@@ -158,25 +158,15 @@ def main() -> int:
                   sort_keys=True, separators=(",", ":")))
             return 0
         if args.mode == "register":
-            from governance.github_policy_review_adoption import (
-                AUTHORITY_PREFIX, SCHEMA, _pages, verify_github_adoption,
-            )
+            from governance.github_policy_review_adoption import SCHEMA, verify_github_adoption
 
             if evidence["pending_reviewers"]:
                 print(json.dumps(evidence, sort_keys=True, indent=2))
                 return 2
-            owner_id = github_get("")["owner"]["id"]
-            mandates = [comment for comment in _pages(github_get, f"issues/{PR}/comments")
-                        if comment.get("user", {}).get("id") == owner_id
-                        and AUTHORITY_PREFIX in (comment.get("body") or "")]
-            if not mandates:
-                raise ValueError("OWNER_MANDATE_MISSING")
             record = {"schema": SCHEMA, "repository": REPO, "pr": PR,
-                      "candidate_sha": target["candidate_sha"],
                       "manifest_sha256": target["manifest_sha256"],
                       "policy_sha256": target["policy_sha256"],
-                      "authority_comment_id": max(comment["id"] for comment in mandates),
-                      "review_ids": {review["account"]: review["review_id"] for review in evidence["reviews"]}}
+                      "verification_mode": "LIVE_GITHUB_OWNER_AND_REVIEWS"}
             def read(path):
                 data = github_get(f"contents/{path}?ref={target['candidate_sha']}")
                 if data.get("encoding") != "base64":
@@ -190,7 +180,7 @@ def main() -> int:
             if result["decision"] != "PASS":
                 print(json.dumps(result, sort_keys=True, indent=2))
                 return 2
-            print(json.dumps(record, sort_keys=True, indent=2))
+            print(json.dumps(result, sort_keys=True, indent=2))
             return 0
         evidence["observed_at"] = datetime.now(timezone.utc).isoformat()
         print(json.dumps(evidence, sort_keys=True, indent=2))

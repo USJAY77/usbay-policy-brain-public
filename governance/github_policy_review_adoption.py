@@ -51,18 +51,6 @@ def _file(get, path, ref):
     return base64.b64decode(data["content"])
 
 
-def _registration_only(get, candidate, head):
-    if head == candidate:
-        return True
-    comparison = get(f"compare/{candidate}...{head}")
-    files = comparison.get("files", [])
-    return (comparison.get("status") == "ahead"
-            and comparison.get("base_commit", {}).get("sha") == candidate
-            and comparison.get("merge_base_commit", {}).get("sha") == candidate
-            and len(files) == 1 and files[0].get("filename") == APPROVAL_PATH
-            and files[0].get("status") == "modified")
-
-
 def _pr_state(pr):
     return (pr.get("state"), pr.get("merged"), pr.get("head", {}).get("sha"),
             pr.get("merge_commit_sha"), (pr.get("head", {}).get("repo") or {}).get("full_name"))
@@ -71,21 +59,20 @@ def _pr_state(pr):
 def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
     """Reject unsigned local assertions; resolve owner, mandate and reviews live."""
     try:
-        required = {"schema", "repository", "pr", "candidate_sha", "manifest_sha256",
-                    "policy_sha256", "authority_comment_id", "review_ids"}
+        required = {"schema", "repository", "pr", "manifest_sha256",
+                    "policy_sha256", "verification_mode"}
         if not isinstance(record, dict) or set(record) != required:
             return _fail("GITHUB_POLICY_ADOPTION_RECORD_MALFORMED")
         if record["schema"] != SCHEMA or record["repository"] != REPO or record["pr"] != PR:
             return _fail("GITHUB_POLICY_ADOPTION_SCOPE_MISMATCH")
-        candidate = record["candidate_sha"]
-        if not all(isinstance(sha, str) and re.fullmatch(r"[0-9a-f]{40}", sha) for sha in (candidate, head)):
+        if record["verification_mode"] != "LIVE_GITHUB_OWNER_AND_REVIEWS":
+            return _fail("GITHUB_POLICY_ADOPTION_MODE_UNKNOWN")
+        if not isinstance(head, str) or not re.fullmatch(r"[0-9a-f]{40}", head):
             return _fail("GITHUB_POLICY_ADOPTION_SHA_MALFORMED")
-        refs = record["review_ids"]
-        if not isinstance(refs, dict) or set(refs) != set(REVIEWERS):
-            return _fail("GITHUB_POLICY_REVIEW_REFERENCES_MALFORMED")
-        ids = [record["authority_comment_id"], *refs.values()]
-        if not all(type(value) is int and value > 0 for value in ids) or len(set(refs.values())) != 2:
-            return _fail("GITHUB_POLICY_REVIEW_REFERENCES_MALFORMED")
+        pr = get(f"pulls/{PR}")
+        candidate = pr["head"]["sha"]
+        if not isinstance(candidate, str) or not re.fullmatch(r"[0-9a-f]{40}", candidate):
+            return _fail("GITHUB_POLICY_ADOPTION_SHA_MALFORMED")
         target = binding(candidate, manifest, policy)
         if any(record[key] != target[key] for key in ("manifest_sha256", "policy_sha256")):
             return _fail("GITHUB_ACTIONS_POLICY_APPROVALS_MANIFEST_HASH_MISMATCH")
@@ -96,22 +83,16 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
         owner = repo["owner"]
         if repo["full_name"] != REPO or owner.get("type") != "User" or type(owner.get("id")) is not int:
             return _fail("GITHUB_POLICY_OWNER_NOT_VERIFIABLE")
-        pr = get(f"pulls/{PR}")
         if pr["head"]["repo"]["full_name"] != REPO:
             return _fail("GITHUB_POLICY_PR_HEAD_MISMATCH")
         if pr.get("state") == "open":
             if pr["head"]["sha"] != head:
                 return _fail("GITHUB_POLICY_PR_HEAD_MISMATCH")
-            if not _registration_only(get, candidate, head):
-                return _fail("GITHUB_POLICY_REVIEWED_CONTENT_CHANGED")
         elif pr.get("state") == "closed" and pr.get("merged") is True:
-            # Durable adoption after a separately authorized merge: the actual
-            # merge tree must equal the registration-only reviewed PR tree.
+            # Durable adoption after a separately authorized merge: its actual
+            # tree must equal the exact PR head reviewed by both accounts.
             merged = pr["merge_commit_sha"]
-            delivery = pr["head"]["sha"]
-            if not _registration_only(get, candidate, delivery):
-                return _fail("GITHUB_POLICY_REVIEWED_CONTENT_CHANGED")
-            if get(f"git/commits/{merged}")["tree"]["sha"] != get(f"git/commits/{delivery}")["tree"]["sha"]:
+            if get(f"git/commits/{merged}")["tree"]["sha"] != get(f"git/commits/{candidate}")["tree"]["sha"]:
                 return _fail("GITHUB_POLICY_MERGE_TREE_MISMATCH")
             if json.loads(_file(get, APPROVAL_PATH, merged)) != record:
                 return _fail("GITHUB_POLICY_MERGED_RECORD_MISMATCH")
@@ -135,8 +116,7 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
         if len(mandate.get("body", "").strip().splitlines()) != 1:
             return _fail("GITHUB_POLICY_OWNER_MANDATE_NOT_EXPLICIT")
         declaration = _marker(mandate.get("body"), AUTHORITY_PREFIX)
-        if (mandate["id"] != record["authority_comment_id"]
-                or mandate.get("issue_url") != f"https://api.github.com/repos/{REPO}/issues/{PR}"
+        if (mandate.get("issue_url") != f"https://api.github.com/repos/{REPO}/issues/{PR}"
                 or mandate.get("html_url") != f"https://github.com/{REPO}/pull/{PR}#issuecomment-{mandate['id']}"
                 or declaration.get("status") != "ACTIVE"
                 or declaration.get("binding") != target):
@@ -149,8 +129,6 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
         observed = collect(reviews, target)
         if observed["pending_reviewers"]:
             return _fail("GITHUB_POLICY_SCOPED_REVIEWS_PENDING")
-        if any(refs[review["account"]] != review["review_id"] for review in observed["reviews"]):
-            return _fail("GITHUB_POLICY_REVIEW_REFERENCE_MISMATCH")
         if (_pages(get, f"issues/{PR}/comments") != comments
                 or _pages(get, f"pulls/{PR}/reviews") != reviews):
             return _fail("GITHUB_POLICY_DECISIONS_CHANGED_DURING_READ")
@@ -161,6 +139,7 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
             "decision": "PASS", "reason": "GITHUB_ACTIONS_POLICY_REVIEW_ADOPTION_VALID",
             "fail_closed": False, "policy_adopted": True, "scope": "CI_POLICY_ONLY",
             "manifest_sha256": target["manifest_sha256"], "required_approvers": 2,
+            "binding": target,
             "authority_evidence_url": mandate["html_url"],
             "review_evidence": [dict(review, authority_status="OWNER_MANDATE_CONFIRMED")
                                 for review in observed["reviews"]],

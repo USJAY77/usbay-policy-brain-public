@@ -17,10 +17,11 @@ policy proposal, not eligible for the non-PB CI-maintenance body route.
 
 ## Approval boundary
 
-The existing approvals file is deliberately unchanged. Its placeholder
-signature records are non-production scaffolding and bind the previous
-manifest. They do not approve this new manifest. No reviewer identity,
-approval time, signature or approval record is fabricated or rebound.
+Historical v1 placeholder records remain preserved in Git history. The current
+v2 approvals file is a verification specification, not a list of granted
+approvals. It binds the proposed policy and manifest and requires live GitHub
+owner/reviewer verification. It contains no invented identity, decision, time,
+role grant or signature. It cannot return PASS without those live decisions.
 
 Consequently, verification of root policy approval evidence must continue
 to fail closed until genuine new human adoption evidence is recorded through
@@ -90,12 +91,18 @@ The reviewers each inspect and submit the prepared exact-head decision. The
 marker explicitly states CI_POLICY_ADOPTION, the exact manifest/policy hashes,
 scope and exclusions. It does not authorize merging or production operation.
 
-`python -m scripts.pb364_review_evidence register` outputs a v2 registration
-record only after live owner/review verification succeeds. It never writes a
-file or submits a decision. A coding agent may then preserve the old v1 bytes as
-historical evidence and commit the new record to the approvals JSON. Do not
-redirect this command over the real approvals file before checking exit status:
-failure output is a diagnostic, not a valid registration record.
+The v2 verification specification is committed before human decisions. This
+avoids a self-referential commit hash and avoids dismissing reviews with a later
+registration commit. The current exact candidate is resolved from PR #410, not
+from an editable approver assertion in the specification.
+
+`python -m scripts.pb364_review_evidence register` outputs a full verification
+receipt only after live owner/review verification succeeds. It automatically
+records the observed mandate URL, assigned roles, reviewer accounts, timestamps,
+review IDs, URLs and exact binding. It never writes a file or submits a decision.
+Keep the receipt as external evidence; do not replace the approvals specification
+with it or commit it to the reviewed PR. Any code commit would require fresh
+decisions for the new head. Failure output is a diagnostic, not an approval.
 
 The root verifier dispatches v2 records to
 `governance/github_policy_review_adoption.py`. It does not trust local record
@@ -106,16 +113,15 @@ wrong role, partial pagination or unavailable API fails closed. Decisions and PR
 head are re-read to detect concurrent changes. This is still a point-in-time
 GitHub observation, not a signed or atomic attestation.
 
-To avoid a self-referential approval commit, reviews bind the complete candidate
-before the registration is committed. The verifier permits a later head only
-when GitHub confirms the candidate is an ancestor and the sole changed path is
-the approvals JSON. Any workflow, test, verifier, document or source change after
-review requires new reviews and a new scoped mandate.
+Reviews and mandate bind the complete, final PR candidate. Any change to that
+candidate, including the approvals specification itself, requires fresh reviews
+and a new scoped mandate. API verification can then be rerun on the same commit
+without invalidating reviews or manufacturing another registration commit.
 
 After a separately authorized merge, the verifier additionally requires the
-merged tree to equal that reviewed registration tree and the merged registration
-record to match. Later checkouts must descend from that merge and retain the
-same manifest, policy bytes and registration references. This preserves a
+merged tree to equal that reviewed PR tree and the merged verification
+specification to match. Later checkouts must descend from that merge and retain
+the same manifest, policy bytes and verification specification. This preserves a
 completed adoption without turning an unrelated branch or an unreviewed squash
 tree into authority. It does not itself perform or authorize a merge.
 

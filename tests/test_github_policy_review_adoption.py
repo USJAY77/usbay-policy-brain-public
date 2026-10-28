@@ -32,9 +32,9 @@ def fixture():
                 "submitted_at": "2026-01-01T00:00:00Z", "body": review_text(target),
                 "html_url": f"https://github.com/{REPO}/pull/410#pullrequestreview-{index}"}
                for index, account in enumerate(("USBAY-AUDIT", "USBAY-GLOBAL23"), 1)]
-    record = {"schema": SCHEMA, "repository": REPO, "pr": 410, "candidate_sha": HEAD,
+    record = {"schema": SCHEMA, "repository": REPO, "pr": 410,
               "manifest_sha256": target["manifest_sha256"], "policy_sha256": target["policy_sha256"],
-              "authority_comment_id": 9, "review_ids": {"USBAY-AUDIT": 1, "USBAY-GLOBAL23": 2}}
+              "verification_mode": "LIVE_GITHUB_OWNER_AND_REVIEWS"}
     responses = {"": {"full_name": REPO, "owner": {"id": 123, "type": "User"}},
                  "pulls/410": {"state": "open", "head": {"sha": HEAD, "repo": {"full_name": REPO}}},
                  "issues/410/comments?per_page=100&page=1": [comment],
@@ -62,7 +62,7 @@ def test_live_owner_mandate_and_scoped_reviews_allow_only_ci_adoption():
 
 
 @pytest.mark.parametrize("field,value", [("schema", "unknown"), ("repository", "other/repo"),
-    ("pr", 409), ("candidate_sha", "not a hash"), ("manifest_sha256", "0" * 64),
+    ("pr", 409), ("verification_mode", "OFFLINE_PASS"), ("manifest_sha256", "0" * 64),
     ("policy_sha256", "0" * 64), ("authority_comment_id", True),
     ("review_ids", {"USBAY-AUDIT": 1, "USBAY-GLOBAL23": 1})])
 def test_forged_local_record_cannot_grant_authority(field, value):
@@ -117,23 +117,21 @@ def test_review_dismissal_or_objection_blocks_adoption(state):
     assert verify(record, responses)["decision"] == "FAIL_CLOSED"
 
 
-def test_wrong_review_reference_fails_closed():
+def test_obsolete_stored_review_references_cannot_override_live_decisions():
     record, responses, _ = fixture()
-    record["review_ids"]["USBAY-AUDIT"] = 100
+    record["review_ids"] = {"USBAY-AUDIT": 100}
     assert verify(record, responses)["decision"] == "FAIL_CLOSED"
 
 
-def test_only_registration_file_may_change_after_review():
+def test_any_new_pr_head_requires_fresh_bound_reviews_and_mandate():
     record, responses, _ = fixture()
     head = "b" * 40
     responses["pulls/410"]["head"]["sha"] = head
-    comparison = {"status": "ahead", "base_commit": {"sha": HEAD},
-                  "merge_base_commit": {"sha": HEAD},
-                  "files": [{"filename": APPROVAL_PATH, "status": "modified"}]}
-    responses[f"compare/{HEAD}...{head}"] = comparison
-    assert verify(record, responses, head)["decision"] == "PASS"
-    comparison["files"].append({"filename": "gateway/app.py", "status": "modified"})
-    assert verify(record, responses, head)["reason"] == "GITHUB_POLICY_REVIEWED_CONTENT_CHANGED"
+    for name, content in [("approved_github_actions_policy.manifest.json", MANIFEST),
+                          ("approved_github_actions_policy.json", POLICY)]:
+        responses[f"contents/governance/{name}?ref={head}"] = {
+            "encoding": "base64", "content": base64.b64encode(content).decode()}
+    assert verify(record, responses, head)["decision"] == "FAIL_CLOSED"
 
 
 def test_api_failure_is_not_offline_approval():
@@ -169,10 +167,13 @@ def test_register_command_emits_only_live_verified_references(monkeypatch, capsy
     monkeypatch.setattr(cli, "github_get", lambda path: responses[path])
     monkeypatch.setattr("sys.argv", ["review-evidence", "register"])
     assert cli.main() == 0
-    assert json.loads(capsys.readouterr().out) == record
+    result = json.loads(capsys.readouterr().out)
+    assert result["decision"] == "PASS"
+    assert result["authority_evidence_url"].endswith("issuecomment-9")
+    assert [review["review_id"] for review in result["review_evidence"]] == [1, 2]
     responses["issues/410/comments?per_page=100&page=1"].clear()
     assert cli.main() != 0
-    assert json.loads(capsys.readouterr().out)["status"] == "FAIL_CLOSED"
+    assert json.loads(capsys.readouterr().out)["decision"] == "FAIL_CLOSED"
 
 
 def test_v2_root_dispatch_uses_actual_bytes_and_checked_out_head(tmp_path, monkeypatch):
@@ -195,12 +196,9 @@ def test_v2_root_dispatch_uses_actual_bytes_and_checked_out_head(tmp_path, monke
 
 def test_merged_policy_adoption_survives_later_descendant_without_new_authority():
     record, responses, _ = fixture()
-    delivery, merged, later = "b" * 40, "c" * 40, "d" * 40
+    delivery, merged, later = HEAD, "c" * 40, "d" * 40
     responses["pulls/410"].update(state="closed", merged=True, merge_commit_sha=merged)
     responses["pulls/410"]["head"]["sha"] = delivery
-    responses[f"compare/{HEAD}...{delivery}"] = {
-        "status": "ahead", "base_commit": {"sha": HEAD}, "merge_base_commit": {"sha": HEAD},
-        "files": [{"filename": APPROVAL_PATH, "status": "modified"}]}
     for sha in (merged, delivery):
         responses[f"git/commits/{sha}"] = {"tree": {"sha": "e" * 40}}
     responses[f"contents/{APPROVAL_PATH}?ref={merged}"] = {
