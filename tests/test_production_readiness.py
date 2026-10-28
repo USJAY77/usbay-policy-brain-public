@@ -222,7 +222,7 @@ def _write_production_readiness_workflow(root: Path, text: str | None = None) ->
             "  production-readiness:\n"
             "    timeout-minutes: 30\n"
             "    steps:\n"
-            "      - uses: actions/setup-python@v5\n"
+            "      - uses: actions/setup-python@v7\n"
             "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
             "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
             "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
@@ -1859,7 +1859,7 @@ def test_guard_detects_workflow_without_hash_verified_install(tmp_path: Path) ->
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install pytest\n",
     )
 
@@ -1879,7 +1879,7 @@ def test_guard_detects_workflow_without_fastapi_import_proof(tmp_path: Path) -> 
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
         "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
         "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
@@ -1899,7 +1899,7 @@ def test_guard_detects_workflow_without_requests_import_proof(tmp_path: Path) ->
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
         "      - run: python -c \"import importlib.metadata; print(importlib.metadata.version('cryptography'))\"\n"
         "      - run: python -c \"import audit.anchor, audit.rfc3161_anchor, audit.worm_archive, scripts.generate_ci_evidence_manifest; print('GOVERNANCE_CRYPTO_IMPORTS_VALID=true')\"\n"
@@ -1920,7 +1920,7 @@ def test_guard_detects_workflow_without_ci_sbom_generation(tmp_path: Path) -> No
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n",
     )
 
@@ -1939,7 +1939,7 @@ def test_guard_detects_workflow_without_ci_evidence_chain(tmp_path: Path) -> Non
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
         "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
         "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
@@ -2044,7 +2044,7 @@ def test_guard_detects_workflow_without_ci_evidence_trust_policy(tmp_path: Path)
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
         "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
         "      - run: test -s sbom/production-readiness-ci-sbom.json\n"
@@ -2073,7 +2073,7 @@ def test_guard_detects_workflow_without_governance_timestamping(tmp_path: Path) 
         "jobs:\n"
         "  production-readiness:\n"
         "    steps:\n"
-        "      - uses: actions/setup-python@v5\n"
+        "      - uses: actions/setup-python@v7\n"
         "      - run: python -m pip install --require-hashes -r requirements-ci.txt\n"
         "      - run: python scripts/generate_ci_dependency_sbom.py --output sbom/production-readiness-ci-sbom.json\n"
         "      - run: test -s sbom/production-readiness-ci-sbom.json\n"

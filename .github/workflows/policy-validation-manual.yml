@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   validate-policy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Checkout repository
@@ -53,7 +53,7 @@ jobs:
           if-no-files-found: error
 
   codex-trigger:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: Codex trigger completed

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from tests.helpers.github_actions_policy import (
     approved_action_ref,
     evaluate_action_ref,
@@ -89,6 +91,23 @@ def test_unknown_github_actions_fail_closed() -> None:
     assert decision["decision"] == "FAIL_CLOSED"
     assert decision["reason"] == "UNKNOWN_GITHUB_ACTION"
     assert decision["silent_pass"] is False
+
+
+def test_setup_python_v7_matches_candidate_policy_in_both_ci_contexts() -> None:
+    policy = load_github_actions_policy()
+    assert approved_action_ref("actions/setup-python", policy) == "actions/setup-python@v7"
+    for context in ("fast_pr", "manual_resilience"):
+        assert evaluate_action_ref("actions/setup-python@v7", context=context, policy=policy)["decision"] == "PASS"
+
+
+@pytest.mark.parametrize("version", ["v5", "v6", "v999"])
+def test_other_python_setup_versions_remain_fail_closed(version: str) -> None:
+    policy = load_github_actions_policy()
+    for context in ("fast_pr", "manual_resilience"):
+        evidence = evaluate_action_ref("actions/setup-python@" + version, context=context, policy=policy)
+        assert evidence["decision"] == "FAIL_CLOSED"
+        assert evidence["reason"] == "UNAPPROVED_GITHUB_ACTION_VERSION"
+        assert evidence["silent_pass"] is False
 
 
 def test_disallowed_github_action_versions_fail_closed() -> None:

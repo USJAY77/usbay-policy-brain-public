@@ -4,13 +4,19 @@ import json
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+
 from governance.github_pr_review_authorization import (
+    DEFAULT_REQUIRED_APPROVERS,
+    PLACEHOLDER_SIGNATURE,
     verify_github_pr_review_authorization,
     verify_placeholder_approvals_are_non_production,
 )
 from tests.helpers.github_actions_policy import evaluate_action_ref, load_github_actions_policy
+from scripts.pb364_review_evidence import REVIEWERS
 
 
+pytestmark = pytest.mark.governance
 ROOT = Path(__file__).resolve().parents[1]
 NOW = datetime(2026, 8, 9, 12, 0, tzinfo=timezone.utc)
 HEAD_SHA = "a" * 40
@@ -107,13 +113,26 @@ def test_malformed_review_payload_blocks() -> None:
 
 
 def test_placeholder_approval_json_alone_blocks_production_authorization() -> None:
-    approvals = json.loads((ROOT / "governance" / "approved_github_actions_policy.approvals.json").read_text(encoding="utf-8"))
+    # Historical v1 contract: never reinterpret a v2 specification as v1 data.
+    approvals = {"schema": "usbay.github_actions_policy_approvals.v1",
+                 "approvals": [{"signature_placeholder": PLACEHOLDER_SIGNATURE}
+                               for _ in range(DEFAULT_REQUIRED_APPROVERS)]}
 
     evidence = verify_placeholder_approvals_are_non_production(approvals)
 
     assert evidence["decision"] == "BLOCKED"
     assert evidence["reason"] == "GITHUB_ACTIONS_POLICY_PLACEHOLDER_APPROVALS_NON_PRODUCTION"
     assert evidence["production_authorization"] is False
+
+
+def test_v2_verification_specification_alone_cannot_grant_production_authority() -> None:
+    specification = json.loads((ROOT / "governance" / "approved_github_actions_policy.approvals.json").read_text(encoding="utf-8"))
+    assert specification["schema"] == "usbay.github_actions_policy_approvals.v2"
+    evidence = verify_placeholder_approvals_are_non_production(specification)
+    assert evidence["decision"] == "BLOCKED"
+    assert evidence["fail_closed"] is True
+    assert evidence["production_authorization"] is False
+    assert evidence["placeholder_production_authorization"] is False
 
 
 def test_wrong_pr_repository_or_head_binding_blocks() -> None:
@@ -196,6 +215,9 @@ def test_required_approvers_remains_exactly_two() -> None:
         now=NOW,
     )
 
-    assert approvals["required_approvers"] == 2
+    assert approvals["schema"] == "usbay.github_actions_policy_approvals.v2"
+    # The live v2 gate fixes the quorum; editable JSON cannot lower it.
+    assert "required_approvers" not in approvals
+    assert DEFAULT_REQUIRED_APPROVERS == len(REVIEWERS) == 2
     assert evidence["decision"] == "PASS"
     assert verify_github_pr_review_authorization(_payload(reviews=[]), required_approvers=1, now=NOW)["decision"] == "BLOCKED"

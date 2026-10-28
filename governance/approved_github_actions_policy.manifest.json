@@ -1,8 +1,8 @@
 {
   "fail_closed_on_manifest_mismatch": true,
-  "generated_at": "2026-06-09T00:00:00Z",
+  "generated_at": "2026-10-28T11:28:28.701152+00:00",
   "governance_owner": "USBAY Governance",
   "policy_file": "governance/approved_github_actions_policy.json",
-  "policy_sha256": "da8ac921a6b1ddfd0fed3fdad3ec4a0d16a1ce4332ccfbb639c0eb2ddd2a0f60",
-  "policy_version": "github-actions-policy-v1-attest-build-provenance-v3"
+  "policy_sha256": "9508205e52347489ba3aeff6a535d40d62093274f3115d4571c3b8ab60bf7e5e",
+  "policy_version": "github-actions-policy-v2-setup-python-v7"
 }

@@ -1,30 +1,8 @@
 {
-  "approvals": [
-    {
-      "approval_reason": "Approve central GitHub Actions governance registry manifest scaffolding for test-only fail-closed validation.",
-      "approved_at": "2026-05-25T00:00:00Z",
-      "approver_id": "human-governance-owner-placeholder",
-      "role": "governance_owner",
-      "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"
-    },
-    {
-      "approval_reason": "Approve policy manifest integrity evidence scaffolding without granting production signing authority.",
-      "approved_at": "2026-05-25T00:00:00Z",
-      "approver_id": "human-security-reviewer-placeholder",
-      "role": "security_reviewer",
-      "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"
-    },
-    {
-      "approval_reason": "Approve actions/checkout@v6 as the governed checkout baseline for CI validation while preserving fail-closed blocking for older or unapproved versions.",
-      "approved_at": "2026-06-09T00:00:00Z",
-      "approver_id": "human-governance-owner-placeholder",
-      "role": "governance_owner",
-      "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"
-    }
-  ],
-  "fail_closed_on_missing_approval": true,
-  "manifest_sha256": "25f8b37f22710675a2ef876e55a7f361b42a2dd6f792ef2f5f5035105696a78a",
-  "policy_version": "github-actions-policy-v1-attest-build-provenance-v3",
-  "required_approvers": 2,
-  "schema": "usbay.github_actions_policy_approvals.v1"
+  "schema": "usbay.github_actions_policy_approvals.v2",
+  "repository": "USJAY77/usbay-policy-brain-public",
+  "pr": 410,
+  "manifest_sha256": "e63d8d49a4454bfae4a31ca7175212b0ea6e077c64571daa809e12c72592d4b1",
+  "policy_sha256": "9508205e52347489ba3aeff6a535d40d62093274f3115d4571c3b8ab60bf7e5e",
+  "verification_mode": "LIVE_GITHUB_OWNER_AND_REVIEWS"
 }
