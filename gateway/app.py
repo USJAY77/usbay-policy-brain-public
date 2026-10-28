@@ -5291,9 +5291,14 @@ def decide(payload: dict):
                 provenance_context=audit_provenance_context,
             )
         try:
+            # Denials can precede tenant validation in decision creation. Bind
+            # evidence only to a policy-valid tenant; never invent a fallback.
+            audit_tenant = tenant_execution_context(payload.get("tenant_id")) if isinstance(payload, dict) else {}
             audit_governance_event(
                 "decision_created",
                 {
+                    "tenant_id": audit_tenant.get("tenant_id"),
+                    "tenant_hash": audit_tenant.get("tenant_hash"),
                     "request_hash": request_hash(request_signature_message(payload)) if isinstance(payload, dict) else None,
                     "decision": "DENY",
                     "policy_version": _policy_version(payload) if isinstance(payload, dict) else None,

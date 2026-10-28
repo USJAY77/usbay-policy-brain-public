@@ -414,6 +414,7 @@ def test_ledger_cross_process_append_and_incomplete_tail_fail_closed(monkeypatch
 def test_ledger_fsync_failure_is_reported_as_uncertain(monkeypatch, tmp_path) -> None:
     _audit_keys(monkeypatch, tmp_path / "keys")
     path = tmp_path / "evidence.jsonl"
+    real_fsync = immutable_ledger.os.fsync
     monkeypatch.setattr(immutable_ledger.os, "fsync", lambda _fd: (_ for _ in ()).throw(OSError("injected")))
     try:
         append_evidence_event(
@@ -425,9 +426,14 @@ def test_ledger_fsync_failure_is_reported_as_uncertain(monkeypatch, tmp_path) ->
         assert str(exc) == "ledger_write_uncertain"
     else:
         raise AssertionError("fsync failure must not report success")
-    assert path.with_suffix(path.suffix + ".uncertain").exists()
+    # The v1 writer records intent before evidence mutation. It never creates
+    # or removes a legacy marker; the outstanding intent must block retries.
+    control = Path(str(path) + ".pair-transactions-v1.jsonl")
+    intent_bytes = control.read_bytes()
+    assert json.loads(intent_bytes)["kind"] == "INTENT"
+    assert not path.exists()
     assert not verify_ledger(path)
-    monkeypatch.undo()
+    monkeypatch.setattr(immutable_ledger.os, "fsync", real_fsync)
     try:
         append_evidence_event(
             path,
@@ -438,3 +444,5 @@ def test_ledger_fsync_failure_is_reported_as_uncertain(monkeypatch, tmp_path) ->
         assert str(exc) == "ledger_write_uncertain"
     else:
         raise AssertionError("uncertain ledger state must block later appends")
+    assert control.read_bytes() == intent_bytes
+    assert not path.exists()
