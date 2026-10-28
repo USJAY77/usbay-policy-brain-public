@@ -11,6 +11,8 @@ import json
 import re
 from pathlib import Path
 import sqlite3
+import time
+from typing import Callable
 from urllib.parse import quote
 
 from audit.audit_writer import write_audit_record
@@ -74,8 +76,13 @@ capability TEXT, revoked INTEGER). Issuer data is never accepted from requests.
 
 
 class PersistentDryRunAttempts:
-    def __init__(self, path: Path):
-        self.store = SQLitePolicyAuthorityReplayRegistry(path)
+    def __init__(self, path: Path, *, clock: Callable[[], float] = time.time):
+        # Consumed attempts are retained history, not expiring authority. Do
+        # not inherit the registry's 300-second freshness cache default.
+        # Keep integrity/schema/backward-clock checks; never reset the DB.
+        self.store = SQLitePolicyAuthorityReplayRegistry(
+            path, max_state_age_seconds=2**63 - 1, now_fn=clock,
+        )
 
     def __call__(self, attempt_hash: str, binding: str) -> bool:
         from datetime import timezone
@@ -89,10 +96,19 @@ class PersistentDryRunAttempts:
 
 
 class ProductAuditWriter:
-    """Single-tenant adapter over the existing signed append-only audit path."""
+    """Hash-only request identity inside an explicitly separate audit partition.
 
-    def __init__(self, *, tenant: str, policy_hash: str, path: Path):
+    audit_tenant is an operator-selected non-sensitive ledger routing ID. The
+    existing writer requires a policy-registered tenant, so a hash cannot be
+    substituted there. It must differ from the request tenant and must never
+    be derived from it. No tenant policy or writer contract is widened.
+    """
+
+    def __init__(self, *, tenant: str, audit_tenant: str, policy_hash: str, path: Path):
         self.tenant = validate_tenant_id(tenant)
+        self.audit_tenant = validate_tenant_id(audit_tenant)
+        if self.tenant == self.audit_tenant:
+            raise ValueError("DISTINCT_AUDIT_PARTITION_REQUIRED")
         if len(policy_hash) != 64 or any(c not in "0123456789abcdef" for c in policy_hash):
             raise ValueError("INVALID_POLICY_HASH")
         self.policy_hash = policy_hash
@@ -100,6 +116,7 @@ class ProductAuditWriter:
 
     def __call__(self, event: dict) -> dict:
         validate_tenant_id(self.tenant)
+        validate_tenant_id(self.audit_tenant)
         expected = {"schema", "request_hash", "action_hash", "tenant_hash",
                     "decision", "blockers", "external_mutation_performed", "execution_authorized"}
         if set(event) != expected or event.get("schema") != "usbay.product_dry_run.v1":
@@ -122,5 +139,6 @@ class ProductAuditWriter:
                 or event.get("external_mutation_performed") is not False):
             raise ValueError("OFFLINE_BOUNDARY_VIOLATION")
         return write_audit_record("product_dry_run", {
-            **event, "tenant_id": self.tenant, "policy_hash": self.policy_hash,
+            **event, "tenant_id": self.audit_tenant, "policy_hash": self.policy_hash,
         }, audit_path=self.path)
+

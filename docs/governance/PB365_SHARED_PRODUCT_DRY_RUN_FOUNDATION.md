@@ -34,3 +34,11 @@ USBAY-AUDIT and USBAY-GLOBAL23 must submit their own code-review decisions. No r
 Remove these additive modules/docs/tests; no existing production path is connected to them. No data migration, provider configuration or policy widening.
 
 Task: #411
+
+
+## Review Corrections
+Consumed-attempt history uses an effectively non-expiring (signed 64-bit seconds) local freshness horizon instead of the underlying cache-like 300-second default. The policy applies only to this offline replay-history adapter; signature/schema/state-integrity checks, backward-clock rejection and separate approval expiry remain intact. The database is never deleted or reset. A 30-day idle/reopen test proves both new-work acceptance and prior replay denial.
+
+The product event persists only the hash of its request tenant. The existing audit ledger still requires a policy-registered routing tenant. ProductAuditWriter therefore requires a distinct, explicitly operator-configured, non-sensitive audit_tenant for the ledger envelope (tests use request t1 and audit partition t2). It must not be derived from the request tenant; identical IDs and unregistered audit partitions block. The raw request tenant is asserted absent from the complete real chain file. Existing tenant policy and audit-writer code are unchanged. Cross-tenant request binding remains enforced before writing.
+
+Local review regression run: 97 tests +34 subtests passed on CPython 3.12.14. Native results must be read separately for the corrected commit. Earlier approvals refer to the prior head and must not be replayed.

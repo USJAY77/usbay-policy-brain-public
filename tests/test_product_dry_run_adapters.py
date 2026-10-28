@@ -57,7 +57,7 @@ class IntegratedDryRunTests(unittest.TestCase):
             policy_version=self.request.policy_version, grants={},
             approval_source=approvals or SignedDryRunApprovals(self.db),
             consume_attempt=PersistentDryRunAttempts(self.root / "attempts.sqlite"),
-            audit=audit or ProductAuditWriter(tenant="t1", policy_hash="a" * 64, path=self.root / "audit.json"),
+            audit=audit or ProductAuditWriter(tenant="t1", audit_tenant="t2", policy_hash="a" * 64, path=self.root / "audit.json"),
             clock=lambda: self.now,
         )
 
@@ -67,6 +67,8 @@ class IntegratedDryRunTests(unittest.TestCase):
         self.assertTrue(verify_chain(self.root / "audit.json"))
         contents = (self.root / "audit.json").read_text()
         self.assertNotIn(self.request.actor, contents)
+        self.assertNotIn(self.request.tenant, contents)
+        self.assertIn('"tenant_id": "t2"', contents)
         self.assertNotIn(self.signature, contents)
         self.assertFalse(result["execution_authorized"])
 
@@ -131,6 +133,29 @@ class IntegratedDryRunTests(unittest.TestCase):
         attempts = PersistentDryRunAttempts(self.root / "attempts.sqlite")
         self.assertTrue(attempts(sha256_payload("different-action"), sha256_payload("different-binding")))
 
+    def test_idle_store_accepts_new_work_and_preserves_old_history(self):
+        path = self.root / "idle.sqlite"
+        old = (sha256_payload("old-action"), sha256_payload("old-binding"))
+        self.assertTrue(PersistentDryRunAttempts(path, clock=lambda: 1000.0)(*old))
+        reopened = PersistentDryRunAttempts(path, clock=lambda: 1000.0 + 86400 * 30)
+        self.assertFalse(reopened(*old))
+        self.assertTrue(reopened(sha256_payload("new-action"), sha256_payload("new-binding")))
+        self.assertFalse(reopened(*old))
+
+    def test_idle_policy_does_not_bypass_integrity_or_backward_clock(self):
+        path = self.root / "integrity.sqlite"
+        self.assertTrue(PersistentDryRunAttempts(path, clock=lambda: 1000.0)(sha256_payload("a"), sha256_payload("b")))
+        self.assertFalse(PersistentDryRunAttempts(path, clock=lambda: 999.0)(sha256_payload("c"), sha256_payload("d")))
+        with sqlite3.connect(path) as conn:
+            conn.execute("UPDATE policy_authority_replay_metadata SET state_hash='tampered'")
+        self.assertFalse(PersistentDryRunAttempts(path, clock=lambda: 2000.0)(sha256_payload("c"), sha256_payload("d")))
+
+    def test_audit_partition_must_be_registered_and_distinct(self):
+        with self.assertRaises(ValueError):
+            ProductAuditWriter(tenant="t1", audit_tenant="t1", policy_hash="a" * 64, path=self.root / "audit.json")
+        with self.assertRaises(Exception):
+            ProductAuditWriter(tenant="t1", audit_tenant="unregistered", policy_hash="a" * 64, path=self.root / "audit.json")
+
     def test_audit_failure_burns_persistent_attempt(self):
         def fail(_):
             raise OSError("synthetic disk error")
@@ -138,7 +163,7 @@ class IntegratedDryRunTests(unittest.TestCase):
         self.assertIn("PERSISTENT_REPLAY_BLOCKED", self.boundary().prepare(self.request)["blockers"])
 
     def test_audit_adapter_rejects_cross_tenant_and_live_flags(self):
-        writer = ProductAuditWriter(tenant="t1", policy_hash="a" * 64, path=self.root / "audit.json")
+        writer = ProductAuditWriter(tenant="t1", audit_tenant="t2", policy_hash="a" * 64, path=self.root / "audit.json")
         for event in (
             {"schema": "usbay.product_dry_run.v1", "request_hash": "b" * 64,
              "action_hash": "c" * 64, "decision": "BLOCKED", "blockers": [],
@@ -152,7 +177,7 @@ class IntegratedDryRunTests(unittest.TestCase):
         self.assertFalse((self.root / "audit.json").exists())
 
     def test_audit_adapter_rejects_extra_payload_and_freeform_codes(self):
-        writer = ProductAuditWriter(tenant="t1", policy_hash="a" * 64, path=self.root / "audit.json")
+        writer = ProductAuditWriter(tenant="t1", audit_tenant="t2", policy_hash="a" * 64, path=self.root / "audit.json")
         event = {"schema": "usbay.product_dry_run.v1", "request_hash": "b" * 64,
                  "action_hash": "c" * 64, "tenant_hash": sha256_payload("t1"),
                  "decision": "BLOCKED", "blockers": [],
@@ -166,3 +191,4 @@ class IntegratedDryRunTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
