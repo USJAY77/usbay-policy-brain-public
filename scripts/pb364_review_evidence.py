@@ -38,6 +38,7 @@ def binding(head: str, manifest: bytes, policy: bytes) -> dict:
         raise ValueError("MANIFEST_NOT_FAIL_CLOSED")
     return {
         "candidate_sha": head,
+        "purpose": "CI_POLICY_ADOPTION",
         "manifest_sha256": hashlib.sha256(manifest).hexdigest(),
         "policy_sha256": policy_hash,
         "scope": SCOPE,
@@ -48,9 +49,11 @@ def binding(head: str, manifest: bytes, policy: bytes) -> dict:
 def review_text(target: dict) -> str:
     return (
         "I have reviewed this candidate and the stated limitations. "
-        "My decision, when submitted with GitHub Approve, is APPROVE_FOR_STATED_SCOPE.\n\n"
+        "My decision, when submitted with GitHub Approve, is APPROVE_FOR_STATED_SCOPE "
+        "for adoption of this CI policy under the owner's explicit scoped mandate.\n\n"
         "Scope: " + SCOPE + ". This records my scoped review, not a claim of "
-        "production signing authority. Authority validation and the separate policy-adoption gate remain required.\n"
+        "production signing authority. Adoption is conditional on live verification of "
+        "both scoped decisions and the owner's mandate.\n"
         "This decision does not authorize merge, deployment, activation, permission changes or production use.\n\n"
         + PREFIX + json.dumps(target, sort_keys=True, separators=(",", ":"))
     )
@@ -133,13 +136,61 @@ def snapshot(get=github_get) -> tuple[dict, dict]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("prepare", "collect"))
+    parser.add_argument("mode", choices=("prepare", "mandate", "collect", "register"))
     args = parser.parse_args()
     try:
-        target, evidence = snapshot()
+        target, evidence = snapshot(get=github_get)
         if args.mode == "prepare":
             print("AI-PREPARED DRAFT — each reviewer must inspect and submit their own decision.\n")
             print(review_text(target))
+            return 0
+        if args.mode == "mandate":
+            from governance.github_policy_review_adoption import AUTHORITY_PREFIX
+
+            print("AI-PREPARED OWNER MANDATE DRAFT — proposed roles; not granted until the owner confirms.\n")
+            print("If this matches my decision as repository owner, I nominate these accounts "
+                  "for this exact CI-policy review/adoption only. This grants no merge, "
+                  "deployment, activation, permission changes or production authority.\n")
+            print("The owner must confirm the role assignment, change PROPOSED to ACTIVE, "
+                  "and submit only the declaration line as a separate PR comment.\n")
+            print(AUTHORITY_PREFIX + json.dumps({"status": "PROPOSED", "binding": target,
+                  "roles": {"USBAY-AUDIT": "security_reviewer", "USBAY-GLOBAL23": "governance_owner"}},
+                  sort_keys=True, separators=(",", ":")))
+            return 0
+        if args.mode == "register":
+            from governance.github_policy_review_adoption import (
+                AUTHORITY_PREFIX, SCHEMA, _pages, verify_github_adoption,
+            )
+
+            if evidence["pending_reviewers"]:
+                print(json.dumps(evidence, sort_keys=True, indent=2))
+                return 2
+            owner_id = github_get("")["owner"]["id"]
+            mandates = [comment for comment in _pages(github_get, f"issues/{PR}/comments")
+                        if comment.get("user", {}).get("id") == owner_id
+                        and AUTHORITY_PREFIX in (comment.get("body") or "")]
+            if not mandates:
+                raise ValueError("OWNER_MANDATE_MISSING")
+            record = {"schema": SCHEMA, "repository": REPO, "pr": PR,
+                      "candidate_sha": target["candidate_sha"],
+                      "manifest_sha256": target["manifest_sha256"],
+                      "policy_sha256": target["policy_sha256"],
+                      "authority_comment_id": max(comment["id"] for comment in mandates),
+                      "review_ids": {review["account"]: review["review_id"] for review in evidence["reviews"]}}
+            def read(path):
+                data = github_get(f"contents/{path}?ref={target['candidate_sha']}")
+                if data.get("encoding") != "base64":
+                    raise ValueError("UNSUPPORTED_CONTENT_ENCODING")
+                return base64.b64decode(data["content"])
+            result = verify_github_adoption(
+                record, read("governance/approved_github_actions_policy.manifest.json"),
+                read("governance/approved_github_actions_policy.json"), target["candidate_sha"],
+                get=github_get,
+            )
+            if result["decision"] != "PASS":
+                print(json.dumps(result, sort_keys=True, indent=2))
+                return 2
+            print(json.dumps(record, sort_keys=True, indent=2))
             return 0
         evidence["observed_at"] = datetime.now(timezone.utc).isoformat()
         print(json.dumps(evidence, sort_keys=True, indent=2))

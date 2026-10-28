@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ def verify_policy_approvals(
     *,
     root: Path = ROOT,
     approvals_path: Path | None = None,
+    allow_legacy_scaffolding: bool = False,
 ) -> dict[str, Any]:
     resolved_approvals = approvals_path or root / "governance" / "approved_github_actions_policy.approvals.json"
     resolved_manifest = root / "governance" / "approved_github_actions_policy.manifest.json"
@@ -42,6 +44,23 @@ def verify_policy_approvals(
 
     if not isinstance(approvals, dict):
         return _fail_closed("GITHUB_ACTIONS_POLICY_APPROVALS_MALFORMED")
+
+    if approvals.get("schema") == "usbay.github_actions_policy_approvals.v2":
+        from governance.github_policy_review_adoption import verify_github_adoption
+
+        try:
+            head = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=root, text=True, timeout=10,
+            ).strip()
+            return verify_github_adoption(
+                approvals, resolved_manifest.read_bytes(),
+                (root / "governance/approved_github_actions_policy.json").read_bytes(), head,
+            )
+        except Exception:
+            return _fail_closed("GITHUB_POLICY_ADOPTION_EVIDENCE_UNAVAILABLE_OR_MALFORMED")
+
+    if approvals.get("schema") != "usbay.github_actions_policy_approvals.v1":
+        return _fail_closed("GITHUB_ACTIONS_POLICY_APPROVALS_SCHEMA_UNKNOWN")
 
     if approvals.get("fail_closed_on_missing_approval") is not True:
         return _fail_closed("GITHUB_ACTIONS_POLICY_APPROVALS_NOT_FAIL_CLOSED")
@@ -89,6 +108,9 @@ def verify_policy_approvals(
 
     if len(seen_approvers) < required_approvers:
         return _fail_closed("GITHUB_ACTIONS_POLICY_APPROVALS_DUPLICATE_APPROVER")
+
+    if not allow_legacy_scaffolding:
+        return _fail_closed("GITHUB_ACTIONS_POLICY_PLACEHOLDERS_NOT_ADOPTION")
 
     return {
         "decision": "PASS",

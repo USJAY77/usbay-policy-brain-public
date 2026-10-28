@@ -48,14 +48,14 @@ automatic merge or production-readiness assertion is part of this batch.
 
 ## Prepared reviews and automatic evidence collection
 
-`python scripts/pb364_review_evidence.py prepare` reads the current PR head,
+`python -m scripts.pb364_review_evidence prepare` reads the current PR head,
 policy and manifest through public GitHub GET endpoints. It checks the policy
 digest and prints one complete scoped review draft for both nominated accounts.
 Each reviewer must inspect the candidate and choose their own GitHub decision.
 Logging in alone is not a decision. The draft is prepared by one agent and is
 not two independent reviews or a grant of either governance role.
 
-`python scripts/pb364_review_evidence.py collect` reads all review pages and
+`python -m scripts.pb364_review_evidence collect` reads all review pages and
 prints JSON evidence to stdout. It copies GitHub account, submitted timestamp,
 review ID and URL only from submitted reviews. It requires both nominated User
 accounts, APPROVED state, exact current commit and the complete binding marker.
@@ -71,9 +71,67 @@ records do not prove two independent humans. Account-role authority must still b
 established from a separate authorized mandate; it is never inferred from login,
 write access or the review request.
 
-This is an evidence collection path, not a replacement for the existing policy
-adoption verifier. It explicitly reports authority NOT_VERIFIED, policy_adopted
-false, production_signatures false and merge_authorized false even when both
-reviews are recorded. The placeholder-based approval gate remains unchanged and
-still blocks adoption. A trusted authority-validation/adoption design remains
-separate work; a collected review must not be relabeled as that missing check.
+Collection alone reports authority NOT_VERIFIED and grants no adoption. The
+following v2 route is separate from that observation and from historical v1
+placeholder scaffolding.
+
+## Explicit mandate and live CI-policy adoption verification
+
+`python -m scripts.pb364_review_evidence mandate` prints a PROPOSED owner-mandate
+draft. The proposed mapping is USBAY-AUDIT as security_reviewer and USBAY-GLOBAL23
+as governance_owner, only for this exact CI-policy candidate. These roles have
+NOT been granted by generating or publishing an AI draft. The repository owner
+must inspect the scope and roles, confirm them by changing PROPOSED to ACTIVE,
+and submit only the declaration line in a separate PR comment. A quoted or
+multiline AI draft cannot satisfy this requirement. No mandate is created by
+login, write access, reviewer nomination, a review request or this document.
+
+The reviewers each inspect and submit the prepared exact-head decision. The
+marker explicitly states CI_POLICY_ADOPTION, the exact manifest/policy hashes,
+scope and exclusions. It does not authorize merging or production operation.
+
+`python -m scripts.pb364_review_evidence register` outputs a v2 registration
+record only after live owner/review verification succeeds. It never writes a
+file or submits a decision. A coding agent may then preserve the old v1 bytes as
+historical evidence and commit the new record to the approvals JSON. Do not
+redirect this command over the real approvals file before checking exit status:
+failure output is a diagnostic, not a valid registration record.
+
+The root verifier dispatches v2 records to
+`governance/github_policy_review_adoption.py`. It does not trust local record
+claims: public GitHub GET responses must confirm the current repository owner,
+the latest explicit owner mandate, its scoped role mapping, and both current
+submitted decisions. An owner revocation, dismissal, source change, wrong hash,
+wrong role, partial pagination or unavailable API fails closed. Decisions and PR
+head are re-read to detect concurrent changes. This is still a point-in-time
+GitHub observation, not a signed or atomic attestation.
+
+To avoid a self-referential approval commit, reviews bind the complete candidate
+before the registration is committed. The verifier permits a later head only
+when GitHub confirms the candidate is an ancestor and the sole changed path is
+the approvals JSON. Any workflow, test, verifier, document or source change after
+review requires new reviews and a new scoped mandate.
+
+After a separately authorized merge, the verifier additionally requires the
+merged tree to equal that reviewed registration tree and the merged registration
+record to match. Later checkouts must descend from that merge and retain the
+same manifest, policy bytes and registration references. This preserves a
+completed adoption without turning an unrelated branch or an unreviewed squash
+tree into authority. It does not itself perform or authorize a merge.
+
+Legacy placeholders cannot grant adoption. Their explicit test-only verifier
+option remains for isolated historical fixtures. The former placeholder test
+now exercises such a temporary fixture; a new root assertion requires real v2
+CI-policy adoption and rejects placeholder status. The real root PASS gate is
+retained. Missing current decisions continue to block the PR.
+
+A successful v2 check authorizes only the declared CI-policy adoption. It reports
+production_signatures false, merge_authorized false, deployment_authorized false
+and activation_authorized false. No production signing keys are introduced. Main
+and runtime behavior remain unchanged; any merge still requires separate owner
+authorization and all ordinary PR gates.
+
+The live checks use public GitHub GET endpoints without credentials. API outages,
+rate limits or deleted evidence block validation; there is no offline PASS or
+fallback to placeholders. This is a CI-specific GitHub evidence adapter, not a
+provider-independent production signing system.
