@@ -59,7 +59,7 @@ def review_text(target: dict) -> str:
     )
 
 
-def collect(reviews: list[dict], target: dict) -> dict:
+def collect(reviews: list[dict], target: dict, *, allow_empty_approval: bool = False) -> dict:
     latest = {}
     for review in reviews:
         account = review.get("user", {}).get("login")
@@ -72,7 +72,8 @@ def collect(reviews: list[dict], target: dict) -> dict:
     records, pending = [], []
     for account in REVIEWERS:
         review = latest.get(account)
-        markers = [line[len(PREFIX):] for line in (review or {}).get("body", "").splitlines() if line.startswith(PREFIX)]
+        raw_body = (review or {}).get("body") or ""
+        markers = [line[len(PREFIX):] for line in raw_body.splitlines() if line.startswith(PREFIX)]
         try:
             declared = json.loads(markers[0]) if len(markers) == 1 else None
         except (ValueError, TypeError):
@@ -84,7 +85,8 @@ def collect(reviews: list[dict], target: dict) -> dict:
             and review.get("user", {}).get("type") == "User"
             and review.get("submitted_at")
             and review.get("html_url") == expected_url
-            and declared == target
+            and ((declared == target and raw_body.strip() == review_text(target).strip())
+                 or (allow_empty_approval and not raw_body.strip()))
         ):
             pending.append(account)
             continue
@@ -92,6 +94,7 @@ def collect(reviews: list[dict], target: dict) -> dict:
             "account": account, "review_id": review["id"],
             "submitted_at": review["submitted_at"], "evidence_url": review["html_url"],
             "decision": "APPROVE_FOR_STATED_SCOPE", "binding": target,
+            "scope_basis": "EXPLICIT_REVIEW_MARKER" if declared == target else "GITHUB_EXACT_HEAD_APPROVAL",
             "authority_status": "NOT_VERIFIED", "signature": None,
         })
     return {
@@ -131,7 +134,7 @@ def snapshot(get=github_get) -> tuple[dict, dict]:
     after = get(f"pulls/{PR}")
     if after.get("head", {}).get("sha") != head or after.get("state") != "open":
         raise ValueError("PR_CHANGED_DURING_READ")
-    return target, collect(reviews, target)
+    return target, collect(reviews, target, allow_empty_approval=True)
 
 
 def main() -> int:

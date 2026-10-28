@@ -40,7 +40,8 @@ def fixture():
                  "issues/410/comments?per_page=100&page=1": [comment],
                  "pulls/410/reviews?per_page=100&page=1": reviews}
     for name, content in [("approved_github_actions_policy.manifest.json", MANIFEST),
-                          ("approved_github_actions_policy.json", POLICY)]:
+                          ("approved_github_actions_policy.json", POLICY),
+                          ("approved_github_actions_policy.approvals.json", json.dumps(record).encode())]:
         responses[f"contents/governance/{name}?ref={HEAD}"] = {
             "encoding": "base64", "content": base64.b64encode(content).decode()}
     return record, responses, declaration
@@ -128,7 +129,8 @@ def test_any_new_pr_head_requires_fresh_bound_reviews_and_mandate():
     head = "b" * 40
     responses["pulls/410"]["head"]["sha"] = head
     for name, content in [("approved_github_actions_policy.manifest.json", MANIFEST),
-                          ("approved_github_actions_policy.json", POLICY)]:
+                          ("approved_github_actions_policy.json", POLICY),
+                          ("approved_github_actions_policy.approvals.json", json.dumps(record).encode())]:
         responses[f"contents/governance/{name}?ref={head}"] = {
             "encoding": "base64", "content": base64.b64encode(content).decode()}
     assert verify(record, responses, head)["decision"] == "FAIL_CLOSED"
@@ -217,3 +219,27 @@ def test_local_hash_declaration_cannot_substitute_different_reviewed_source():
     record, responses, _ = fixture()
     responses[f"contents/governance/approved_github_actions_policy.json?ref={HEAD}"]["content"] = base64.b64encode(b"other").decode()
     assert verify(record, responses)["reason"] == "GITHUB_POLICY_REVIEWED_BYTES_MISMATCH"
+
+
+def test_native_approve_needs_no_pasted_text_but_still_requires_owner_mandate():
+    record, responses, _ = fixture()
+    reviews = responses["pulls/410/reviews?per_page=100&page=1"]
+    for review in reviews:
+        review["body"] = None
+    result = verify(record, responses)
+    assert result["decision"] == "PASS"
+    assert all(review["scope_basis"] == "GITHUB_EXACT_HEAD_APPROVAL" for review in result["review_evidence"])
+    responses["issues/410/comments?per_page=100&page=1"].clear()
+    assert verify(record, responses)["reason"] == "GITHUB_POLICY_OWNER_MANDATE_MISSING"
+
+
+def test_native_approval_cannot_override_conflicting_text_or_unreviewed_specification():
+    record, responses, _ = fixture()
+    review = responses["pulls/410/reviews?per_page=100&page=1"][0]
+    review["body"] = "I do not approve policy adoption."
+    assert verify(record, responses)["decision"] == "FAIL_CLOSED"
+    review["body"] = review_text(binding(HEAD, MANIFEST, POLICY)) + "\nI do not approve policy adoption."
+    assert verify(record, responses)["decision"] == "FAIL_CLOSED"
+    review["body"] = ""
+    responses[f"contents/{APPROVAL_PATH}?ref={HEAD}"]["content"] = base64.b64encode(b"{}").decode()
+    assert verify(record, responses)["reason"] == "GITHUB_POLICY_REVIEWED_SPECIFICATION_MISMATCH"

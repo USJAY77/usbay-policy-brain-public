@@ -59,7 +59,10 @@ not two independent reviews or a grant of either governance role.
 `python -m scripts.pb364_review_evidence collect` reads all review pages and
 prints JSON evidence to stdout. It copies GitHub account, submitted timestamp,
 review ID and URL only from submitted reviews. It requires both nominated User
-accounts, APPROVED state, exact current commit and the complete binding marker.
+accounts, APPROVED state and exact current commit. A nonempty review body must
+match the complete prepared draft including its binding marker. A native Approve with an empty
+body needs no pasted text; it is recorded as GITHUB_EXACT_HEAD_APPROVAL, with
+authority still unverified until the separate owner-mandate check succeeds.
 Stale, dismissed, broader, malformed or absent decisions remain pending. A later
 submitted objection takes precedence. A head change during reading fails closed.
 Pending collection exits 2; read/validation failures exit 1. Neither command
@@ -87,9 +90,12 @@ and submit only the declaration line in a separate PR comment. A quoted or
 multiline AI draft cannot satisfy this requirement. No mandate is created by
 login, write access, reviewer nomination, a review request or this document.
 
-The reviewers each inspect and submit the prepared exact-head decision. The
-marker explicitly states CI_POLICY_ADOPTION, the exact manifest/policy hashes,
-scope and exclusions. It does not authorize merging or production operation.
+The reviewers each inspect the final PR and choose Approve then Submit review
+from their own account. No pasted text is required. That native action approves
+the exact head containing the policy, manifest and verification specification;
+the owner's explicit mandate supplies the bounded CI-policy scope and roles.
+Optional prepared text carries the same binding. Conflicting nonempty text is
+not silently ignored. No decision authorizes merging or production operation.
 
 The v2 verification specification is committed before human decisions. This
 avoids a self-referential commit hash and avoids dismissing reviews with a later

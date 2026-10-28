@@ -79,6 +79,8 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
         if (_file(get, "governance/approved_github_actions_policy.manifest.json", candidate) != manifest
                 or _file(get, "governance/approved_github_actions_policy.json", candidate) != policy):
             return _fail("GITHUB_POLICY_REVIEWED_BYTES_MISMATCH")
+        if json.loads(_file(get, APPROVAL_PATH, candidate)) != record:
+            return _fail("GITHUB_POLICY_REVIEWED_SPECIFICATION_MISMATCH")
         repo = get("")
         owner = repo["owner"]
         if repo["full_name"] != REPO or owner.get("type") != "User" or type(owner.get("id")) is not int:
@@ -126,7 +128,10 @@ def verify_github_adoption(record, manifest, policy, head, *, get=github_get):
                 or set(roles.values()) != {"governance_owner", "security_reviewer"}):
             return _fail("GITHUB_POLICY_OWNER_ROLES_INVALID")
         reviews = _pages(get, f"pulls/{PR}/reviews")
-        observed = collect(reviews, target)
+        # Native Approve approves the exact head containing this specification
+        # and policy. Scope/authority come from the explicit owner mandate, not
+        # an invented review-body declaration. Nonempty conflicting text fails.
+        observed = collect(reviews, target, allow_empty_approval=True)
         if observed["pending_reviewers"]:
             return _fail("GITHUB_POLICY_SCOPED_REVIEWS_PENDING")
         if (_pages(get, f"issues/{PR}/comments") != comments
