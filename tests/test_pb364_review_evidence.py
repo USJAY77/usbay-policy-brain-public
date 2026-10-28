@@ -65,10 +65,24 @@ def test_later_objection_overrides_prior_approval_even_on_older_commit():
     assert collect([objection] + items, TARGET)["pending_reviewers"] == ["USBAY-AUDIT"]
 
 
+def test_comment_only_review_does_not_revoke_a_valid_approval():
+    items = reviews()
+    neutral = dict(items[0], id=3, state="COMMENTED", commit_id="b" * 40, body="Follow-up question")
+    assert collect(items + [neutral], TARGET)["status"] == "REVIEWS_RECORDED"
+
+
 def test_later_comment_does_not_override_prior_approval():
     items = reviews()
     comment = dict(items[0], id=3, state="COMMENTED", body="Follow-up comment")
     assert collect([comment] + items, TARGET)["status"] == "REVIEWS_RECORDED"
+
+
+def test_comment_only_review_cannot_clear_changes_requested_or_dismissal():
+    for state in ("CHANGES_REQUESTED", "DISMISSED"):
+        items = reviews()
+        objection = dict(items[0], id=3, state=state)
+        neutral = dict(items[0], id=4, state="COMMENTED", body="More context")
+        assert collect(items + [objection, neutral], TARGET)["pending_reviewers"] == ["USBAY-AUDIT"]
 
 
 def test_duplicate_markers_and_duplicate_accounts_do_not_satisfy_two_reviews():

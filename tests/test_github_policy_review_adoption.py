@@ -64,7 +64,7 @@ def test_live_owner_mandate_and_scoped_reviews_allow_only_ci_adoption():
 
 @pytest.mark.parametrize("field,value", [("schema", "unknown"), ("repository", "other/repo"),
     ("pr", 409), ("verification_mode", "OFFLINE_PASS"), ("manifest_sha256", "0" * 64),
-    ("policy_sha256", "0" * 64), ("authority_comment_id", True),
+    ("policy_sha256", "0" * 64), ("authority_comment_id", True), ("required_approvers", 1),
     ("review_ids", {"USBAY-AUDIT": 1, "USBAY-GLOBAL23": 1})])
 def test_forged_local_record_cannot_grant_authority(field, value):
     record, responses, _ = fixture()
@@ -252,3 +252,14 @@ def test_native_approval_cannot_override_conflicting_text_or_unreviewed_specific
     review["body"] = ""
     responses[f"contents/{APPROVAL_PATH}?ref={HEAD}"]["content"] = base64.b64encode(b"{}").decode()
     assert verify(record, responses)["reason"] == "GITHUB_POLICY_REVIEWED_SPECIFICATION_MISMATCH"
+
+
+def test_durable_live_adoption_survives_comment_but_not_a_real_objection():
+    record, responses, _ = fixture()
+    reviews = responses["pulls/410/reviews?per_page=100&page=1"]
+    neutral = dict(reviews[0], id=3, state="COMMENTED", body="Follow-up question")
+    reviews.append(neutral)
+    assert verify(record, responses)["decision"] == "PASS"
+    reviews.append(dict(reviews[0], id=4, state="CHANGES_REQUESTED"))
+    reviews.append(dict(neutral, id=5))
+    assert verify(record, responses)["reason"] == "GITHUB_POLICY_SCOPED_REVIEWS_PENDING"

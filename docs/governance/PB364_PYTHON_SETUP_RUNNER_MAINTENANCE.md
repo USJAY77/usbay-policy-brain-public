@@ -97,6 +97,11 @@ the owner's explicit mandate supplies the bounded CI-policy scope and roles.
 Optional prepared text carries the same binding. Conflicting nonempty text is
 not silently ignored. No decision authorizes merging or production operation.
 
+GitHub COMMENTED and PENDING reviews are neutral: they do not replace an existing
+approval. A later CHANGES_REQUESTED or DISMISSED decision still blocks adoption,
+and a comment cannot clear that objection. Any changed PR head still requires
+new approvals, even when a comment references another commit.
+
 The v2 verification specification is committed before human decisions. This
 avoids a self-referential commit hash and avoids dismissing reviews with a later
 registration commit. The current exact candidate is resolved from PR #410, not
@@ -147,3 +152,22 @@ The live checks use public GitHub GET endpoints without credentials. API outages
 rate limits or deleted evidence block validation; there is no offline PASS or
 fallback to placeholders. This is a CI-specific GitHub evidence adapter, not a
 provider-independent production signing system.
+
+## Additional review corrections
+
+The unmarked legacy PR-review authorization test module had two v1 assumptions
+against the v2 specification. Its placeholder contract now uses an explicit
+historical v1 fixture; the current v2 specification is separately checked to
+grant no production authority by itself. Its quorum assertions use the fixed
+two-reviewer policy instead of a removed JSON field. The whole module is marked
+governance, so the required PR tier now executes these existing consumers.
+
+The workflow bootstrap guard and its eight positive workflow fixtures now expect
+setup-python v7, consistent with the candidate policy/workflows. New governance
+tests exercise the real workflow plus absent and disallowed setup versions.
+No bootstrap requirement is removed. New cases also prove that neutral comments
+preserve an approval while real objections and dismissals remain blocking.
+
+These source changes require fresh exact-head reviews. Previously recorded
+reviews and successful runs remain historical evidence for their original head;
+they must not be relabeled as approval of a changed candidate.
