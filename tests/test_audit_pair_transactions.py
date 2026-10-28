@@ -178,6 +178,7 @@ def test_fsync_failure_never_reports_success(tmp_path, monkeypatch, boundary):
     assert calls == boundary
     assert chain.verify_chain(path) is (boundary >= 7)
     assert ledger._log_path(evidence).exists()
+    assert not list(tmp_path.glob(".audit-pair-*"))
 
 
 @pytest.mark.parametrize("fault", ["empty", "tail", "unknown_version", "duplicate_key", "orphan", "digest", "oversize"])

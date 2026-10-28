@@ -330,13 +330,19 @@ def _record(log, kind, txid, payload):
 def _publish_chain(path, data):
     descriptor, temporary = tempfile.mkstemp(prefix=".audit-pair-", dir=path.parent)
     try:
-        if path.exists():
-            os.fchmod(descriptor, stat.S_IMODE(path.stat().st_mode) & 0o600)
-        _write_all(descriptor, data)
-        os.fsync(descriptor)
+        try:
+            if path.exists():
+                os.fchmod(descriptor, stat.S_IMODE(path.stat().st_mode) & 0o600)
+            _write_all(descriptor, data)
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
+        os.replace(temporary, path)
     finally:
-        os.close(descriptor)
-    os.replace(temporary, path)
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
     _fsync_directory(path.parent)
 
 
