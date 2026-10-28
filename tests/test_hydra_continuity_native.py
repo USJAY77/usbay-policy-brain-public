@@ -10,6 +10,7 @@ from governance.durable_authority_registries import HUMAN_APPROVAL
 
 pytestmark=[pytest.mark.governance,pytest.mark.regression]
 HELPERS=pathlib.Path(__file__).parent/"helpers"
+from security.hydra_continuity import reserve as reserve_continuity
 from security.hydra_live_client import hydra_endpoint_url_hash
 from tests.helpers.hydra_transport import configure_transport_authority,NOW
 from tests.test_hydra_live_client import authorized_context
@@ -116,6 +117,15 @@ def test_valid_then_replay_after_client_restart(node,tmp_path,monkeypatch):
     first=attempt(fixture);second=attempt(fixture)
     evidence("valid-replay",{"first":first,"second":second,"node_entries":count(tmp_path)})
     assert first["admitted"] and not second["admitted"] and count(tmp_path)==1
+
+def test_native_continuity_replay_preserves_denial_code(node,tmp_path,monkeypatch):
+    fixture,_,_=setup(node,tmp_path,monkeypatch)
+    continuity=node[2][-1]
+    mandate=json.loads(fixture.read_text())["context"]["hydra_remote_transport_authorization"]
+    reserve_continuity(continuity.config,mandate)
+    observed=attempt(fixture)
+    assert not observed["admitted"]
+    assert observed["reason"]=="hydra_remote_transport_authorization_replayed"
 
 def test_registry_only_restore_is_blocked(node,tmp_path,monkeypatch):
     fixture,registry,record=setup(node,tmp_path,monkeypatch)

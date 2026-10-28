@@ -12,7 +12,7 @@ import sqlite3
 import threading
 import time
 from pathlib import Path
-from urllib import request
+from urllib import error, request
 
 from security.hydra_continuity_contracts import (
     VERSION, ContinuityDenied, binding, canonical, check_scope, decode, digest, exact,
@@ -127,7 +127,18 @@ class NoRedirect(request.HTTPRedirectHandler):
 def exchange(url, value):
     # Only trusted loopback reference URLs are admitted by trust(). No proxies.
     req = request.Request(url, data=canonical(value), headers={"Content-Type": "application/json"})
-    with request.build_opener(request.ProxyHandler({}), NoRedirect()).open(req, timeout=5) as response:
+    try:
+        response = request.build_opener(request.ProxyHandler({}), NoRedirect()).open(req, timeout=5)
+    except error.HTTPError as response:
+        raw = response.read(1048577)
+        require(len(raw) <= 1048576)
+        if response.code != 403:
+            raise ContinuityDenied() from None
+        denied = decode(raw)
+        exact(denied, {"denied"})
+        require(type(denied["denied"]) is str)
+        raise ContinuityDenied(denied["denied"])
+    with response:
         raw = response.read(1048577)
         require(len(raw) <= 1048576)
         return decode(raw)
