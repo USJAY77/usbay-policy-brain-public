@@ -1,4 +1,116 @@
-# Bounded Hydra transport authority correction
+# Hydra transport authority: current v2 and historical v1
+
+## Current PB-362 contract and scope
+
+This section describes the PB-362 candidate at
+`c8da79ae3898683057bdaccbfe2cf7d18ae02472`. The earlier implementation record
+below is historical v1 evidence, not current setup or recovery guidance.
+See [Hydra continuity reference](hydra-continuity-reference.md) for the current
+reference model and its limitations. This documentation grants no operational
+provisioning, enrollment, recovery, migration or activation authority.
+
+Both `HydraLiveNodeClient.vote` and `RemoteHydraNode.evaluate` require the shared
+admission boundary before remote node I/O. The mandatory transport contract is
+`usbay.hydra.transport_mandate.v2`; v1 mandates are rejected. The separate
+continuity wire schema remains `usbay.hydra.continuity.v1`, which is not a v1
+transport mandate. The exact signed fields are `MANDATE_FIELDS` in
+`security/hydra_continuity_contracts.py`; v2 adds continuity identity, logical
+store identity, generation and authority epoch to the earlier transport fields.
+Tenant, environment, policy, request, node and endpoint bindings remain required.
+The local issuer record and the independently verified service issuer state must
+explicitly authorize v2. Changing a version string without valid signatures,
+scope and history is not migration.
+
+## Reference-only configuration and availability
+
+The current backend requires `USBAY_ENV=test`, trust mode
+`synthetic_reference_only`, and explicit `USBAY_HYDRA_CONTINUITY_TRUST` configuration.
+Service and witness URLs must be HTTP on literal `127.0.0.1` with explicit ports;
+this restriction is for those reference endpoints, not the remote node URL.
+The trust document binds distinct control/service/witness verification keys,
+identities, generation, epoch, tenant, environment and policy scope. The original
+registry, environment, replay-path and detached-mandate settings remain necessary
+for their respective paths, but those four settings alone are insufficient.
+Direct client integrations may supply a signed mandate in trusted context;
+Gateway detached delivery uses `USBAY_HYDRA_TRANSPORT_MANDATES_PATH`.
+
+Gateway selects live clients with `HYDRA_NODE_URLS` or
+`USBAY_HYDRA_BACKEND=services`; within that client family, per-node
+`USBAY_HYDRA_NODE_1_URL` through `USBAY_HYDRA_NODE_3_URL` configure endpoints
+when the URL list is absent. The mixed stack uses `USBAY_HYDRA_REMOTE_URL`.
+Selecting a URL or backend does not provide transport authority. Rejected remote
+admission removes that usable vote; overall request availability depends on the
+remaining clients and quorum. No claim that every mixed-stack request stops is
+made. Existing remote integrations may lose availability until a separately
+reviewed migration decision is implemented. There is no operational provider
+backend or production-enablement procedure here; setting production to test mode
+is not an acceptable migration.
+
+The repository's legacy `scripts/test_hydra_live.sh` constructs these live clients
+with node-decision context but no signed transport mandate. Its positive consensus
+expectations are not a current v2 configuration example or authority source; the
+missing-mandate check blocks those calls. This script was not run or corrected
+for this documentation proposal. Node launcher scripts only start node services;
+they do not provision issuers, continuity stores or witness trust.
+
+## Storage and stopped states
+
+Gateway storage is open-only: an existing exact schema, signed provisioning
+metadata and consistent append-only events/materialized replay index are required.
+An old v1 database containing only `hydra_transport_reservations` is insufficient.
+Admission never creates, imports, resets or upgrades it. Synthetic fixtures use
+explicit control-signed provisioning for disposable stores; those helpers grant
+no operational provisioning authority.
+
+The local `CONTINUITY_PENDING` record commits before the service call. Service
+consumption, witness append, local `START_RESERVED` evidence and node effects are
+separate transactions. Lost replies, timeout or interruption never release a
+reservation or authorize automatic retry. A service head/sequence mismatch with
+the independently current witness stops admission. Witness loss, rollback,
+conflict or unverifiable freshness remains `STOPPED_UNVERIFIED_HEAD`; the public
+transport boundary may report `trust_unavailable`. A fresh signature alone does
+not establish current history. Witness process restart loses the live pin and
+remains stopped; there is no witness reopen/recovery API or self-baselining.
+Proof-based reopening of intact, already-witnessed service history does not
+recover lost or mismatched history. The `RECOVER` contract validator only verifies
+a `STOPPED_RECONCILIATION_ONLY` review contract; it does not perform recovery.
+
+## Human migration prerequisites and preservation
+
+Before any separate operational decision, human reviewers must identify affected
+v1 issuers, both remote client families, deployed configurations and external
+consumers, recording unknowns and availability/quorum impact. They must decide
+which consumers remain stopped, are retired, or require a separately authorized
+operational v2 design. Repository search cannot establish absence of external
+consumers, enrollment or production readiness.
+
+Preserve all consumption nonce/authorization-ID history, issuer and revocation
+events, witness history, receipts, pending records and uncertainty. Establish
+independently current head, sequence, generation and epoch evidence before any
+admission. Do not restore older histories, delete spent grants, automatically
+reinitialize stores, bump generations to bypass uncertainty, or downgrade to
+unwitnessed v1. A safe operational import/reconciliation protocol, verified human
+provisioning/recovery authority, independent infrastructure/key custody and the
+witness's independent recovery protocol remain separate unresolved requirements;
+this candidate supplies none of those operational procedures.
+
+Keep Draft, `hold_for_evidence`, and EGAP-HYDRA-REMOTE-TRANSPORT-AUTH open until
+the required human assessment and supporting evidence are explicitly recorded.
+Green CI, reviewer account names, role labels or empty-body GitHub approvals do
+not establish migration acceptance or operational authority. Auto-merge remains
+prohibited. Synthetic/native local tests do not prove production independence,
+including coherent restoration of witness process memory together with disk.
+Recording a migration assessment alone does not close EGAP or authorize merge
+or operational action.
+
+## Historical v1 implementation record — not current instructions
+
+The retained sections below describe the earlier bounded v1 implementation,
+including its then-current status, configuration, transactions and validation
+claims. They are preserved for audit, are superseded by the current v2 section
+above, and must not be used as current setup, migration or rollback instructions.
+
+
 
 Status: local, uncommitted candidate. Base: d5777f747ca195c1b8fcb76de11c1f2d7c2894a6.
 No new PB identifier, issuer registration, operational grant, deployment,
