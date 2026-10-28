@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   auto-fix:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
       PYTHONPATH: ${{ github.workspace }}
@@ -38,7 +38,7 @@ jobs:
           git ls-files | grep secret_provider
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: "3.11"
 

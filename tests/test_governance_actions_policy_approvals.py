@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -10,13 +11,30 @@ from tests.helpers.governance_policy_manifest import MANIFEST_PATH
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def _synthetic_approvals() -> dict:
+    # Independent temporary test fixtures, never repository adoption evidence.
+    return {
+        "schema": "usbay.github_actions_policy_approvals.v1",
+        "fail_closed_on_missing_approval": True,
+        "required_approvers": 2,
+        "manifest_sha256": hashlib.sha256(MANIFEST_PATH.read_bytes()).hexdigest(),
+        "approvals": [
+            {"approver_id": "synthetic-test-" + role, "role": role,
+             "approved_at": "2026-01-01T00:00:00Z",
+             "approval_reason": "Synthetic fixture only; no human authority.",
+             "signature_placeholder": "SIGNATURE_PLACEHOLDER_NON_PRODUCTION_DO_NOT_TRUST"}
+            for role in ("governance_owner", "security_reviewer")
+        ],
+    }
+
+
 def _write_approval_tree(tmp_path: Path, *, approvals: dict | None = None, manifest_text: str | None = None) -> Path:
     governance = tmp_path / "governance"
     governance.mkdir(parents=True)
     manifest = manifest_text if manifest_text is not None else MANIFEST_PATH.read_text(encoding="utf-8")
     governance.joinpath("approved_github_actions_policy.manifest.json").write_text(manifest, encoding="utf-8")
     if approvals is None:
-        approvals = json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
+        approvals = _synthetic_approvals()
     governance.joinpath("approved_github_actions_policy.approvals.json").write_text(
         json.dumps(approvals, sort_keys=True, indent=2) + "\n",
         encoding="utf-8",
@@ -48,7 +66,7 @@ def test_missing_approval_file_fails_closed(tmp_path: Path) -> None:
 
 
 def test_one_approval_only_fails_closed(tmp_path: Path) -> None:
-    approvals = json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
+    approvals = _synthetic_approvals()
     approvals["approvals"] = approvals["approvals"][:1]
     root = _write_approval_tree(tmp_path, approvals=approvals)
 
@@ -84,7 +102,7 @@ def test_malformed_approval_file_fails_closed(tmp_path: Path) -> None:
 
 
 def test_unknown_approver_role_fails_closed(tmp_path: Path) -> None:
-    approvals = json.loads(APPROVALS_PATH.read_text(encoding="utf-8"))
+    approvals = _synthetic_approvals()
     approvals["approvals"][0]["role"] = "untrusted_admin"
     root = _write_approval_tree(tmp_path, approvals=approvals)
 
