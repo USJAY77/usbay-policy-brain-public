@@ -1238,6 +1238,8 @@ def validate_replay_policy_startup():
 
 
 def validate_hydra_consensus_startup():
+    if os.getenv("USBAY_NODE_ATTESTATION_ADAPTER") and hydra_live_mode_enabled():
+        raise DecisionStoreError("confidential_space_live_backend_unsupported")
     expected_roles = {
         "node-1": "primary",
         "node-2": "secondary",
@@ -2680,6 +2682,10 @@ def create_governance_decision(payload):
             "replay_registry_hash": replay_hash_value,
             "attestation_timestamp": attestation_timestamp,
             "normalized_provenance_context": normalized_context,
+            # Only the opt-in measured local producer receives the original signed
+            # request transiently; RemoteHydraNode strips it before any transport.
+            **({"confidential_space_signed_request": payload.copy()}
+               if os.getenv("USBAY_NODE_ATTESTATION_ADAPTER") == "google-confidential-space-oidc-rs256-v1" and not hydra_live_mode_enabled() else {}),
         },
     )
     audit_hydra_consensus(hydra_result, tenant_context=tenant_context)

@@ -135,6 +135,13 @@ class InProcessHydraNode(HydraNodeClient):
         self.node_id = node_id
 
     def evaluate(self, request_hash: str, policy_version: str, context: dict | None = None) -> HydraNodeDecision:
+        from security import confidential_space_attestation as cs
+        if cs.enabled():
+            try:
+                return sign_hydra_node_decision(cs.evaluate(self.node_id, request_hash, policy_version, context))
+            except cs.AttestationRejected as exc:
+                cs.diagnostic(exc.code, exc.stage, self.node_id, request_hash)
+                raise
         state = _state_fields(self.node_id, request_hash, context)
         return sign_hydra_node_decision(
             HydraNodeDecision(
@@ -165,14 +172,37 @@ class SubprocessHydraNode(HydraNodeClient):
             "policy_version": policy_version,
             "context": context or {},
         }
-        completed = subprocess.run(
-            [sys.executable, "-m", "security.hydra_nodes", "--worker"],
-            input=json.dumps(payload),
-            text=True,
-            capture_output=True,
-            timeout=self.timeout_seconds,
-            check=True,
-        )
+        from security import confidential_space_attestation as cs
+        connected = cs.enabled()
+        serialized = json.dumps(payload, allow_nan=not connected)
+        if connected:
+            cs.require(len(serialized.encode()) <= cs.LIMIT, "SIZE", "worker")
+        try:
+            completed = subprocess.run(
+                [sys.executable, "-m", "security.hydra_nodes", "--worker"],
+                input=serialized,
+                text=True,
+                capture_output=True,
+                timeout=self.timeout_seconds,
+                check=True,
+            )
+        except subprocess.TimeoutExpired:
+            if connected: cs.diagnostic("WORKER_TIMEOUT", "worker", self.node_id, request_hash)
+            raise
+        except subprocess.CalledProcessError as exc:
+            if connected:
+                cs.worker_failure(exc.stdout or "", self.node_id, request_hash, exc.returncode)
+            raise
+        if connected:
+            try:
+                config, policy = cs.settings()
+                verified = cs.verify(completed.stdout, cs.scope(self.node_id, request_hash, policy_version, context), config, policy)
+                cs.diagnostic("VERIFIED", "worker_admission", self.node_id, request_hash,
+                              evidence=completed.stdout.encode(), worker_exit=completed.returncode)
+                return sign_hydra_node_decision(verified)
+            except cs.AttestationRejected as exc:
+                cs.diagnostic(exc.code, exc.stage, self.node_id, request_hash, worker_exit=completed.returncode)
+                raise
         return HydraNodeDecision.from_dict(json.loads(completed.stdout))
 
 
@@ -196,7 +226,7 @@ class RemoteHydraNode(HydraNodeClient):
                 "request_hash": request_hash,
                 "policy_version": policy_version,
                 "context": {k: v for k, v in context.items()
-                            if k != "hydra_remote_transport_authorization"},
+                            if k not in {"hydra_remote_transport_authorization", "confidential_space_signed_request"}},
             }
         ).encode("utf-8")
         hydra_request = request.Request(
@@ -267,6 +297,19 @@ def collect_node_decisions(
 
 
 def _worker() -> None:
+    from security import confidential_space_attestation as cs
+    if cs.enabled():
+        try:
+            payload = cs.decode(sys.stdin.read(cs.LIMIT + 1))
+            cs.require(isinstance(payload, dict) and set(payload) == {"node_id","request_hash","policy_version","context"}, "WORKER_REPLY", "producer")
+            config, policy = cs.settings()
+            packet = cs.produce(str(payload.get("node_id", "node-2")), str(payload.get("request_hash", "")),
+                                str(payload.get("policy_version", "")), payload.get("context"), config, policy)
+            print(packet.decode())
+        except cs.AttestationRejected as exc:
+            print(json.dumps({"error": {"code": exc.code, "stage": exc.stage}}))
+            raise SystemExit(2)
+        return
     payload = json.loads(sys.stdin.read())
     node = InProcessHydraNode(node_id=str(payload.get("node_id", "node-2")))
     decision = node.evaluate(
