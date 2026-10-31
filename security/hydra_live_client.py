@@ -121,7 +121,7 @@ class HydraLiveNodeClient:
                 "policy_version": policy_version,
                 "action": action,
                 "context": {k: v for k, v in context.items()
-                            if k != "hydra_remote_transport_authorization"},
+                            if k not in {"hydra_remote_transport_authorization", "confidential_space_signed_request"}},
             },
             sort_keys=True,
             separators=(",", ":"),
