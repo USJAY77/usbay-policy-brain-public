@@ -182,6 +182,15 @@ def _freshness_field_for(domain: str) -> str:
     }.get(domain, "")
 
 
+@pytest.fixture(autouse=True)
+def isolated_consumer_audit_keys(tmp_path: Path, monkeypatch):
+    # All real consumer paths (also tests without harness) need disposable keys.
+    # Explicit overrides in an individual test still run after this fixture.
+    from tests.test_audit_exporter import isolated_anchor_keys
+
+    isolated_anchor_keys(tmp_path / "audit-keys", monkeypatch)
+
+
 @pytest.fixture()
 def harness(tmp_path: Path):
     request = _request()
@@ -917,3 +926,29 @@ def test_invalid_decision_clock_blocks(harness) -> None:
     decision = make(now=datetime(2026, 8, 8, 10, 0, 0))  # naive datetime
     assert decision["decision"] == "BLOCK"
     assert "DECISION_CLOCK_INVALID" in decision["reason_codes"]
+
+
+def test_real_consumer_audit_preserves_source_fingerprints(harness):
+    import hashlib
+    import audit.keys as audit_keys
+    from audit.immutable_ledger import ledger_path_for, verify_ledger
+
+    root = Path(__file__).resolve().parents[1]
+    public_path = root / "audit/public_key.pem"
+
+    def snapshot():
+        return {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in root.rglob("*") if path.is_file()
+                and ".git" not in path.relative_to(root).parts
+                and "__pycache__" not in path.parts}
+
+    before = snapshot()
+    _, _, make, tmp_path = harness
+    decision = make()
+    assert decision["decision"] == "ALLOW"
+    assert verify_ledger(ledger_path_for(tmp_path / "audit_chain.json"))
+    assert audit_keys.DEFAULT_PUBLIC_KEY_PATH.is_relative_to(tmp_path)
+    assert audit_keys.DEFAULT_PUBLIC_KEY_PATH.is_file()
+    assert snapshot() == before
+    # Preserve any pre-existing historical artifact and prove no new one appears.
+    assert public_path.is_file() == ("audit/public_key.pem" in before)
