@@ -1,0 +1,195 @@
+{
+  "artifact_type": "proposed_evidence_only_lifecycle_supersession_record",
+  "schema": null,
+  "schema_authority": {
+    "status": "UNKNOWN",
+    "review_required": true,
+    "authoritative_schema_claimed": false,
+    "explanation": "No established EGAP reopening/supersession schema was identified in the inspected repository contracts. The existing general lifecycle-governance contract does not establish authority for this proposed EGAP record. Field names and transition labels below are a review proposal, not an established governance-standard enum."
+  },
+  "gap_id": "EGAP-HYDRA-REMOTE-TRANSPORT-AUTH",
+  "candidate_status": "LOCAL_UNCOMMITTED_REVIEW_CANDIDATE",
+  "authoritative_source": {
+    "repository": "USJAY77/usbay-policy-brain-public",
+    "ref": "main",
+    "commit": "f532a7794c194a0686ddab37ad5f94d01d4f8f87",
+    "tree": "f56a737150621bfafe8c3cb8184b4bbf910e9fa9",
+    "scope": "Pinned authoritative-main source observation for this candidate, not a claim that remote main can never advance."
+  },
+  "historical_state": "CLOSED",
+  "historical_closure": {
+    "pull_request": 388,
+    "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/388",
+    "merge_commit": "cc2f74cdac522aba33207dfed523bb4534a11e49",
+    "record_path": "governance/evidence/egap_hydra_remote_transport_auth_closure.json",
+    "git_blob_sha1": "f0c5df6e3f85cbe6867b194de9fbb65ae9077f86",
+    "sha256": "6ec6fc2d977150343528b84e5bf96b80ddc25af6cf2e1a770888989d33a7127b",
+    "historical_scope": "Hydra P1 / earlier bounded v1 remote transport authorization evidence",
+    "recorded_implementation_pull_request": 332,
+    "verification_scope": "PR/merge identity, source ancestry and exact historical artifact bytes checked. The artifact records historical CI, approvals and post-change validation; those historical checks were not rerun or independently re-performed by this preparation."
+  },
+  "current_state": "OPEN",
+  "transition_type": "SUPERSEDED_SCOPE",
+  "required_lifecycle_action": "REOPEN_REQUIRED",
+  "transition_vocabulary_status": "PROPOSED_REVIEW_REQUIRED",
+  "lifecycle_transition_executed": false,
+  "reopening_timestamp_utc": null,
+  "reopening_timestamp_status": "UNKNOWN; no reopening timestamp is asserted",
+  "supersession_reason": "The historical v1 closure remains valid as retained evidence for its original bounded scope. PB-361, PB-362 and PB-367 introduced materially stronger current v2 transport, continuity and operational assurance requirements. The original closure evidence does not satisfy those broader requirements. OPEN records the later source-evidenced assurance gap for review; this local file executes no governed reopening or closure decision.",
+  "superseding_evidence": [
+    {
+      "pb": "PB-361",
+      "pull_request": 405,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/405",
+      "merge_commit": "0d2d33468a8489e75adb8ab461549c0bc75003c7",
+      "finding": "Broader production transport assurance is not closed. Real transport, production issuer enrollment/key custody, external-node identity and related operational assurance remain unproven.",
+      "references": [
+        {
+          "commit": "0d2d33468a8489e75adb8ab461549c0bc75003c7",
+          "path": "docs/hydra-transport-authority.md",
+          "git_blob_sha1": "e31f11c97f0b30797177d1b7074036a01e77470c",
+          "sha256": "90447c68b5650fad4b01146f6f9b2f6bd29f18f27d7e0f272051a4a6937f1ae8"
+        }
+      ]
+    },
+    {
+      "pb": "PB-362",
+      "pull_request": 406,
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/pull/406",
+      "merge_commit": "2eff24b203c8023f2fe5b852c61d57d08fabe746",
+      "finding": "The shared contract mandates usbay.hydra.transport_mandate.v2. Continuity is a test-only synthetic_reference_only implementation. The broader EGAP explicitly remains OPEN.",
+      "references": [
+        {
+          "commit": "2eff24b203c8023f2fe5b852c61d57d08fabe746",
+          "path": "docs/hydra-continuity-reference.md",
+          "git_blob_sha1": "4f824095e4d6a53e27aa6f7848aed235841836a4",
+          "sha256": "d9d1fbeaa94f155fc6c397709e63b92a5bf85153964a9116d75a5e20bd972102"
+        },
+        {
+          "commit": "2eff24b203c8023f2fe5b852c61d57d08fabe746",
+          "path": "security/hydra_continuity_contracts.py",
+          "git_blob_sha1": "77d5bc0e330f401d5df40ce2975c534e74dc3cb3",
+          "sha256": "b5c7b67f373151ff541b5254cab2a95b6f91027628e6a12d0d5b19316aa32373"
+        }
+      ]
+    },
+    {
+      "pb": "PB-367",
+      "commit": "bb68f8008e5ace3505aeb62b3eca4a2498187036",
+      "url": "https://github.com/USJAY77/usbay-policy-brain-public/commit/bb68f8008e5ace3505aeb62b3eca4a2498187036",
+      "finding": "Operational evidence foundation supplies review contracts and an unavailable provider, not an operational backend or activation. The broader EGAP explicitly remains OPEN.",
+      "references": [
+        {
+          "commit": "bb68f8008e5ace3505aeb62b3eca4a2498187036",
+          "path": "docs/hydra-operational-evidence-foundation.md",
+          "git_blob_sha1": "d3c7af0c5d9a270324ae346f3a38a08ab3199699",
+          "sha256": "e6f0c12751f6bcbfc6c4cd94bfdbc4aa1705ca0b2f57f077ee3be5f57a899e40"
+        }
+      ]
+    }
+  ],
+  "current_limitations": [
+    {
+      "id": "operational_provider_backend",
+      "status": "UNAVAILABLE_IN_INSPECTED_HYDRA_CONTINUITY_FOUNDATION",
+      "description": "The operational continuity-provider foundation supplies UnavailableOperationalProvider only; no operational activation/backend is established. This does not deny the separate disabled Confidential Space attestation adapter exists.",
+      "references": [
+        {
+          "commit": "f532a7794c194a0686ddab37ad5f94d01d4f8f87",
+          "path": "security/hydra_operational_provider.py",
+          "git_blob_sha1": "774aca8068e7a71db81577360d0922dcbafe202a",
+          "sha256": "239846318774ff6d9e94c992b1f1afe64792cd5c877315d97df39854e074b241"
+        },
+        {
+          "commit": "f532a7794c194a0686ddab37ad5f94d01d4f8f87",
+          "path": "docs/confidential-space-node-attestation.md",
+          "git_blob_sha1": "8abe139f8dfc0286cef02690197584d21427b2b5",
+          "sha256": "ed3e0d1e1d1ba5b9a8dc76b575ab4fdfed578e576de757ef995ca1d393bceed5"
+        }
+      ]
+    },
+    {
+      "id": "continuity_reference",
+      "status": "SYNTHETIC_TEST_ONLY",
+      "description": "The current continuity reference requires USBAY_ENV=test and synthetic_reference_only; a mode name or valid synthetic signature is not operational authority.",
+      "references": [
+        {
+          "commit": "f532a7794c194a0686ddab37ad5f94d01d4f8f87",
+          "path": "security/hydra_continuity_contracts.py",
+          "git_blob_sha1": "77d5bc0e330f401d5df40ce2975c534e74dc3cb3",
+          "sha256": "b5c7b67f373151ff541b5254cab2a95b6f91027628e6a12d0d5b19316aa32373"
+        }
+      ]
+    },
+    {
+      "id": "production_identity_and_key_custody",
+      "status": "UNPROVEN",
+      "description": "Production remote-node and issuer enrollment, authentic external identity, governed custody, rotation and revocation are not proven by this source/evidence preparation."
+    },
+    {
+      "id": "independent_production_infrastructure",
+      "status": "UNPROVEN",
+      "description": "Local processes, stores and synthetic keys do not establish independent production administration or failure domains."
+    },
+    {
+      "id": "independent_currentness_and_recovery_authority",
+      "status": "UNPROVEN",
+      "description": "Independently current history and authorized operational recovery remain unproven. Fresh signatures alone do not establish current history."
+    },
+    {
+      "id": "operational_witness_recovery",
+      "status": "UNPROVEN",
+      "description": "No operational independent witness recovery is proven. Witness loss, rollback, conflict or unverifiable freshness must remain STOPPED_UNVERIFIED_HEAD; do not self-baseline or reset history.",
+      "references": [
+        {
+          "commit": "f532a7794c194a0686ddab37ad5f94d01d4f8f87",
+          "path": "docs/hydra-transport-authority.md",
+          "git_blob_sha1": "3e82fa4368992b0ca4adc3cf1c3bbc2f578c1100",
+          "sha256": "7377eb90ab44d1397acdd77522c293b6114e1f51dcbd759dbd9de4d8fe6e0129"
+        }
+      ]
+    },
+    {
+      "id": "deployment_and_production_authority",
+      "status": "NOT_GRANTED_BY_THIS_RECORD",
+      "description": "No deployment, production, enrollment, recovery or activation authority is granted or inferred. External/deployed configurations and authorities not established by this review remain UNKNOWN."
+    }
+  ],
+  "closure_prerequisites": {
+    "classification": "EVIDENCE_REQUIREMENTS_ONLY_NOT_IMPLEMENTATION_AUTHORITY",
+    "requirements": [
+      "Operational provider evidence bound to the actual approved workload, transport and current source.",
+      "Production remote-node and issuer identity, enrollment and scoped trust evidence.",
+      "Governed key custody, rotation and revocation evidence.",
+      "Independent transport, history currentness and infrastructure evidence, including the stated rollback/freshness fault model.",
+      "Authorized recovery and preservation evidence covering consumption, revocation, witness history, receipts, pending reservations and uncertainty; no history reset or unsafe v1 downgrade.",
+      "Appropriate explicit human governance assessment and candidate-specific CI evidence; existing role names, reviewer accounts or historical approvals do not supply new operational authority.",
+      "A separate explicit new lifecycle closure decision under an accepted schema and authorized human governance process."
+    ]
+  },
+  "governance_boundaries": {
+    "runtime_changed": false,
+    "tests_changed": false,
+    "workflows_changed": false,
+    "policy_changed": false,
+    "deployment_authorized": false,
+    "production_authorized": false,
+    "recovery_authorized": false,
+    "activation_authorized": false,
+    "enrollment_authorized": false,
+    "transport_execution_authorized": false,
+    "github_lifecycle_status_mutated": false,
+    "human_approval": "NOT_PROVIDED_BY_THIS_CANDIDATE",
+    "ci_results_claimed_by_this_candidate": false
+  },
+  "historical_preservation": {
+    "record_deleted": false,
+    "record_rewritten": false,
+    "record_invalidated": false,
+    "record_relabeled": false,
+    "original_scope_preserved": true,
+    "statement": "The PR #388 closure record remains unchanged and valid as historical evidence for its original bounded v1 scope. This new record neither overwrites that record nor reuses its approvals, CI or authority as evidence of current v2 operational assurance."
+  },
+  "transaction_and_recovery_limits": "Service consumption, witness publication, local evidence commits and node effects remain separate transactions. No cross-store atomicity, lost-history recovery, permission to release consumed reservations, or blind retry is claimed.",
+  "review_required": true
+}
