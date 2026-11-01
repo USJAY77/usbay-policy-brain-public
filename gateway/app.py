@@ -20,6 +20,7 @@ from security.compute_governance import compute_policy_state, validate_compute_r
 from security.compute_router import ComputeRoutingError, route_execution
 from gateway.authorization_request_consumer import consume_gateway_authorization_request
 from security import execution_lifecycle_store, gateway_lifecycle
+from security.replay_policy import ReplayPolicyError, load_replay_policy
 from gateway.live_policy_evaluation import handle_live_policy_evaluation
 from security.decision_store import (
     DecisionStoreError,
@@ -1186,49 +1187,10 @@ def canonical_execution_governance_gate() -> dict:
 
 
 def replay_policy_config():
-    defaults = {
-        "nonce_ttl_seconds": 300,
-        "timestamp_skew_seconds": 30,
-        "replay_fail_closed": True,
-    }
     try:
-        raw = json.loads(REPLAY_POLICY_PATH.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        raw = {}
-    except Exception as exc:
-        raise DecisionStoreError("invalid_replay_policy:json") from exc
-    if not isinstance(raw, dict):
-        raise DecisionStoreError("invalid_replay_policy:root")
-    config = defaults | raw
-    if "timestamp_skew_seconds" not in raw and "max_clock_skew_seconds" in raw:
-        config["timestamp_skew_seconds"] = raw["max_clock_skew_seconds"]
-    if "nonce_ttl_seconds" not in raw and "max_request_age_seconds" in raw:
-        config["nonce_ttl_seconds"] = raw["max_request_age_seconds"]
-    env_map = {
-        "nonce_ttl_seconds": "USBAY_NONCE_TTL_SECONDS",
-        "timestamp_skew_seconds": "USBAY_TIMESTAMP_SKEW_SECONDS",
-    }
-    for key, env_name in env_map.items():
-        if os.getenv(env_name):
-            config[key] = os.getenv(env_name)
-    if os.getenv("USBAY_MAX_CLOCK_SKEW_SECONDS") and not os.getenv("USBAY_TIMESTAMP_SKEW_SECONDS"):
-        config["timestamp_skew_seconds"] = os.getenv("USBAY_MAX_CLOCK_SKEW_SECONDS")
-    if os.getenv("USBAY_REPLAY_FAIL_CLOSED"):
-        config["replay_fail_closed"] = os.getenv("USBAY_REPLAY_FAIL_CLOSED", "").lower() == "true"
-    normalized = {}
-    for key in ("nonce_ttl_seconds", "timestamp_skew_seconds"):
-        value = config.get(key)
-        try:
-            normalized[key] = int(value)
-        except Exception:
-            raise DecisionStoreError(f"invalid_replay_policy:{key}")
-        if normalized[key] <= 0:
-            raise DecisionStoreError(f"invalid_replay_policy:{key}")
-    if config.get("replay_fail_closed") is not True:
-        raise DecisionStoreError("invalid_replay_policy:replay_fail_closed")
-    normalized["replay_fail_closed"] = True
-    return normalized
-
+        return load_replay_policy(REPLAY_POLICY_PATH)
+    except ReplayPolicyError as exc:
+        raise DecisionStoreError(str(exc)) from exc
 
 def validate_replay_policy_startup():
     config = replay_policy_config()

@@ -108,7 +108,10 @@ def fixture(tmp_path, monkeypatch):
     trust=tmp_path/"trust.json"
     def write():trust.write_bytes(cs.canonical(config))
     write();monkeypatch.setenv("USBAY_CONFIDENTIAL_SPACE_TRUST_PATH",str(trust))
-    yield dict(config=config,sign=sign,claims=claims,request=request,control=control,write=write,tmp=tmp_path,start_launcher=start_launcher)
+    def sign_request(raw):
+        private = request_key.private_bytes(serialization.Encoding.PEM, serialization.PrivateFormat.PKCS8, serialization.NoEncryption())
+        return sign_request_payload(raw, private, "synthetic-request")
+    yield dict(config=config,sign=sign,claims=claims,request=request,sign_request=sign_request,control=control,write=write,tmp=tmp_path,start_launcher=start_launcher)
     if server is not None:
         server.shutdown();server.server_close();thread.join(timeout=2)
     short.cleanup()
@@ -127,6 +130,41 @@ def test_in_process_connected(fixture,caplog):
     assert result.decision=="allow" and result.hardware_backed and result.attestation_provider_mode=="external_attestation_service"
     assert fixture["control"]["calls"]==1
     assert "VERIFIED" in caplog.text and "synthetic-actor" not in caplog.text and "eyJ" not in caplog.text
+
+
+@pytest.mark.parametrize("field", ["cmd_override", "env_override"])
+@pytest.mark.parametrize("case", ["omitted", "empty", "nonempty", "null", "string", "boolean", "wrong_container"])
+def test_optional_override_claims(fixture, field, case):
+    raw, expected, config, policy = packet(fixture)
+    envelope = cs.decode(raw)
+    claims = fixture["claims"](cs.commitment(envelope["response"], expected))
+    container = claims["submods"]["container"]
+    if case == "omitted":
+        del container[field]
+    else:
+        values = {"empty": [] if field == "cmd_override" else {},
+                  "nonempty": ["shell"] if field == "cmd_override" else {"PATH": "/untrusted"},
+                  "null": None, "string": "", "boolean": False,
+                  "wrong_container": {} if field == "cmd_override" else []}
+        container[field] = values[case]
+    envelope["token"] = fixture["sign"](claims)
+    if case in {"omitted", "empty"}:
+        assert cs.verify(cs.canonical(envelope), expected, config, policy).hardware_backed
+    else:
+        with pytest.raises(cs.AttestationRejected, match="MEASUREMENT"):
+            cs.verify(cs.canonical(envelope), expected, config, policy)
+        # Rejected optional claims must not consume the otherwise-valid admission.
+        assert cs.verify(raw, expected, config, policy).hardware_backed
+
+
+def test_both_optional_overrides_omitted(fixture):
+    raw, expected, config, policy = packet(fixture)
+    envelope = cs.decode(raw)
+    claims = fixture["claims"](cs.commitment(envelope["response"], expected))
+    del claims["submods"]["container"]["cmd_override"]
+    del claims["submods"]["container"]["env_override"]
+    envelope["token"] = fixture["sign"](claims)
+    assert cs.verify(cs.canonical(envelope), expected, config, policy).hardware_backed
 
 
 def test_real_worker_connected_without_deadline_extension(fixture):

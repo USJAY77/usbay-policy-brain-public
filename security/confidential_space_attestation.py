@@ -32,6 +32,7 @@ from security.runtime_attestation import challenge_nonce
 from security.tenant_context import tenant_execution_context
 from security.request_signing import request_signature_message, validate_request_signature, DEFAULT_REQUEST_KEY_CONFIG_PATH
 from security.policy_registry import validate_policy_registry_shape, policy_hash as registry_policy_hash
+from security.replay_policy import load_replay_policy
 
 PROFILE = "google-confidential-space-oidc-rs256-v1"
 ISSUER = "https://confidentialcomputing.googleapis.com"
@@ -234,7 +235,7 @@ def produce(node_id, request_hash, policy_version, context, config, policy, *, a
             hashlib.sha256(str(signed_request.get("nonce", "")).encode()).hexdigest() == expected["nonce_hash"] and
             bool(signed_request.get("actor_id")), "REQUEST_BINDING", "producer")
     try:
-        replay_policy = decode(Path("governance/replay_policy.json").read_bytes())
+        replay_policy = load_replay_policy()
         timestamp = int(signed_request["timestamp"])
         current = time.time()
         require(current - replay_policy["nonce_ttl_seconds"] <= timestamp <= current + replay_policy["timestamp_skew_seconds"], "REQUEST_FRESHNESS", "producer")
@@ -353,8 +354,10 @@ def verify(packet, expected, config, policy, *, now=None):
                 gce.get("project_number") == enrollment["project_number"] and
                 claims.get("google_service_accounts") == [enrollment["service_account"]], "WORKLOAD", "identity")
         require(container.get("image_digest") == image and container.get("image_reference") == enrollment["image_reference"] and
-                container.get("args") == enrollment["args"] and container.get("cmd_override") == [] and
-                container.get("env_override") == {} and container.get("env") == enrollment["env"], "MEASUREMENT", "identity")
+                container.get("args") == enrollment["args"] and
+                type(container.get("cmd_override", [])) is list and container.get("cmd_override", []) == [] and
+                type(container.get("env_override", {})) is dict and container.get("env_override", {}) == {} and
+                container.get("env") == enrollment["env"], "MEASUREMENT", "identity")
         require(claims.get("dbgstat") == "disabled-since-boot" and claims.get("secboot") is True and claims.get("swname") == "CONFIDENTIAL_SPACE" and
                 type(claims.get("swversion")) is list and len(claims["swversion"]) == 1 and
                 claims["swversion"][0] in enrollment["swversions"] and claims.get("hwmodel") in enrollment["hardware_models"] and
