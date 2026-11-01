@@ -12,7 +12,7 @@ from typing import Any
 from gateway.request_identity import is_authenticated_request_identity
 from governance.hashing import canonical_json, is_sha256_reference, sha256_reference
 from security.declared_intent import (
-    FIELDS, IntentError, parse_object, utc_time, validate_declaration, validate_operation,
+    FIELDS, IntentError, parse_identity_time, parse_object, validate_declaration, validate_operation,
 )
 from security.intent_replay_store import IntentReplayStore, IntentStoreError
 
@@ -62,7 +62,7 @@ def consume_declared_intent(
         if not is_authenticated_request_identity(authenticated_identity):
             raise IntentError("INTENT_IDENTITY_UNVERIFIED")
         context = authenticated_identity
-        if not utc_time(context.valid_from) <= comparison_time < utc_time(context.valid_until):
+        if not parse_identity_time(context.valid_from) <= comparison_time < parse_identity_time(context.valid_until):
             raise IntentError("INTENT_IDENTITY_NOT_CURRENT")
         request = parse_object(raw_request)
         if set(request) != FIELDS | {"operation"}:

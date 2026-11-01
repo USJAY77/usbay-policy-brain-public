@@ -82,6 +82,45 @@ def test_valid_signed_declaration_is_non_executing(case):
     _assert_block(_consume(material,identity,store),'INTENT_REPLAY')
 
 
+def test_authenticated_identity_accepts_offset_and_fractional_validity_times(tmp_path):
+    material = _resign(_setup(tmp_path/'identity'), _request())
+    credential = {k:v for k,v in material['signed'].items() if k != 'signature'}
+    credential.update(valid_from='2026-10-16T11:59:00.000Z', valid_until='2026-10-16T12:04:00+00:00')
+    material['signed'] = sign_request_payload(credential, material['private_pem'], PUBKEY_ID)
+    identity = _authenticate(material)
+    result = _consume(material, identity, IntentReplayStore.provision(tmp_path/'intent.db'))
+    assert result['decision'] == 'ALLOW'
+
+
+@pytest.mark.parametrize('field,value', [
+    ('tenant_id', 'tenant/@id'), ('actor_id', 'reviewer/@id'),
+    ('request_id', 'request/@id'), ('correlation_id', 'correlation/@id'),
+    ('environment', 'Test/Prod'),
+])
+def test_declaration_accepts_authenticated_identity_identifier_alphabet(tmp_path, field, value):
+    from governance.durable_authority_registries import IDENTITY
+    material = _setup(tmp_path/'identity')
+    record = dict(material['record'])
+    if field in ('tenant_id', 'actor_id'):
+        record[field] = value
+    elif field == 'environment':
+        record['environments'] = [value]
+        credential = {k:v for k,v in material['signed'].items() if k != 'signature'}
+        credential['environment'] = value
+        material['signed'] = sign_request_payload(credential, material['private_pem'], PUBKEY_ID)
+    if field in ('tenant_id', 'actor_id', 'environment'):
+        material['registry'].update_authority(IDENTITY, record, timestamp=NOW)
+    request = _request()
+    request[field] = value
+    _rehash(request)
+    material = _resign(material, request)
+    identity = _authenticate(
+        material, expected_environment=value if field == 'environment' else 'test',
+    )
+    result = _consume(material, identity, IntentReplayStore.provision(tmp_path/'intent.db'))
+    assert result['decision'] == 'ALLOW'
+
+
 @pytest.mark.parametrize('field,value',[
     ('purpose','other'),('tenant_id','t2'),('actor_id','other'),('request_id','other'),
     ('correlation_id','other'),('environment','staging'),('action_class','write'),

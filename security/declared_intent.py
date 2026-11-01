@@ -9,7 +9,7 @@ import re
 from datetime import datetime, timezone
 from typing import Any
 
-from gateway.request_identity import RequestIdentityError, parse_unique_json_object
+from gateway.request_identity import IDENTIFIER_RE, RequestIdentityError, parse_unique_json_object
 from governance.hashing import canonical_json, is_sha256_reference, sha256_reference
 
 SCHEMA = "usbay.intent_governance.declared_intent.v1"
@@ -58,16 +58,32 @@ def utc_time(value: Any) -> datetime:
         raise IntentError("INTENT_TIME_INVALID") from exc
 
 
+def parse_identity_time(value: Any) -> datetime:
+    """Parse an authenticated identity timestamp using its established contract."""
+    if not isinstance(value, str) or "T" not in value:
+        raise IntentError("INTENT_TIME_INVALID")
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise IntentError("INTENT_TIME_INVALID") from exc
+    if parsed.tzinfo is None:
+        raise IntentError("INTENT_TIME_INVALID")
+    return parsed.astimezone(timezone.utc)
+
+
 def validate_declaration(raw: Any, *, now: datetime) -> dict:
     value = parse_object(raw)
     if set(value) != FIELDS:
         raise IntentError("INTENT_FIELDS_INVALID")
     if value["schema_version"] != SCHEMA or value["declaration_source"] != "human_declared":
         raise IntentError("INTENT_DECLARATION_REQUIRED")
-    for key in ("intent_id", "request_id", "correlation_id", "tenant_id", "actor_id", "nonce"):
+    for key in ("intent_id", "nonce"):
         if not isinstance(value[key], str) or not IDENTIFIER.fullmatch(value[key]):
             raise IntentError("INTENT_IDENTIFIER_INVALID")
-    for key in ("environment", "purpose", "action_class"):
+    for key in ("tenant_id", "actor_id", "request_id", "correlation_id", "environment"):
+        if not isinstance(value[key], str) or not IDENTIFIER_RE.fullmatch(value[key]):
+            raise IntentError("INTENT_SCOPE_INVALID")
+    for key in ("purpose", "action_class"):
         if not isinstance(value[key], str) or not CODE.fullmatch(value[key]):
             raise IntentError("INTENT_SCOPE_INVALID")
     resources = value["resource_scope"]
