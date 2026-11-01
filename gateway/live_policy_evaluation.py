@@ -81,7 +81,10 @@ async def handle_live_policy_evaluation(
         deps = dependencies or default_dependencies()
         body_bytes = await request.body()
         body = parse_unique_json_object(body_bytes, reason_code="LIVE_POLICY_REQUEST_MALFORMED")
-        credential = request.headers.get("x-usbay-request-identity")
+        credentials = request.headers.getlist("x-usbay-request-identity")
+        if len(credentials) > 1:
+            return _response(401, "BLOCK", "REQUEST_IDENTITY_HEADER_AMBIGUOUS")
+        credential = credentials[0] if credentials else None
         if not credential:
             return _response(401, "BLOCK", "REQUEST_IDENTITY_MISSING")
         now = datetime.now(timezone.utc)
@@ -155,6 +158,7 @@ async def handle_live_policy_evaluation(
             action="live_policy_evaluated",
             decision=decision_evidence,
             timestamp=evaluation.timestamp,
+            expected_tenant_id=identity.tenant_id,
         )
         persisted = [
             record
