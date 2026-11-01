@@ -24,7 +24,7 @@
     "record_path": "governance/evidence/egap_hydra_remote_transport_auth_closure.json",
     "git_blob_sha1": "f0c5df6e3f85cbe6867b194de9fbb65ae9077f86",
     "sha256": "6ec6fc2d977150343528b84e5bf96b80ddc25af6cf2e1a770888989d33a7127b",
-    "historical_scope": "Hydra P1 / earlier bounded v1 remote transport authorization evidence",
+    "historical_scope": "Hydra P1 / earlier bounded pre-mandate remote transport authorization evidence",
     "recorded_implementation_pull_request": 332,
     "verification_scope": "PR/merge identity, source ancestry and exact historical artifact bytes checked. The artifact records historical CI, approvals and post-change validation; those historical checks were not rerun or independently re-performed by this preparation."
   },
