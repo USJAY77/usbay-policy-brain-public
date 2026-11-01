@@ -253,6 +253,17 @@ def test_native_restart_replay(fixture):
     assert not child.stderr
 
 
+def test_packet_limit_accommodates_maximum_token(fixture):
+    raw, expected, cfg, policy = packet(fixture)
+    envelope = cs.decode(raw)
+    claims = fixture["claims"](cs.commitment(envelope["response"], expected))
+    claims["padding"] = ["x" * 7900] * 6
+    envelope["token"] = fixture["sign"](claims)
+    raw = cs.canonical(envelope)
+    assert len(envelope["token"]) <= cs.LIMIT < len(raw) <= cs.PACKET_LIMIT
+    assert cs.verify(raw, expected, cfg, policy).hardware_backed
+
+
 @pytest.mark.parametrize("fault",["missing","corrupt","schema","locked"])
 def test_store_unavailable_does_not_admit(fixture,fault):
     raw,expected,cfg,policy=packet(fixture);db=Path(cfg["replay_db"]);lock=None
@@ -262,7 +273,10 @@ def test_store_unavailable_does_not_admit(fixture,fault):
         with sqlite3.connect(db) as conn:conn.execute("DROP TABLE decision_evidence_consumption")
     else:lock=sqlite3.connect(db);lock.execute("BEGIN IMMEDIATE")
     try:
-        with pytest.raises(cs.AttestationRejected,match="REPLAY_OR_STORE"):cs.verify(raw,expected,cfg,policy)
+        expected_code={"missing":"STORE_UNAVAILABLE","corrupt":"STORE_CORRUPT",
+                       "schema":"STORE_SCHEMA","locked":"STORE_TIMEOUT"}[fault]
+        with pytest.raises(cs.AttestationRejected,match="REPLAY_OR_STORE_"+expected_code):
+            cs.verify(raw,expected,cfg,policy)
     finally:
         if lock:lock.rollback();lock.close()
     if fault=="missing":assert not db.exists()

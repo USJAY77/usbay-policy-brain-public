@@ -155,6 +155,11 @@ class SQLiteDecisionEvidenceConsumptionStore:
             if "timeout" in message or "locked" in message:
                 return ConsumptionResult(STORE_TIMEOUT, STORE_TIMEOUT, self.store_type)
             return _store_unavailable(self.store_type)
+        except ValueError as exc:
+            code = getattr(exc, "code", None)
+            if isinstance(code, str) and code.startswith("STORE_"):
+                return ConsumptionResult(code, code, self.store_type)
+            return ConsumptionResult(ATOMIC_CONSUMPTION_FAILED, ATOMIC_CONSUMPTION_FAILED, self.store_type)
         except Exception:
             return ConsumptionResult(ATOMIC_CONSUMPTION_FAILED, ATOMIC_CONSUMPTION_FAILED, self.store_type)
 

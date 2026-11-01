@@ -38,6 +38,8 @@ ISSUER = "https://confidentialcomputing.googleapis.com"
 SOCKET = "/run/container_launcher/teeserver.sock"
 DOMAIN = "USBAY/ConfidentialSpace/NodeResponse/v1"
 LIMIT = 65536
+PACKET_LIMIT = LIMIT + 8192
+WORKER_INPUT_LIMIT = 4 * LIMIT + 8192
 EXCLUDED = frozenset({"signature", "attestation_timestamp", "attestation_hash",
                       "attestation_node_id", "attestation_provider_mode", "hardware_backed"})
 MODELS = frozenset({"GCP_AMD_SEV", "GCP_AMD_SEV_ES", "GCP_INTEL_TDX"})
@@ -62,8 +64,8 @@ def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
 
-def decode(raw):
-    require(type(raw) in (str, bytes) and len(raw) <= LIMIT, "SIZE", "parse")
+def decode(raw, *, limit=LIMIT, string_limit=8192):
+    require(type(raw) in (str, bytes) and len(raw) <= limit, "SIZE", "parse")
     def pairs(items):
         result = {}
         for key, value in items:
@@ -79,7 +81,7 @@ def decode(raw):
             remaining[0] -= 1
             require(depth <= 12 and remaining[0] >= 0, "SIZE", "parse")
             if isinstance(item, str):
-                require(len(item) <= 8192, "SIZE", "parse")
+                require(len(item) <= string_limit, "SIZE", "parse")
             elif isinstance(item, dict):
                 for key, child in item.items():
                     require(len(key) <= 128, "SIZE", "parse"); bound(child, depth + 1)
@@ -283,6 +285,9 @@ class AdmissionStore(SQLiteDecisionEvidenceConsumptionStore):
             require(connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)], "STORE_CORRUPT", "replay")
             require(not connection.execute("SELECT 1 FROM sqlite_master WHERE type IN ('trigger','view')").fetchone(), "STORE_SCHEMA", "replay")
             return connection
+        except sqlite3.DatabaseError:
+            connection.close()
+            raise AttestationRejected("STORE_CORRUPT", "replay") from None
         except Exception:
             connection.close(); raise
 
@@ -293,7 +298,7 @@ def verify(packet, expected, config, policy, *, now=None):
     try:
         validate_config(config)
         require(type(now) in (float,int) and math.isfinite(now), "TIME", "claims")
-        value = decode(packet)
+        value = decode(packet, limit=PACKET_LIMIT, string_limit=LIMIT)
         require(isinstance(value, dict) and set(value) == {"response", "token"}, "ENVELOPE", "parse")
         response, token = value["response"], value["token"]
         fields = set(HydraNodeDecision("", "", "", "", "", 0).to_dict())

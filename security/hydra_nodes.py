@@ -174,9 +174,9 @@ class SubprocessHydraNode(HydraNodeClient):
         }
         from security import confidential_space_attestation as cs
         connected = cs.enabled()
-        serialized = json.dumps(payload, allow_nan=not connected)
+        serialized = json.dumps(payload, allow_nan=not connected, ensure_ascii=not connected)
         if connected:
-            cs.require(len(serialized.encode()) <= cs.LIMIT, "SIZE", "worker")
+            cs.require(len(serialized.encode()) <= cs.WORKER_INPUT_LIMIT, "SIZE", "worker")
         try:
             completed = subprocess.run(
                 [sys.executable, "-m", "security.hydra_nodes", "--worker"],
@@ -300,7 +300,9 @@ def _worker() -> None:
     from security import confidential_space_attestation as cs
     if cs.enabled():
         try:
-            payload = cs.decode(sys.stdin.read(cs.LIMIT + 1))
+            payload = cs.decode(sys.stdin.read(cs.WORKER_INPUT_LIMIT + 1),
+                                limit=cs.WORKER_INPUT_LIMIT,
+                                string_limit=cs.WORKER_INPUT_LIMIT)
             cs.require(isinstance(payload, dict) and set(payload) == {"node_id","request_hash","policy_version","context"}, "WORKER_REPLY", "producer")
             config, policy = cs.settings()
             packet = cs.produce(str(payload.get("node_id", "node-2")), str(payload.get("request_hash", "")),
