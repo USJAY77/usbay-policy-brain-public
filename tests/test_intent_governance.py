@@ -18,7 +18,7 @@ from security.declared_intent import FIELDS, IntentError, SCHEMA, intent_hash, v
 from security.intent_replay_store import IntentReplayStore, IntentStoreError
 from security.request_signing import sign_request_payload
 from tests.test_gateway_request_identity import (
-    NOW, PUBKEY_ID, _authenticate, _setup,
+    NOW, PUBKEY_ID, PURPOSE as AUTHENTICATED_PURPOSE, _authenticate, _setup,
 )
 
 pytestmark = [pytest.mark.governance, pytest.mark.regression]
@@ -32,11 +32,11 @@ def _request():
     intent = dict(schema_version=SCHEMA, declaration_source='human_declared',
                   intent_id='intent-001', request_id='request-001', correlation_id='correlation-001',
                   tenant_id='t1', actor_id='synthetic-reviewer', environment='test',
-                  purpose='research', action_class='read', resource_scope=[RESOURCE],
+                  purpose=AUTHENTICATED_PURPOSE, action_class='read', resource_scope=[RESOURCE],
                   issued_at='2026-10-16T11:59:00Z', expires_at='2026-10-16T12:03:00Z',
                   nonce='intent-nonce-001', intent_hash='')
     intent['intent_hash'] = intent_hash(intent)
-    return {**intent, 'operation':dict(purpose='research', action_class='read', resource_reference=RESOURCE)}
+    return {**intent, 'operation':dict(purpose=AUTHENTICATED_PURPOSE, action_class='read', resource_reference=RESOURCE)}
 
 
 def _resign(material, request):
@@ -73,6 +73,7 @@ def _assert_block(result, reason=None):
 
 def test_valid_signed_declaration_is_non_executing(case):
     material, identity, store = case
+    assert identity.purpose == material['body']['purpose'] == material['body']['operation']['purpose']
     result = _consume(material,identity,store)
     assert result['decision']=='ALLOW'
     assert result['intent_hash']==material['body']['intent_hash']
@@ -249,7 +250,7 @@ def test_privacy_of_persisted_and_returned_evidence(case):
     material,identity,store=case
     result=_consume(material,identity,store)
     values=json.dumps(result)
-    for raw in ['synthetic-reviewer','intent-nonce-001','intent-001','request-001','correlation-001','research',RESOURCE]:
+    for raw in ['synthetic-reviewer','intent-nonce-001','intent-001','request-001','correlation-001',material['body']['purpose'],RESOURCE]:
         assert raw not in values
         assert raw.encode() not in store.path.read_bytes()
     assert result['tenant_reference']==sha256_reference({'tenant_id':'t1'})
@@ -379,3 +380,34 @@ def test_default_decision_clock_is_read_once_for_early_block(case, monkeypatch):
     _assert_block(result)
     assert result["timestamp"] == NOW
     assert calls == [True]
+
+
+@pytest.mark.parametrize("operation_matches_declaration", [False, True])
+def test_declared_purpose_is_bound_before_replay(case, operation_matches_declaration):
+    material, identity, store = case
+    request = copy.deepcopy(material["body"])
+    request["purpose"] = "customer_scope_canary"
+    if operation_matches_declaration:
+        request["operation"]["purpose"] = request["purpose"]
+    _rehash(request)
+    changed = _resign(material, request)
+    authenticated = _authenticate(changed)
+    # Real authentication succeeds, but grants only the original purpose.
+    assert authenticated.purpose == AUTHENTICATED_PURPOSE
+    assert request["purpose"] != authenticated.purpose
+    assert changed["body"]["intent_hash"] == intent_hash(
+        {k:v for k,v in changed["body"].items() if k in FIELDS})
+    before = store.path.read_bytes()
+    result = _consume(changed, authenticated, store)
+    _assert_block(result, "INTENT_IDENTITY_BINDING_MISMATCH")
+    assert store.path.read_bytes() == before
+    with sqlite3.connect(store.path) as connection:
+        assert connection.execute("SELECT count(*) FROM consumed").fetchone() == (0,)
+    assert "customer_scope_canary" not in json.dumps(result)
+    assert AUTHENTICATED_PURPOSE not in json.dumps(result)
+    assert result["timestamp"] == NOW
+    # The rejected declaration did not burn these intent_id/nonce values.
+    valid = _consume(material, identity, IntentReplayStore(store.path))
+    assert valid["decision"] == "ALLOW"
+    assert all(valid[flag] is False for flag in FLAGS)
+    _assert_block(_consume(material, identity, store), "INTENT_REPLAY")

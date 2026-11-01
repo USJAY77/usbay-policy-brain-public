@@ -70,7 +70,7 @@ def consume_declared_intent(
         if sha256_reference(request) != context.request_body_hash:
             raise IntentError("INTENT_REQUEST_BINDING_MISMATCH")
         intent = validate_declaration({k: v for k, v in request.items() if k != "operation"}, now=comparison_time)
-        for field in ("tenant_id", "actor_id", "request_id", "correlation_id", "environment"):
+        for field in ("tenant_id", "actor_id", "request_id", "correlation_id", "environment", "purpose"):
             if intent[field] != getattr(context, field):
                 raise IntentError("INTENT_IDENTITY_BINDING_MISMATCH")
         validate_operation(request["operation"], intent)
