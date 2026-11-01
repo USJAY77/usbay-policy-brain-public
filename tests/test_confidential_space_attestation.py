@@ -80,7 +80,7 @@ def fixture(tmp_path, monkeypatch):
         registry=validate_policy_registry_shape(cs.decode(Path('governance/policy_registry.json').read_bytes()))
         context=dict(tenant_id="t1",policy_hash=policy_hash(registry),nonce_hash=hashlib.sha256(raw["nonce"].encode()).hexdigest(),attestation_timestamp=time.time(),confidential_space_signed_request=signed)
         return node,rh,"1.0",context
-    short=tempfile.TemporaryDirectory(prefix="cs-",dir="/private/tmp")
+    short=tempfile.TemporaryDirectory(prefix="cs-",dir="/tmp")
     sock=str(Path(short.name)/"launcher.sock")
     monkeypatch.setenv("USBAY_TEST_ALLOWED_SOCKET",sock)
     config["launcher_socket"]=sock
