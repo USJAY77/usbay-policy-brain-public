@@ -285,6 +285,9 @@ class AdmissionStore(SQLiteDecisionEvidenceConsumptionStore):
             require(connection.execute("PRAGMA integrity_check").fetchall() == [("ok",)], "STORE_CORRUPT", "replay")
             require(not connection.execute("SELECT 1 FROM sqlite_master WHERE type IN ('trigger','view')").fetchone(), "STORE_SCHEMA", "replay")
             return connection
+        except sqlite3.OperationalError:
+            connection.close()
+            raise
         except sqlite3.DatabaseError:
             connection.close()
             raise AttestationRejected("STORE_CORRUPT", "replay") from None

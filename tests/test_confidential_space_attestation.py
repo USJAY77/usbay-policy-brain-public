@@ -282,6 +282,27 @@ def test_store_unavailable_does_not_admit(fixture,fault):
     if fault=="missing":assert not db.exists()
 
 
+def test_open_time_store_lock_is_timeout(fixture,monkeypatch):
+    raw,expected,cfg,policy=packet(fixture)
+    connect=cs.sqlite3.connect
+
+    class LockedConnection:
+        def __init__(self,*args,**kwargs):
+            self.connection=connect(*args,**kwargs)
+
+        def execute(self,statement,*args,**kwargs):
+            if statement=="PRAGMA synchronous=FULL":
+                raise sqlite3.OperationalError("database is locked")
+            return self.connection.execute(statement,*args,**kwargs)
+
+        def __getattr__(self,name):
+            return getattr(self.connection,name)
+
+    monkeypatch.setattr(cs.sqlite3,"connect",LockedConnection)
+    with pytest.raises(cs.AttestationRejected,match="REPLAY_OR_STORE_STORE_TIMEOUT"):
+        cs.verify(raw,expected,cfg,policy)
+
+
 @pytest.mark.parametrize("fault",["unavailable","reply","worker_timeout"])
 def test_provider_and_worker_failure(fixture,fault,caplog):
     fixture["start_launcher"]()
