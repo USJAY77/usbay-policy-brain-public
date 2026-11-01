@@ -713,6 +713,7 @@ def append_evidence_event(
     decision: Any,
     timestamp: str | None = None,
     key_version: str = DEFAULT_KEY_VERSION,
+    expected_tenant_id: str | None = None,
 ) -> dict[str, Any]:
     ledger_path = _storage_path(path)
     try:
@@ -720,6 +721,12 @@ def append_evidence_event(
             if _check_read_state(ledger_path):
                 raise LedgerIntegrityError("ledger_journal_write_unsupported")
             snapshot = _transaction_snapshot(context)
+            if expected_tenant_id is not None:
+                expected = validate_tenant_id(expected_tenant_id)
+                if snapshot[3]:
+                    validate_records_single_tenant(snapshot[3], expected)
+                if _tenant_id(_safe_decision(decision)) != expected:
+                    raise LedgerIntegrityError("ledger_tenant_mismatch")
             block = _prepare_record(snapshot[3], action=action, decision=decision,
                                     timestamp=timestamp, key_version=key_version)
             return _commit_transaction(context, snapshot, block)
