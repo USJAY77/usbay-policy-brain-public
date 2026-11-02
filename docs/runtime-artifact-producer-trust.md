@@ -1,8 +1,44 @@
 # Runtime artifact producer trust (development candidate)
 
-This is a separate, fail-closed trust mechanism, not a startup integration,
-deployment approval, or completed gitless repair. Existing Git-backed scanner,
-release, tenant, replay, Hydra and audit controls remain unchanged.
+This is a development integration, not deployment approval or production
+readiness. A signed artifact authority replaces production runtime Git queries;
+release, tenant, replay, Hydra and audit controls remain independently required.
+
+## Packaged runtime integration
+
+The Replit platform profile (not Dockerfile) packages at build time through
+`python3 -m security.runtime_artifact_package`. It requires an explicit external
+build-only key file and key ID. The file contains one base64-encoded raw Ed25519
+private key, must be outside the checkout/output, and is never copied. No key is
+provisioned by this implementation. Missing inputs fail the build.
+
+Only clean HEAD regular files are copied, with their modes, to a **new**
+`.runtime-artifact` directory. The signed manifest is written last and verified
+against the copied bytes. No .git, ignored state, dependency directory, or private
+build input is copied. Existing destinations are refused, not deleted.
+
+The platform run command enters that package, selects production mode, and uses
+`python3 -B` to avoid generating unmanifested bytecode. Runtime independently
+requires public producer trust and never imports the build signer.
+
+`RuntimeArtifactAuthority` seals verified normalized data, retains initial
+file/manifest fingerprints and detects replacement, content, mode, source,
+manifest and symlink-layout changes. Both startup scanner and deployment
+provenance consume the same instance. Freshness checks repeat signature/file
+verification; no invalid artifact triggers a Git fallback. CI/development Git
+helpers remain a separate path.
+
+Existing scanner exclusions/platform-managed dependency prefixes are unchanged
+and centralized. Extra governed files are rejected. Mutable `tmp/` state is not
+declared managed and remains subject to existing forbidden-material scanning;
+the signed source inventory does not authorize or authenticate mutable state.
+
+An independently valid governance release with the **exact signed source commit**
+is still required through existing release-path configuration. Packaging does
+not invent a release, lineage, tenant authority or production credentials.
+The legacy release HMAC fallback remains a production blocker, not producer trust.
+Docker packaging, external publisher identity and live source binding are not
+established by this development implementation.
 
 ## Contract and independent verifier configuration
 
@@ -62,14 +98,15 @@ traversal; inode/stat stability, regular type, size, Git executable mode and
 SHA256 must match. An optional independently supplied expected commit/tree pin
 must match the signed source identity.
 
-The immutable `VerifiedRuntimeArtifact` result is the common future input for
-both scanner and provenance resolver, not two separate authority roots. No
-integration replaces their Git checks in this candidate.
+The immutable `VerifiedRuntimeArtifact` result is sealed in one
+`RuntimeArtifactAuthority` shared by scanner and provenance. Runtime consumers
+also recheck independently configured trust; an explicitly passed stale object
+cannot bypass key/mode/config changes.
 
 No ordinary filesystem read is an immutable image boundary: a file can change
 after verification. The packaging consumer must retain/verify the exact signed
 snapshot at use. Whole-artifact replay/freshness policy, generated governed
-files, unknown-file scanning integration and the actual publisher/image binding
+files and the actual publisher/image binding
 remain separate requirements. A nonce alone does not prevent replay of an
 unchanged, valid older manifest.
 

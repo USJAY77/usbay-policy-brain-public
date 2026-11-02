@@ -1,2 +1,3 @@
 - [Python bytecode provenance](python-bytecode-provenance.md) — validate generated caches structurally; never blanket-exclude them from private-material scans.
 - [App Storage preservation boundary](app-storage-preservation.md) — bucket creation exposes only a name; preservation controls require separate evidence and approval.
+- [Scanner test isolation](scanner-test-isolation.md) — keep hostile test fixtures outside the scanned source tree; do not weaken scanner rules to hide fixture contamination.

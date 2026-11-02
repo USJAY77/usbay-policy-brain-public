@@ -34,6 +34,13 @@ from security.deployment_attestation import (
     assert_startup_release_integrity,
     resolve_runtime_provenance_authority,
 )
+from security.runtime_artifact_authority import (
+    MANAGED_RUNTIME_PATH_PREFIXES as _MANAGED_RUNTIME_PATH_PREFIXES,
+    RUNTIME_SCAN_EXCLUDED_DIRS as _RUNTIME_SCAN_EXCLUDED_DIRS,
+    artifact_runtime_required,
+    get_runtime_artifact_authority,
+)
+from security.runtime_artifact_provenance import RuntimeArtifactError
 from security.persistent_nonce_store import (
     NONCE_RESULT_EXPIRED,
     NONCE_RESULT_REPLAY,
@@ -1731,7 +1738,9 @@ def _policy_version(payload):
     return str(policy_version)
 
 
-def runtime_provenance_authority():
+def runtime_provenance_authority(artifact_authority=None):
+    if artifact_authority is not None:
+        return resolve_runtime_provenance_authority(artifact_authority=artifact_authority)
     return resolve_runtime_provenance_authority()
 
 
@@ -1891,31 +1900,6 @@ def forbidden_runtime_files_in_repo(repo_root=None):
     return [finding["path"] for finding in forbidden_runtime_file_findings(repo_root)]
 
 
-_MANAGED_RUNTIME_PATH_PREFIXES = (
-    (".cache", "uv"),
-    (".config", ".semgrep"),
-    (".config", "replit", ".semgrep"),
-    (".local", "share", "pnpm", "store"),
-    (".local", "state", "replit"),
-    (".pythonlibs",),
-    ("node_modules", ".pnpm"),
-)
-
-_RUNTIME_SCAN_EXCLUDED_DIRS = {
-    ".githooks",
-    ".github",
-    ".pytest_cache",
-    ".venv",
-    "__pycache__",
-    "docs",
-    "demos",
-    "tests",
-    "tools",
-    "usbay_policy_brain.egg-info",
-    "venv",
-}
-
-
 def _decode_git_runtime_paths(raw_paths):
     tracked_paths = set()
     try:
@@ -2053,7 +2037,7 @@ def _is_managed_broken_runtime_symlink(relative_path, path, governed_paths):
     )
 
 
-def forbidden_runtime_file_findings(repo_root=None):
+def forbidden_runtime_file_findings(repo_root=None, *, artifact_authority=None):
     root = Path(repo_root or REPO_ROOT)
     try:
         canonical_root = root.resolve(strict=True)
@@ -2061,8 +2045,23 @@ def forbidden_runtime_file_findings(repo_root=None):
         raise PolicyRegistryError("runtime_scan_root_unavailable") from exc
     if not canonical_root.is_dir():
         raise PolicyRegistryError("runtime_scan_root_not_directory")
-    _validate_runtime_git_identity(canonical_root)
-    governed_paths = _governed_runtime_paths(canonical_root)
+    # Explicit temporary Git repositories remain available to development tests;
+    # production or a gitless package can never fall back after failed trust.
+    packaged = artifact_authority is not None or artifact_runtime_required(canonical_root)
+    if packaged:
+        try:
+            artifact_authority = artifact_authority or get_runtime_artifact_authority(canonical_root)
+            if artifact_authority.root != canonical_root:
+                raise RuntimeArtifactError("runtime_artifact_root_mismatch")
+            if artifact_authority is not get_runtime_artifact_authority(canonical_root):
+                raise RuntimeArtifactError("runtime_artifact_authority_mismatch")
+            artifact_authority.assert_fresh()
+            governed_paths = {item.path for item in artifact_authority.verified.managed_files}
+        except RuntimeArtifactError as exc:
+            raise PolicyRegistryError(str(exc)) from None
+    else:
+        _validate_runtime_git_identity(canonical_root)
+        governed_paths = _governed_runtime_paths(canonical_root)
     findings = []
 
     def add_finding(relative_path, rule_id):
@@ -2172,7 +2171,12 @@ def forbidden_runtime_file_findings(repo_root=None):
             relative_failure = "."
         add_finding(relative_failure, "runtime_traversal_failed")
 
-    if _governed_runtime_paths(canonical_root) != governed_paths:
+    if packaged:
+        try:
+            artifact_authority.assert_fresh()
+        except RuntimeArtifactError as exc:
+            raise PolicyRegistryError(str(exc)) from None
+    elif _governed_runtime_paths(canonical_root) != governed_paths:
         raise PolicyRegistryError("runtime_scan_git_state_changed")
 
     return sorted(findings, key=lambda item: (item["path"], item["rule"]))
@@ -2198,8 +2202,8 @@ def _forbidden_runtime_file_error(findings):
     return PolicyRegistryError("forbidden_runtime_file_present:" + canonical(diagnostics))
 
 
-def validate_no_forbidden_runtime_files(repo_root=None):
-    findings = forbidden_runtime_file_findings(repo_root)
+def validate_no_forbidden_runtime_files(repo_root=None, *, artifact_authority=None):
+    findings = forbidden_runtime_file_findings(repo_root, artifact_authority=artifact_authority)
     if findings:
         raise _forbidden_runtime_file_error(findings)
     return True
@@ -2248,8 +2252,13 @@ def policy_runtime_state(provenance_context=None):
 
 
 def validate_policy_registry_startup():
-    validate_no_forbidden_runtime_files()
-    authority = runtime_provenance_authority()
+    artifact = get_runtime_artifact_authority(REPO_ROOT) if artifact_runtime_required(REPO_ROOT) else None
+    if artifact is None:
+        validate_no_forbidden_runtime_files()
+        authority = runtime_provenance_authority()
+    else:
+        validate_no_forbidden_runtime_files(artifact_authority=artifact)
+        authority = runtime_provenance_authority(artifact_authority=artifact)
     normalized_context = authority.context_dict()
     load_tenant_policy()
     validate_replay_policy_startup()
@@ -2260,6 +2269,8 @@ def validate_policy_registry_startup():
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)
     load_policy_registry(provenance_context=normalized_context)
+    if artifact is not None:
+        artifact.assert_fresh()
 
 
 def execution_command_allowed(command):

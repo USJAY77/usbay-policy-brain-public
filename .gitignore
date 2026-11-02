@@ -130,5 +130,8 @@ governance/request_private.key
 # Generated governance release artifacts
 governance_release*.json
 
+# Signed build output; never add a generated package to source history.
+/.runtime-artifact/
+
 # Generated governance release artifacts
 governance_release*.json
