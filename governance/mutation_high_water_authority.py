@@ -412,6 +412,7 @@ class GovernedMutationHighWaterUpdaterAuthority(MutationCurrentnessUpdaterAuthor
                 "proposed_projection_hash": kwargs["proposed_projection_hash"],
             }),
             "consumption": {
+                "issuer_id": grant["issuer_id"],
                 "grant_id": grant["grant_id"],
                 "nonce": grant["grant_nonce"],
                 "replay_identity": digest({
