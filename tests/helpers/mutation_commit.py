@@ -39,6 +39,7 @@ class SyntheticCurrentnessFence(MutationAuthorityCurrentnessFence):
         self.fail_after_commit=False
         self.installed_state=deepcopy(state)
         self.guard_active=False
+        self.terminal=False
 
     def update(self,*,root_status=None,epoch=False):
         with self.lock:
@@ -49,6 +50,9 @@ class SyntheticCurrentnessFence(MutationAuthorityCurrentnessFence):
     @contextmanager
     def hold(self,connection,*,command,challenge):
         with self.lock:
+            if self.terminal:
+                from governance.tenant_enrollment_contracts import EnrollmentDenied
+                raise EnrollmentDenied('POLICY_OBJECT_REVOCATION')
             self.guard_active=True
             try:yield SyntheticGuard(self,connection,command,challenge)
             finally:self.guard_active=False
@@ -113,6 +117,7 @@ class SyntheticGuard(MutationFenceGuard):
             raise CommitFenceRejected('COMMIT_FENCE_STALE')
         self.source.version+=1
         connection.execute('COMMIT')
+        self.source.terminal=True
         if self.source.fail_after_commit:raise OSError('synthetic lost commit acknowledgment')
         return dict(position=deepcopy(proposed_position),event_hash=digest({'synthetic-transition':update_id}))
 
