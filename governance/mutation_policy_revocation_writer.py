@@ -289,6 +289,7 @@ class GovernedPolicyRevocationWriter:
                         proposed_position=deepcopy(
                             proposed_position),
                         update_id=c["transaction_id"],
+                        terminal=True,
                     )
                     require(not conn.in_transaction,
                             "COMMIT_STATE_UNKNOWN")
