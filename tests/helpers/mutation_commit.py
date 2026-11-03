@@ -19,7 +19,7 @@ from governance.mutation_commit import (
     MutationAuthorityCurrentnessFence,MutationFenceGuard,CommitFenceRejected,commit_fingerprint,
 )
 from governance.mutation_issuer_authority import identity_reference
-from governance.tenant_enrollment_contracts import canonical,digest,instant,object_id,PolicyAdoption
+from governance.tenant_enrollment_contracts import canonical,digest,instant,object_id,PolicyAdoption,EnrollmentGrant
 from security.enrollment_policy_currentness import EnrollmentTrust,ScopedPublicKey
 from tests.helpers.mutation_authority import synthetic_mutation
 from tests.helpers.mutation_issuer_authority import attach_synthetic_issuance
@@ -146,7 +146,7 @@ class SyntheticCommit:
         return self.seal_command(p)
 
 
-def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION"):
+def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consumed=False):
     f=synthetic_mutation()
     pending=f.enrollment.next_adoption();f.pending=pending
     a=pending['adoption']['payload'];p=pending['policy']['payload']
@@ -157,9 +157,26 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION"):
                 adoption_id=object_id(PolicyAdoption,a),target_grant_id=None)
         attach_synthetic_issuance(f)
         f.commit_target=pending['adoption']
-    else:
-        assert action=='REVOKE_POLICY_OBJECT'
+    elif action=='REVOKE_POLICY_OBJECT':
         f.commit_target=f.enrollment.inputs['policy']
+    else:
+        assert action=='REVOKE_GRANT_OBJECT'
+        target=f.enrollment.inputs['grant']['payload']
+        target_id=object_id(EnrollmentGrant,target)
+        for envelope in (f.parent,f.proposal,f.grant):
+            envelope['payload'].update(
+                allowed_action='REVOKE_GRANT_OBJECT',
+                resource_type='ENROLLMENT_GRANT',
+                resource_id=target_id,
+                object_id=target_id,
+                object_version_hash=digest(target),
+                policy_id=target['policy_id'],
+                target_grant_id=target['grant_id'],
+                adoption_id=None,
+            )
+        f.refresh()
+        attach_synthetic_issuance(f)
+        f.commit_target=f.enrollment.inputs['grant']
     private=Ed25519PrivateKey.generate();f.private['test-commit-source']=private
     base=f.grant['payload']
     key=ScopedPublicKey('synthetic-commit-source','test-commit-source',private.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw),
@@ -168,6 +185,9 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION"):
     f.trust=EnrollmentTrust(tuple(f.trust._keys.values())+(key,),max_age_seconds=60)
     path=tmp_path/'synthetic-fence.sqlite';f.enrollment.store(path)
     view=EnrollmentAuthorityView(path,f.trust,clock=lambda:NOW)
+    if action=='REVOKE_GRANT_OBJECT' and grant_consumed:
+        admitted=view.enroll(f.enrollment.inputs)
+        assert admitted['reason']=='ENROLLMENT_COMMITTED_RECEIPT_REQUIRED'
     if action=='FINALIZE_POLICY_ADOPTION':
         result=view.propose_adoption(pending)
         assert result['publication']=='PENDING'
@@ -189,6 +209,13 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION"):
             policy_version=f.enrollment.inputs['policy']['payload']['policy_version'],
             policy_hash=base['object_version_hash'],revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
             expected_revocation_state='NOT_REVOKED')
+    if action=='REVOKE_GRANT_OBJECT':
+        target=f.enrollment.inputs['grant']['payload']
+        state=dict(tenant_id=base['tenant_id'],object_id=base['object_id'],object_version_hash=base['object_version_hash'],
+            expected_current_head=base['expected_current_head'],grant_id=target['grant_id'],
+            grant_version_hash=base['object_version_hash'],
+            expected_consumption_state='CONSUMED' if grant_consumed else 'UNCONSUMED',
+            expected_revocation_state='NOT_REVOKED',revocation_effect_scope='ALL_VERSIONS_OF_OBJECT')
     # TEST ONLY projection table. No production schema/bootstrap is added.
     with sqlite3.connect(path) as conn:
         conn.execute('CREATE TABLE synthetic_mutation_target(tenant TEXT,object_id TEXT,state TEXT,PRIMARY KEY(tenant,object_id))')
