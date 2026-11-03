@@ -54,9 +54,10 @@ def build_effect_for_mutation(m):
     parent["effect_fingerprint"]=fingerprint(parent,"parent")
     parent_env=dict(payload=parent,signature=private["effect-parent"].sign(canonical(parent)).hex())
     pref=dict(parent_effect_authority_id=parent["effect_authority_id"],parent_effect_authority_hash=digest(parent))
-    proposal=dict(common("proposal","effect-proposal"),**base,**pref,
-        proposal_id="synthetic-effect-proposal",proposal_nonce="synthetic-effect-proposal-nonce",
-        proposal_fingerprint="")
+    proposal={**common("proposal","effect-proposal"),**base,**pref,
+        "proposal_id":"synthetic-effect-proposal",
+        "proposal_nonce":"synthetic-effect-proposal-nonce",
+        "proposal_fingerprint":""}
     proposal["proposal_fingerprint"]=fingerprint(proposal,"proposal")
     proposal_env=dict(payload=proposal,signature=private["effect-proposal"].sign(canonical(proposal)).hex())
     reviews=[]
@@ -68,12 +69,13 @@ def build_effect_for_mutation(m):
         p["decision_fingerprint"]=fingerprint(p,"review")
         reviews.append(dict(payload=p,signature=private[key_id].sign(canonical(p)).hex()))
     by_id={r["payload"]["reviewer_id"]:r for r in reviews}
-    grant=dict(common("grant","effect-grant"),**base,**pref,
-        grant_id="synthetic-effect-grant",grant_nonce="synthetic-effect-grant-nonce",
-        proposal_hash=digest(proposal),
-        reviewer_a_decision_hash=digest(by_id["USBAY-AUDIT"]["payload"]),
-        reviewer_b_decision_hash=digest(by_id["USBAY-GLOBAL23"]["payload"]),
-        review_threshold=2,review_required=2,grant_fingerprint="")
+    grant={**common("grant","effect-grant"),**base,**pref,
+        "grant_id":"synthetic-effect-grant",
+        "grant_nonce":"synthetic-effect-grant-nonce",
+        "proposal_hash":digest(proposal),
+        "reviewer_a_decision_hash":digest(by_id["USBAY-AUDIT"]["payload"]),
+        "reviewer_b_decision_hash":digest(by_id["USBAY-GLOBAL23"]["payload"]),
+        "review_threshold":2,"review_required":2,"grant_fingerprint":""}
     grant["grant_fingerprint"]=fingerprint(grant,"grant")
     grant_env=dict(payload=grant,signature=private["effect-grant"].sign(canonical(grant)).hex())
     return dict(parent=parent_env,proposal=proposal_env,reviews=reviews,grant=grant_env)
