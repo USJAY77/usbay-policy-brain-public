@@ -778,6 +778,7 @@ class EnrollmentAuthorityView:
         expected_sequence = 1
         consumption = []
         tenants = {}
+        terminal_revocations = {}
         for seq, encoded, event_hash in conn.execute("SELECT sequence,payload,event_hash FROM enrollment_events ORDER BY sequence"):
             event = parse_json(encoded)
             require(seq == expected_sequence and event["previous_event_hash"] == previous and event["sequence"] == seq
@@ -788,12 +789,44 @@ class EnrollmentAuthorityView:
                 from governance.tenant_enrollment_contracts import TenantRegistrationRecord, scope
                 record = TenantRegistrationRecord.from_payload(event["record"]).payload
                 tenants[digest(list(scope(record)))] = record
+            if event["kind"] == "POLICY_REVOCATION_TERMINAL_NON_PRODUCTION":
+                key = (event["scope_hash"], event["object_id"])
+                require(key not in terminal_revocations, "ENROLLMENT_HISTORY_INVALID")
+                terminal_revocations[key] = (
+                    event["object_version_hash"],
+                    event["revocation_reference"],
+                    event["revocation_hash"],
+                    event["terminal_projection_hash"],
+                    event["terminal_proof_hash"],
+                    event["source_epoch"],
+                    event["source_version"],
+                    event["command_hash"],
+                    event["transaction_id"],
+                )
             previous = event_hash
         require(state["event_tip"] == previous, "ENROLLMENT_HISTORY_INVALID")
         require(consumption == [list(row) for row in conn.execute("SELECT kind,identity FROM enrollment_uses ORDER BY kind,identity")],
                 "ENROLLMENT_HISTORY_INVALID")
         require(tenants == {key: parse_json(record) for key, record in conn.execute("SELECT scope,record FROM enrollment_tenants")},
                 "ENROLLMENT_HISTORY_INVALID")
+        table_names = {
+            row[0] for row in
+            conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+        }
+        if "policy_revocation_terminal" in table_names:
+            materialized = {
+                (row[0], row[1]): tuple(row[2:])
+                for row in conn.execute(
+                    "SELECT scope_hash,object_id,object_version_hash,"
+                    "revocation_reference,revocation_hash,"
+                    "terminal_projection_hash,terminal_proof_hash,"
+                    "source_epoch,source_version,command_hash,transaction_id "
+                    "FROM policy_revocation_terminal")
+            }
+            require(materialized == terminal_revocations,
+                    "ENROLLMENT_HISTORY_INVALID")
+        else:
+            require(not terminal_revocations, "ENROLLMENT_HISTORY_INVALID")
         if require_finalized:
             require(state["publication"] == "FINALIZED", "STOPPED_UNVERIFIED_POLICY_HEAD")
         return state
