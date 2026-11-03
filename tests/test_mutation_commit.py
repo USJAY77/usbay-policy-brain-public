@@ -17,6 +17,7 @@ from governance.mutation_authority import fingerprint
 from governance.tenant_enrollment_contracts import FLAGS,EnrollmentDenied,canonical,digest,instant,parse_json
 from tests.helpers.mutation_commit import synthetic_commit
 from tests.helpers.mutation_policy_revocation_effect import build_effect_for_mutation
+from tests.helpers.mutation_grant_revocation_effect import build_grant_effect_for_mutation
 from tests.helpers.tenant_enrollment import NOW
 
 
@@ -367,3 +368,45 @@ def test_policy_revocation_effect_grant_hash_mismatch_denies(tmp_path):
     with f.view.mutation_attempt(currentness_fence=f.source) as tx:
         result=f.verify(tx,command,revocation_effect=effect)
     deny(result,'REVOCATION_SCOPE_MISMATCH')
+
+
+def test_grant_revocation_effect_extension_allows_commit_fence(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_GRANT_OBJECT')
+    effect=build_grant_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash=digest(effect['grant']['payload']),
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command,revocation_effect=effect)
+    assert result['decision']=='ALLOW'
+    assert result['reason']=='COMMIT_FENCE_VERIFIED'
+    assert result['evidence']['revocation_effect_scope']=='ALL_VERSIONS_OF_OBJECT'
+    assert result['evidence']['revocation_effect_grant_hash']==digest(effect['grant']['payload'])
+
+
+def test_grant_revocation_missing_effect_bundle_denies(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_GRANT_OBJECT')
+    effect=build_grant_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash=digest(effect['grant']['payload']),
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command)
+    deny(result,'REVOCATION_SCOPE_MISMATCH')
+
+
+def test_policy_effect_bundle_cannot_authorize_grant_revocation(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_GRANT_OBJECT')
+    policy_effect=build_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash=digest(policy_effect['grant']['payload']),
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command,revocation_effect=policy_effect)
+    deny(result)
