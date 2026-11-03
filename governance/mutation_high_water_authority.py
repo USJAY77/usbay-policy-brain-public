@@ -10,6 +10,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 import re
 
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
 from governance.mutation_authority import REVIEWERS
 from governance.tenant_enrollment_contracts import (
     FLAGS, POLICY_DOMAIN, PURPOSE, SCOPE_FIELDS, TRUST_DOMAIN, EnrollmentDenied,
@@ -216,7 +218,8 @@ def _signed(trust, envelope, model, role, now):
             and now < instant(key.expires_at),
             "HIGH_WATER_AUTHORITY_EXPIRED")
     try:
-        key.public_key.verify(bytes.fromhex(envelope["signature"]), canonical(p))
+        Ed25519PublicKey.from_public_bytes(key.public_key).verify(
+            bytes.fromhex(envelope["signature"]), canonical(p))
     except Exception:
         raise EnrollmentDenied("HIGH_WATER_AUTHORITY_INVALID") from None
     return p, key
