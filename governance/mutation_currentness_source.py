@@ -342,10 +342,10 @@ class SQLiteMutationCurrentnessProjectionUpdater(MutationCurrentnessProjectionUp
                             for k in ("evidence_hash", "source_status_hash"))
                     and type(auth["consumption"]) is dict
                     and set(auth["consumption"])
-                        == {"grant_id", "nonce", "replay_identity"}
+                        == {"issuer_id", "grant_id", "nonce", "replay_identity"}
                     and all(type(auth["consumption"][k]) is str
                             and bool(auth["consumption"][k])
-                            for k in ("grant_id", "nonce", "replay_identity")),
+                            for k in ("issuer_id", "grant_id", "nonce", "replay_identity")),
                     "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
             self._view._consume(
                 conn, "mutation_high_water_authority",
