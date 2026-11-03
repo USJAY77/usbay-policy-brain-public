@@ -258,12 +258,18 @@ def verify_policy_revocation_effect(
         for field in BINDINGS:
             require(grant[field] == proposal[field],
                     "AUTHORITY_SCOPE_BROADENING")
+        for field in BINDINGS - {
+                "parent_effect_authority_id",
+                "parent_effect_authority_hash"}:
             require(grant[field] == parent[field],
                     "AUTHORITY_SCOPE_BROADENING")
 
         require(
-            grant["parent_effect_authority_id"]
+            proposal["parent_effect_authority_id"]
                 == parent["effect_authority_id"]
+            and grant["parent_effect_authority_id"]
+                == parent["effect_authority_id"]
+            and proposal["parent_effect_authority_hash"] == digest(parent)
             and grant["parent_effect_authority_hash"] == digest(parent),
             "PARENT_AUTHORITY_INVALID")
 
