@@ -108,7 +108,7 @@ class _CommitContract:
     def from_payload(cls,p):
         fields=COMMAND_FIELDS if cls.kind=='command' else FENCE_FIELDS
         require(type(p) is dict,'MUTATION_COMMAND_INVALID' if cls.kind=='command' else 'COMMIT_FENCE_MISMATCH')
-        effect_required=p.get('action') in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT')
+        effect_required=p.get('action') in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT','REVOKE_ADOPTION')
         if effect_required:
             require(REVOCATION_EFFECT_FIELDS <= set(p),'REVOCATION_SCOPE_MISMATCH')
         expected_fields=COMMON|fields|(REVOCATION_EFFECT_FIELDS if effect_required else set())
@@ -295,7 +295,7 @@ class MutationAttempt:
             'issuer_grant','review_policy','root_source','currentness','target_object'},'AUTHORITY_CURRENTNESS_UNPROVEN')
         require(material['currentness']['expected']==state['head'],'EXPECTED_HEAD_MISMATCH')
         g=bundle['grant']['payload']
-        if c['action'] not in ('FINALIZE_POLICY_ADOPTION','REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT'):
+        if c['action'] not in ('FINALIZE_POLICY_ADOPTION','REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT','REVOKE_ADOPTION'):
             # Existing v1 grants remain insufficient for other revocation actions.
             require(g.get('revocation_effect_scope')==c['expected_state']['revocation_effect_scope'],
                     'REVOCATION_SCOPE_MISMATCH')
@@ -305,7 +305,7 @@ class MutationAttempt:
             self._replay(c)
         require(result['decision']=='ALLOW',result['reason'])
         effect_result=None
-        if c['action'] in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT'):
+        if c['action'] in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT','REVOKE_ADOPTION'):
             effect=bundle.get('revocation_effect')
             require(type(effect) is dict
                     and set(effect)=={'parent','proposal','reviews','grant'},
@@ -327,11 +327,28 @@ class MutationAttempt:
                     now=now,
                     expected_state=c['expected_state'],
                 )
-            else:
+            elif c['action']=='REVOKE_GRANT_OBJECT':
                 from governance.mutation_grant_revocation_effect import (
                     verify_grant_revocation_effect,
                 )
                 effect_result=verify_grant_revocation_effect(
+                    mutation_proposal=bundle['proposal'],
+                    mutation_reviews=bundle['reviews'],
+                    mutation_grant=bundle['grant'],
+                    mutation_material=material,
+                    effect_parent=effect['parent'],
+                    effect_proposal=effect['proposal'],
+                    effect_reviews=effect['reviews'],
+                    effect_grant=effect['grant'],
+                    trust=self._view.trust,
+                    now=now,
+                    expected_state=c['expected_state'],
+                )
+            else:
+                from governance.mutation_adoption_revocation_effect import (
+                    verify_adoption_revocation_effect,
+                )
+                effect_result=verify_adoption_revocation_effect(
                     mutation_proposal=bundle['proposal'],
                     mutation_reviews=bundle['reviews'],
                     mutation_grant=bundle['grant'],
@@ -380,7 +397,7 @@ class MutationAttempt:
             currentness_snapshot_identity=digest({'currentness':material['currentness'],
                 'authority_evidence_hash':digest(result['issuance_evidence'])}),
             verification_valid_until=result['verification_valid_until'])
-        if c['action'] in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT'):
+        if c['action'] in ('REVOKE_POLICY_OBJECT','REVOKE_GRANT_OBJECT','REVOKE_ADOPTION'):
             expected.update(
                 revocation_effect_scope=c['revocation_effect_scope'],
                 revocation_effect_grant_hash=c['revocation_effect_grant_hash'])
