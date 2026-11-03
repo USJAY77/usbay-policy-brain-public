@@ -277,3 +277,59 @@ def test_governed_recovery_requires_recovery_required_classification(tmp_path):
     )
     assert result["decision"] == "DENY"
     assert result["reason"] == "RECOVERY_NOT_REQUIRED"
+
+
+def test_governed_recovery_consumes_grant_nonce_replay_and_operation(tmp_path):
+    (
+        f, recovery, _, _, _, _, recovered_projection,
+        sqlite_old_position, failed_ledger_position, _,
+        failed_consumption, proposal, reviews, grant,
+    ) = _recovery_setup(tmp_path)
+    result = recovery.recover(
+        f.command["payload"], recovered_projection,
+        failed_update_previous_position=sqlite_old_position,
+        failed_update_ledger_position=failed_ledger_position,
+        failed_update_consumption=failed_consumption,
+        proposal=proposal, reviews=reviews, grant=grant,
+    )
+    assert result["decision"] == "ALLOW"
+    with sqlite3.connect(f.path) as conn:
+        rows = list(conn.execute(
+            "SELECT kind,identity FROM enrollment_uses "
+            "WHERE kind LIKE 'mutation_recovery_authority:%'"))
+    kinds = {row[0] for row in rows}
+    assert {
+        "mutation_recovery_authority:grant_id",
+        "mutation_recovery_authority:nonce",
+        "mutation_recovery_authority:replay_identity",
+        "mutation_recovery_authority:operation_id",
+    } <= kinds
+
+
+def test_governed_recovery_uncertain_ledger_append_is_unknown(tmp_path):
+    (
+        f, recovery, high_water, _, _, _, recovered_projection,
+        sqlite_old_position, failed_ledger_position, _,
+        failed_consumption, proposal, reviews, grant,
+    ) = _recovery_setup(tmp_path)
+    high_water.writer.fail_uncertain = True
+    result = recovery.recover(
+        f.command["payload"], recovered_projection,
+        failed_update_previous_position=sqlite_old_position,
+        failed_update_ledger_position=failed_ledger_position,
+        failed_update_consumption=failed_consumption,
+        proposal=proposal, reviews=reviews, grant=grant,
+    )
+    assert result["decision"] == "DENY"
+    assert result["reason"] == "RECOVERY_STATE_UNKNOWN"
+    assert result["reconciliation_required"] is True
+    with sqlite3.connect(f.path) as conn:
+        row = conn.execute(
+            "SELECT source_epoch,source_version,projection_hash "
+            "FROM mutation_currentness_projection"
+        ).fetchone()
+    assert row == (
+        sqlite_old_position["source_epoch"],
+        sqlite_old_position["source_version"],
+        sqlite_old_position["projection_hash"],
+    )
