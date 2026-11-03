@@ -23,12 +23,18 @@ from governance.tenant_enrollment_contracts import EnrollmentDenied, digest, req
 
 HIGH_WATER_ACTION = "USBAY_MUTATION_CURRENTNESS_HIGH_WATER"
 HIGH_WATER_SCHEMA = "usbay.mutation_currentness.high_water.v1"
+RECOVERY_ACTION = "USBAY_MUTATION_CURRENTNESS_RECOVERY_HIGH_WATER"
+RECOVERY_SCHEMA = "usbay.mutation_currentness.recovery_high_water.v1"
 HIGH_WATER_FIELDS = {
     "schema_version", "tenant_id", "scope_hash", "source_epoch",
     "source_version", "projection_hash", "update_id_reference",
     "previous_position_hash", "position_hash", "storage_boundary_reference",
 }
 POSITION_FIELDS = {"scope_hash", "source_epoch", "source_version", "projection_hash"}
+RECOVERY_FIELDS = HIGH_WATER_FIELDS | {
+    "recovery_state_hash", "recovery_evidence_reference",
+    "recovery_operation_id_reference",
+}
 
 
 def _position_hash(position):
@@ -77,6 +83,39 @@ def _validate_record(record, *, tenant_id, scope_hash, storage_boundary_referenc
     return position, decision
 
 
+def _validate_recovery_record(record, *, tenant_id, scope_hash,
+                              storage_boundary_reference):
+    require(type(record) is dict and record.get("action") == RECOVERY_ACTION,
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    require(record.get("tenant_id") == tenant_id, "TENANT_MISMATCH")
+    decision = record.get("decision")
+    require(type(decision) is dict and set(decision) >= RECOVERY_FIELDS,
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    require(decision["schema_version"] == RECOVERY_SCHEMA
+            and decision["tenant_id"] == tenant_id
+            and decision["scope_hash"] == scope_hash
+            and decision["storage_boundary_reference"]
+                == storage_boundary_reference,
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    for field in (
+        "recovery_state_hash", "recovery_evidence_reference",
+        "recovery_operation_id_reference",
+    ):
+        require(type(decision[field]) is str
+                and decision[field].startswith("sha256:"),
+                "AUTHORITY_CURRENTNESS_UNPROVEN")
+    position = {
+        "scope_hash": decision["scope_hash"],
+        "source_epoch": decision["source_epoch"],
+        "source_version": decision["source_version"],
+        "projection_hash": decision["projection_hash"],
+    }
+    _validate_position(position)
+    require(decision["position_hash"] == _position_hash(position),
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    return position, decision
+
+
 class MutationHighWaterLedgerWriter:
     """Privileged pre-provisioned writer contract; default denies.
 
@@ -95,6 +134,12 @@ class MutationHighWaterLedgerWriter:
     def append_position(self, *, tenant_id: str, previous: dict,
                         proposed: dict, update_id: str) -> dict:
         raise EnrollmentDenied("AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+
+    def append_recovery_position(
+            self, *, tenant_id: str, previous: dict, recovered: dict,
+            recovery_state_hash: str, recovery_evidence_reference: str,
+            recovery_operation_id: str) -> dict:
+        raise EnrollmentDenied("RECOVERY_WRITER_UNAVAILABLE")
 
 
 class ImmutableLedgerMutationHighWater(MutationCurrentnessHighWater):
@@ -126,12 +171,18 @@ class ImmutableLedgerMutationHighWater(MutationCurrentnessHighWater):
     def _current(self, scope_hash):
         matches = []
         for record in self._records():
-            if record.get("action") != HIGH_WATER_ACTION:
-                continue
+            action = record.get("action")
             try:
-                position, decision = _validate_record(
-                    record, tenant_id=self.tenant_id, scope_hash=scope_hash,
-                    storage_boundary_reference=self.storage_boundary_reference)
+                if action == HIGH_WATER_ACTION:
+                    position, decision = _validate_record(
+                        record, tenant_id=self.tenant_id, scope_hash=scope_hash,
+                        storage_boundary_reference=self.storage_boundary_reference)
+                elif action == RECOVERY_ACTION:
+                    position, decision = _validate_recovery_record(
+                        record, tenant_id=self.tenant_id, scope_hash=scope_hash,
+                        storage_boundary_reference=self.storage_boundary_reference)
+                else:
+                    continue
             except EnrollmentDenied:
                 continue
             matches.append((position, decision, record))
@@ -140,11 +191,20 @@ class ImmutableLedgerMutationHighWater(MutationCurrentnessHighWater):
         previous_hash = digest({"genesis": scope_hash})
         for position, decision, _ in matches:
             if previous is not None:
-                require(position["source_epoch"] == previous["source_epoch"],
-                        "AUTHORITY_CURRENTNESS_UNPROVEN")
-                require(position["source_version"]
-                        == previous["source_version"] + 1,
-                        "AUTHORITY_CURRENTNESS_UNPROVEN")
+                if decision["schema_version"] == RECOVERY_SCHEMA:
+                    require(position["source_epoch"]
+                            == previous["source_epoch"] + 1,
+                            "AUTHORITY_CURRENTNESS_UNPROVEN")
+                    require(position["source_version"]
+                            > previous["source_version"],
+                            "AUTHORITY_CURRENTNESS_UNPROVEN")
+                else:
+                    require(position["source_epoch"]
+                            == previous["source_epoch"],
+                            "AUTHORITY_CURRENTNESS_UNPROVEN")
+                    require(position["source_version"]
+                            == previous["source_version"] + 1,
+                            "AUTHORITY_CURRENTNESS_UNPROVEN")
             require(decision["previous_position_hash"] == previous_hash,
                     "AUTHORITY_CURRENTNESS_UNPROVEN")
             previous = position
@@ -163,6 +223,35 @@ class ImmutableLedgerMutationHighWater(MutationCurrentnessHighWater):
             anchor = _HeldLedgerAnchor(self, scope_hash)
             anchor.current()
             yield anchor
+
+    @contextmanager
+    def hold_recovery(
+            self, *, scope_hash: str, previous: dict, recovered: dict,
+            recovery_state_hash: str, recovery_evidence_reference: str,
+            recovery_operation_id: str):
+        require(isinstance(self.writer, MutationHighWaterLedgerWriter),
+                "RECOVERY_WRITER_UNAVAILABLE")
+        require(self.writer.storage_boundary_reference
+                == self.storage_boundary_reference,
+                "AUTHORITY_CURRENTNESS_UNPROVEN")
+        _validate_position(previous)
+        _validate_position(recovered)
+        require(previous["scope_hash"] == scope_hash
+                and recovered["scope_hash"] == scope_hash,
+                "TENANT_MISMATCH")
+        require(recovered["source_epoch"]
+                == previous["source_epoch"] + 1
+                and recovered["source_version"]
+                > previous["source_version"],
+                "RECOVERY_EPOCH_INVALID")
+        with self.writer.hold(
+                tenant_id=self.tenant_id, scope_hash=scope_hash):
+            current = self._current(scope_hash)
+            require(current == previous, "RECOVERY_STATE_STALE")
+            yield _HeldLedgerRecoveryAnchor(
+                self, scope_hash, previous, recovered,
+                recovery_state_hash, recovery_evidence_reference,
+                recovery_operation_id)
 
     @contextmanager
     def hold_update(self, *, scope_hash: str, expected: dict,
@@ -240,3 +329,41 @@ class _HeldLedgerUpdateAnchor(_HeldLedgerAnchor):
         # caller; this adapter never converts uncertainty into a retry.
         if self.current() != proposed:
             raise MutationCurrentnessUpdateUncertain()
+
+
+class _HeldLedgerRecoveryAnchor(_HeldLedgerAnchor):
+    def __init__(self, source, scope_hash, previous, recovered,
+                 recovery_state_hash, recovery_evidence_reference,
+                 recovery_operation_id):
+        super().__init__(source, scope_hash)
+        self.previous = deepcopy(previous)
+        self.recovered = deepcopy(recovered)
+        self.recovery_state_hash = recovery_state_hash
+        self.recovery_evidence_reference = recovery_evidence_reference
+        self.recovery_operation_id = recovery_operation_id
+
+    def append_recovery(self):
+        if self.current() != self.previous:
+            raise MutationCurrentnessUpdateRejected("RECOVERY_STATE_STALE")
+        try:
+            receipt = self.source.writer.append_recovery_position(
+                tenant_id=self.source.tenant_id,
+                previous=deepcopy(self.previous),
+                recovered=deepcopy(self.recovered),
+                recovery_state_hash=self.recovery_state_hash,
+                recovery_evidence_reference=self.recovery_evidence_reference,
+                recovery_operation_id=self.recovery_operation_id,
+            )
+        except MutationCurrentnessUpdateUncertain:
+            raise
+        except Exception as exc:
+            raise MutationCurrentnessUpdateRejected(
+                "RECOVERY_WRITER_UNAVAILABLE") from exc
+        require(type(receipt) is dict
+                and receipt.get("position") == self.recovered
+                and type(receipt.get("event_hash")) is str
+                and bool(receipt["event_hash"]),
+                "RECOVERY_WRITER_UNAVAILABLE")
+        if self.current() != self.recovered:
+            raise MutationCurrentnessUpdateUncertain()
+        return receipt
