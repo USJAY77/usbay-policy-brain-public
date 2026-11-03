@@ -13,10 +13,14 @@ from governance.mutation_currentness_source import (
     SQLiteMutationCurrentnessProjectionUpdater, projection_payload_hash,
     projection_scope_hash,
 )
+from governance.mutation_high_water_authority import (
+    GovernedMutationHighWaterUpdaterAuthority,
+)
 from governance.tenant_enrollment_contracts import EnrollmentDenied, digest
 from tests.test_mutation_currentness_source import (
     SyntheticUpdaterAuthority, _stored_projection, projected_commit,
 )
+from tests.test_mutation_high_water_authority import _fixture as authority_fixture
 
 
 class SyntheticLedgerWriter(MutationHighWaterLedgerWriter):
@@ -235,3 +239,92 @@ def test_ledger_high_water_integrates_with_projection_updater(tmp_path):
             "source_version": 2,
             "projection_hash": projection_payload_hash(proposed),
         }
+
+
+def test_reviewed_grant_drives_projection_and_ledger_once(tmp_path):
+    f, _, _ = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    scope_hash = projection_scope_hash(f.command["payload"])
+    previous_hash = projection_payload_hash(previous)
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["root_status"] = "REVOKED"
+    proposed_hash = projection_payload_hash(proposed)
+    proposed_position = {
+        "scope_hash": scope_hash,
+        "source_epoch": 1,
+        "source_version": 2,
+        "projection_hash": proposed_hash,
+    }
+    update_id = "reviewed-ledger-update-2"
+    update_ref = digest({"update_id": update_id})
+    position_hash = digest(proposed_position)
+
+    trust, proposal, reviews, grant, _, _, _ = authority_fixture(
+        scope_hash_override=scope_hash,
+        position_hash_override=position_hash,
+        update_ref_override=update_ref,
+        expected_projection_hash_override=previous_hash,
+    )
+    f.view.trust = trust
+    g = grant["payload"]
+    authority = GovernedMutationHighWaterUpdaterAuthority(
+        proposal=proposal,
+        reviews=reviews,
+        grant=grant,
+        trust=trust,
+        parent_authority_id=g["parent_authority_id"],
+        parent_authority_hash=g["parent_authority_hash"],
+        signer_identity_reference=g["signer_identity_reference"],
+        signer_key_id=g["signer_key_id"],
+        signer_key_fingerprint=g["signer_key_fingerprint"],
+        clock=lambda: __import__("tests.helpers.tenant_enrollment", fromlist=["NOW"]).NOW,
+    )
+
+    boundary = g["storage_boundary_reference"]
+    previous_position = {
+        "scope_hash": scope_hash,
+        "source_epoch": 1,
+        "source_version": 1,
+        "projection_hash": previous_hash,
+    }
+    records = [_record(
+        previous["scope"]["tenant_id"],
+        boundary,
+        previous_position,
+        digest({"genesis": scope_hash}),
+    )]
+    writer = SyntheticLedgerWriter(records, boundary)
+    high_water = ImmutableLedgerMutationHighWater(
+        "unused",
+        tenant_id=previous["scope"]["tenant_id"],
+        writer=writer,
+        storage_boundary_reference=boundary,
+        reader=lambda _: deepcopy(records),
+    )
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=authority,
+        high_water=high_water,
+    )
+    result = updater.update(
+        f.command["payload"],
+        proposed,
+        expected_epoch=1,
+        expected_version=1,
+        expected_projection_hash=previous_hash,
+        update_id=update_id,
+    )
+    assert result["decision"] == "ALLOW"
+    assert result["source_version"] == 2
+    with high_water.hold(scope_hash=scope_hash) as anchor:
+        assert anchor.current() == proposed_position
+
+    second = updater.update(
+        f.command["payload"],
+        previous,
+        expected_epoch=1,
+        expected_version=2,
+        expected_projection_hash=proposed_hash,
+        update_id="reviewed-ledger-update-3",
+    )
+    assert second["decision"] == "DENY"
