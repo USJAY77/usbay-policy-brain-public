@@ -347,9 +347,12 @@ class SQLiteMutationCurrentnessProjectionUpdater(MutationCurrentnessProjectionUp
                             and bool(auth["consumption"][k])
                             for k in ("issuer_id", "grant_id", "nonce", "replay_identity")),
                     "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
-            self._view._consume(
-                conn, "mutation_high_water_authority",
-                deepcopy(auth["consumption"]))
+            try:
+                self._view._consume(
+                    conn, "mutation_high_water_authority",
+                    deepcopy(auth["consumption"]))
+            except sqlite3.IntegrityError:
+                raise EnrollmentDenied("GRANT_ALREADY_CONSUMED") from None
             expected = {
                 "scope_hash": scope_hash,
                 "source_epoch": epoch,
