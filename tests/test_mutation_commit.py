@@ -16,6 +16,7 @@ from governance.mutation_commit import (
 from governance.mutation_authority import fingerprint
 from governance.tenant_enrollment_contracts import FLAGS,EnrollmentDenied,canonical,digest,instant,parse_json
 from tests.helpers.mutation_commit import synthetic_commit
+from tests.helpers.mutation_policy_revocation_effect import build_effect_for_mutation
 from tests.helpers.tenant_enrollment import NOW
 
 
@@ -324,3 +325,45 @@ def test_audit_event_records_exact_transaction_id(tmp_path):
         payloads=[json.loads(row[0]) for row in conn.execute('SELECT payload FROM enrollment_events ORDER BY sequence')]
     event=next(e for e in reversed(payloads) if e.get('kind')=='MUTATION_ATTEMPT_CONSUMED_NON_EXECUTING')
     assert event['evidence']['transaction_id']=='synthetic-transaction'
+
+
+def test_policy_revocation_effect_extension_allows_commit_fence(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_POLICY_OBJECT')
+    effect=build_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash=digest(effect['grant']['payload']),
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command,revocation_effect=effect)
+    assert result['decision']=='ALLOW'
+    assert result['reason']=='COMMIT_FENCE_VERIFIED'
+    assert result['evidence']['revocation_effect_scope']=='ALL_VERSIONS_OF_OBJECT'
+    assert result['evidence']['revocation_effect_grant_hash']==digest(effect['grant']['payload'])
+
+
+def test_policy_revocation_command_with_effect_fields_but_no_effect_bundle_denies(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_POLICY_OBJECT')
+    effect=build_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash=digest(effect['grant']['payload']),
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command)
+    deny(result,'REVOCATION_SCOPE_MISMATCH')
+
+
+def test_policy_revocation_effect_grant_hash_mismatch_denies(tmp_path):
+    f=synthetic_commit(tmp_path,action='REVOKE_POLICY_OBJECT')
+    effect=build_effect_for_mutation(f.f)
+    f.view.trust=f.f.trust
+    command=f.new_command(
+        revocation_effect_scope='ALL_VERSIONS_OF_OBJECT',
+        revocation_effect_grant_hash='sha256:'+'e'*64,
+    )
+    with f.view.mutation_attempt(currentness_fence=f.source) as tx:
+        result=f.verify(tx,command,revocation_effect=effect)
+    deny(result,'REVOCATION_SCOPE_MISMATCH')
