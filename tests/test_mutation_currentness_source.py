@@ -8,11 +8,12 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from governance.mutation_currentness_source import (
-    MutationCurrentnessHighWater, MutationProjectionSigner,
-    SQLiteMutationCurrentnessFence, PROJECTION_SCHEMA,
+    MutationCurrentnessHighWater, MutationCurrentnessUpdaterAuthority,
+    MutationProjectionSigner, SQLiteMutationCurrentnessFence,
+    SQLiteMutationCurrentnessProjectionUpdater, PROJECTION_SCHEMA,
     projection_scope, projection_scope_hash, projection_payload_hash,
 )
-from governance.tenant_enrollment_contracts import canonical, digest
+from governance.tenant_enrollment_contracts import canonical, digest, parse_json
 from security.enrollment_policy_currentness import EnrollmentTrust, ScopedPublicKey
 from tests.helpers.mutation_commit import synthetic_commit
 
@@ -52,6 +53,31 @@ class SyntheticAnchor(MutationCurrentnessHighWater):
             from governance.mutation_commit import CommitFenceRejected
             raise CommitFenceRejected("COMMIT_FENCE_STALE")
         connection.execute("COMMIT")
+
+    @contextmanager
+    def hold_update(self, *, scope_hash, expected, proposed, update_id):
+        with self.lock:
+            assert self.record == expected
+            self._proposed = deepcopy(proposed)
+            yield self
+
+    def commit_update(self, connection, *, expected, proposed, update_id):
+        assert self.record == expected
+        assert proposed == self._proposed
+        connection.execute("COMMIT")
+        self.record = deepcopy(proposed)
+
+
+class SyntheticUpdaterAuthority(MutationCurrentnessUpdaterAuthority):
+    def authorize_update(self, **kwargs):
+        return {
+            "decision": "ALLOW",
+            "evidence_hash": digest({"synthetic-updater-evidence": kwargs["update_id"]}),
+            "source_status_hash": digest({
+                "previous": kwargs["previous_projection_hash"],
+                "proposed": kwargs["proposed_projection_hash"],
+            }),
+        }
 
 
 def _add_key(f, issuer, key_id, roles):
@@ -110,6 +136,12 @@ def projected_commit(tmp_path):
         "expected_current_head": command["expected_current_head"],
         "revocation_reference":
             currentness["revocations"]["payload"]["revocation_reference"],
+        "authority_status": {
+            "parent_status": "ACTIVE",
+            "root_status": "ACTIVE",
+            "issuer_status": "ACTIVE",
+            "issuance_state": "AVAILABLE",
+        },
     }
     scope_hash = projection_scope_hash(command)
     projection_hash = projection_payload_hash(projection)
@@ -214,3 +246,118 @@ def test_projection_table_is_never_autocreated(tmp_path):
             conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
     assert "mutation_currentness_projection" not in tables
+
+
+def _stored_projection(f):
+    with sqlite3.connect(f.path) as conn:
+        encoded = conn.execute(
+            "SELECT projection FROM mutation_currentness_projection"
+        ).fetchone()[0]
+    return parse_json(encoded)
+
+
+def test_projection_status_is_not_inferred_active(tmp_path):
+    f, source, anchor = projected_commit(tmp_path)
+    projection = _stored_projection(f)
+    projection["authority_status"]["root_status"] = "REVOKED"
+    new_hash = projection_payload_hash(projection)
+    with sqlite3.connect(f.path) as conn:
+        conn.execute(
+            "UPDATE mutation_currentness_projection "
+            "SET projection=?,projection_hash=? WHERE source_version=1",
+            (canonical(projection).decode(), new_hash),
+        )
+    anchor.record["projection_hash"] = new_hash
+    with f.view.mutation_attempt(currentness_fence=source) as tx:
+        result = f.verify(tx)
+        assert result["decision"] == "DENY"
+        assert result["reason"] == "ROOT_AUTHORITY_REVOKED"
+
+
+def test_projection_updater_advances_version_and_binds_audit(tmp_path):
+    f, source, anchor = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    previous_hash = projection_payload_hash(previous)
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["root_status"] = "REVOKED"
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=SyntheticUpdaterAuthority(),
+        high_water=anchor,
+    )
+    result = updater.update(
+        f.command["payload"], proposed,
+        expected_epoch=1,
+        expected_version=1,
+        expected_projection_hash=previous_hash,
+        update_id="synthetic-update-1",
+    )
+    assert result["decision"] == "ALLOW"
+    assert result["source_epoch"] == 1
+    assert result["source_version"] == 2
+    assert anchor.record["source_version"] == 2
+    with sqlite3.connect(f.path) as conn:
+        row = conn.execute(
+            "SELECT source_epoch,source_version,projection_hash "
+            "FROM mutation_currentness_projection"
+        ).fetchone()
+        assert row == (1, 2, projection_payload_hash(proposed))
+        events = [
+            parse_json(x[0]) for x in
+            conn.execute("SELECT payload FROM enrollment_events ORDER BY sequence")
+        ]
+    event = [
+        e for e in events
+        if e.get("kind") == "MUTATION_CURRENTNESS_PROJECTED_NON_PRODUCTION"
+    ][-1]
+    assert event["source_epoch"] == 1
+    assert event["previous_source_version"] == 1
+    assert event["source_version"] == 2
+    assert event["previous_projection_hash"] == previous_hash
+    assert event["projection_hash"] == projection_payload_hash(proposed)
+    with f.view.mutation_attempt(currentness_fence=source) as tx:
+        denied = f.verify(tx)
+        assert denied["decision"] == "DENY"
+        assert denied["reason"] == "ROOT_AUTHORITY_REVOKED"
+
+
+def test_projection_updater_stale_cas_fails_closed(tmp_path):
+    f, _, anchor = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["issuer_status"] = "REVOKED"
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=SyntheticUpdaterAuthority(),
+        high_water=anchor,
+    )
+    result = updater.update(
+        f.command["payload"], proposed,
+        expected_epoch=1,
+        expected_version=2,
+        expected_projection_hash=projection_payload_hash(previous),
+        update_id="synthetic-stale-update",
+    )
+    assert result["decision"] == "DENY"
+    assert result["reason"] == "CURRENTNESS_UPDATE_STALE"
+
+
+def test_projection_updater_without_authority_fails_closed(tmp_path):
+    f, _, anchor = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["parent_status"] = "REVOKED"
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=None,
+        high_water=anchor,
+    )
+    result = updater.update(
+        f.command["payload"], proposed,
+        expected_epoch=1,
+        expected_version=1,
+        expected_projection_hash=projection_payload_hash(previous),
+        update_id="synthetic-no-authority",
+    )
+    assert result["decision"] == "DENY"
+    assert result["reason"] == "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE"
