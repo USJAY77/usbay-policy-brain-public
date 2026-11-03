@@ -13,6 +13,9 @@ import re
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from governance.mutation_authority import REVIEWERS
+from governance.mutation_currentness_source import (
+    MutationCurrentnessUpdaterAuthority, projection_scope_hash,
+)
 from governance.tenant_enrollment_contracts import (
     FLAGS, POLICY_DOMAIN, PURPOSE, SCOPE_FIELDS, TRUST_DOMAIN, EnrollmentDenied,
     canonical, decision, digest, instant, parse_json, require,
@@ -345,3 +348,76 @@ def verify_recovery_epoch_grant(proposal, reviews, grant, *,
         return decision(
             str(error) if type(error) is EnrollmentDenied
             else "HIGH_WATER_AUTHORITY_INVALID")
+
+
+class GovernedMutationHighWaterUpdaterAuthority(MutationCurrentnessUpdaterAuthority):
+    """Adapter from one exact reviewed writer grant to the projection updater.
+
+    This class does not consume the grant or create a signer. The protected
+    SQLite updater must durably consume the returned grant identity before
+    treating an update as committed. Missing or mismatched bindings deny.
+    """
+
+    def __init__(self, *, proposal, reviews, grant, trust, parent_authority_id,
+                 parent_authority_hash, signer_identity_reference,
+                 signer_key_id, signer_key_fingerprint, clock):
+        self.proposal = deepcopy(proposal)
+        self.reviews = deepcopy(reviews)
+        self.grant = deepcopy(grant)
+        self.trust = trust
+        self.parent_authority_id = parent_authority_id
+        self.parent_authority_hash = parent_authority_hash
+        self.signer_identity_reference = signer_identity_reference
+        self.signer_key_id = signer_key_id
+        self.signer_key_fingerprint = signer_key_fingerprint
+        self.clock = clock
+
+    def authorize_update(self, **kwargs):
+        command = kwargs["command"]
+        proposed_position = {
+            "scope_hash": projection_scope_hash(command),
+            "source_epoch": kwargs["source_epoch"],
+            "source_version": kwargs["source_version"] + 1,
+            "projection_hash": kwargs["proposed_projection_hash"],
+        }
+        result = verify_high_water_writer_grant(
+            self.proposal, self.reviews, self.grant,
+            trust=self.trust,
+            now=self.clock(),
+            expected_scope_hash=proposed_position["scope_hash"],
+            expected_position_hash=digest(proposed_position),
+            expected_update_id_reference=digest({"update_id": kwargs["update_id"]}),
+            expected_signer_identity_reference=self.signer_identity_reference,
+            expected_signer_key_id=self.signer_key_id,
+            expected_signer_key_fingerprint=self.signer_key_fingerprint,
+            expected_parent_authority_id=self.parent_authority_id,
+            expected_parent_authority_hash=self.parent_authority_hash,
+        )
+        require(result["decision"] == "ALLOW",
+                result.get("reason", "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE"))
+        grant = self.grant["payload"]
+        require(grant["expected_source_epoch"] == kwargs["source_epoch"]
+                and grant["expected_source_version"] == kwargs["source_version"]
+                and grant["expected_projection_hash"]
+                == kwargs["previous_projection_hash"],
+                "CURRENTNESS_UPDATE_STALE")
+        return {
+            "decision": "ALLOW",
+            "evidence_hash": result["grant_hash"],
+            "source_status_hash": digest({
+                "parent_authority_id": self.parent_authority_id,
+                "parent_authority_hash": self.parent_authority_hash,
+                "scope_hash": proposed_position["scope_hash"],
+                "previous_projection_hash": kwargs["previous_projection_hash"],
+                "proposed_projection_hash": kwargs["proposed_projection_hash"],
+            }),
+            "consumption": {
+                "grant_id": grant["grant_id"],
+                "nonce": grant["grant_nonce"],
+                "replay_identity": digest({
+                    "grant_id": grant["grant_id"],
+                    "update_id": kwargs["update_id"],
+                    "proposed_position": proposed_position,
+                }),
+            },
+        }
