@@ -187,7 +187,9 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consu
     view=EnrollmentAuthorityView(path,f.trust,clock=lambda:NOW)
     if action=='REVOKE_GRANT_OBJECT' and grant_consumed:
         admitted=view.enroll(f.enrollment.inputs)
-        assert admitted['reason']=='ENROLLMENT_COMMITTED_RECEIPT_REQUIRED'
+        assert admitted['decision']=='DENY'
+        assert admitted['reason']=='SIGNED_RECEIPT_REQUIRED'
+        assert admitted['registration_outcome']=='COMMITTED_NON_EXECUTING'
     if action=='FINALIZE_POLICY_ADOPTION':
         result=view.propose_adoption(pending)
         assert result['publication']=='PENDING'
