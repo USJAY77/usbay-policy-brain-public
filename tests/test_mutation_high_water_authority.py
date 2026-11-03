@@ -17,7 +17,8 @@ from tests.helpers.tenant_enrollment import NOW
 
 def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
              scope_hash_override=None, position_hash_override=None,
-             update_ref_override=None, expected_projection_hash_override=None):
+             update_ref_override=None, expected_projection_hash_override=None,
+             recovery_overrides=None):
     tenant = "synthetic-enrollment-tenant"
     registry = digest({"registry": "synthetic-only"})
     specs = {
@@ -145,6 +146,24 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
         )
         kind = "writer_grant"
     else:
+        recovery_overrides = dict(recovery_overrides or {})
+        previous_epoch = recovery_overrides.get("previous_epoch", 1)
+        next_epoch = recovery_overrides.get("next_epoch", previous_epoch + 1)
+        previous_source_version = recovery_overrides.get(
+            "previous_source_version", 7)
+        next_source_version = recovery_overrides.get(
+            "next_source_version", previous_source_version + 1)
+        previous_projection_hash = recovery_overrides.get(
+            "previous_projection_hash", digest({"projection": 7}))
+        recovered_projection_hash = recovery_overrides.get(
+            "recovered_projection_hash",
+            digest({"recovered_projection": 8}))
+        previous_high_water_event_hash = recovery_overrides.get(
+            "previous_high_water_event_hash", digest({"event": 7}))
+        recovery_evidence_reference = recovery_overrides.get(
+            "recovery_evidence_reference", digest({"recovery": "evidence"}))
+        recovery_operation_id = recovery_overrides.get(
+            "recovery_operation_id", "synthetic-recovery-operation")
         payload = dict(
             common,
             schema_version="usbay.mutation_high_water_authority.recovery_grant.v1",
@@ -153,28 +172,28 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
             **base,
             grant_id="synthetic-recovery-grant",
             grant_nonce="synthetic-recovery-nonce",
-            previous_epoch=1,
-            next_epoch=2,
-            previous_source_version=7,
-            next_source_version=8,
-            previous_projection_hash=digest({"projection": 7}),
-            recovered_projection_hash=digest({"recovered_projection": 8}),
-            previous_high_water_event_hash=digest({"event": 7}),
-            recovery_evidence_reference=digest({"recovery": "evidence"}),
+            previous_epoch=previous_epoch,
+            next_epoch=next_epoch,
+            previous_source_version=previous_source_version,
+            next_source_version=next_source_version,
+            previous_projection_hash=previous_projection_hash,
+            recovered_projection_hash=recovered_projection_hash,
+            previous_high_water_event_hash=previous_high_water_event_hash,
+            recovery_evidence_reference=recovery_evidence_reference,
             reason_code="RESTORE_FROM_VERIFIED_HIGH_WATER",
             proposed_recovery_state_hash=recovery_state_hash(
                 scope_hash=scope_hash,
-                previous_epoch=1,
-                next_epoch=2,
-                previous_source_version=7,
-                next_source_version=8,
-                previous_projection_hash=digest({"projection": 7}),
-                recovered_projection_hash=digest({"recovered_projection": 8}),
-                previous_high_water_event_hash=digest({"event": 7}),
-                recovery_evidence_reference=digest({"recovery": "evidence"}),
-                recovery_operation_id="synthetic-recovery-operation",
+                previous_epoch=previous_epoch,
+                next_epoch=next_epoch,
+                previous_source_version=previous_source_version,
+                next_source_version=next_source_version,
+                previous_projection_hash=previous_projection_hash,
+                recovered_projection_hash=recovered_projection_hash,
+                previous_high_water_event_hash=previous_high_water_event_hash,
+                recovery_evidence_reference=recovery_evidence_reference,
+                recovery_operation_id=recovery_operation_id,
             ),
-            recovery_operation_id="synthetic-recovery-operation",
+            recovery_operation_id=recovery_operation_id,
             max_uses=1,
             proposal_hash=digest(proposal["payload"]),
             reviewer_a_decision_hash=digest(reviews[0]["payload"]),
