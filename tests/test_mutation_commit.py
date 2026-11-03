@@ -296,6 +296,11 @@ def test_review_expiry_after_verification_before_commit_is_stale(tmp_path):
     field='reviewer_a_decision_hash' if payload['reviewer_id']=='USBAY-AUDIT' else 'reviewer_b_decision_hash'
     grant[field]=digest(payload);grant['grant_fingerprint']=fingerprint(grant,'grant')
     f.f.grant=f.f.sign(grant)
+    command=deepcopy(f.command['payload'])
+    command['reviewer_a_decision_hash']=grant['reviewer_a_decision_hash']
+    command['reviewer_b_decision_hash']=grant['reviewer_b_decision_hash']
+    command['mutation_authority_grant_hash']=digest(grant)
+    f.command=f.seal_command(command)
     with f.view.mutation_attempt(currentness_fence=f.source) as tx:
         assert f.verify(tx)['decision']=='ALLOW'
         f.source.before_confirm=lambda source:setattr(source,'clock',lambda:instant('2026-01-02T12:00:02Z'))
