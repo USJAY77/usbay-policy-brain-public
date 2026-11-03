@@ -5,8 +5,8 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
 from governance.mutation_high_water_authority import (
-    AUTHORITY_DOMAIN, fingerprint, verify_high_water_writer_grant,
-    verify_recovery_epoch_grant,
+    AUTHORITY_DOMAIN, fingerprint, recovery_state_hash,
+    verify_high_water_writer_grant, verify_recovery_epoch_grant,
 )
 from governance.tenant_enrollment_contracts import (
     FLAGS, POLICY_DOMAIN, PURPOSE, SCOPE_FIELDS, TRUST_DOMAIN, canonical, digest,
@@ -61,7 +61,12 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
     position_hash = position_hash_override or (
         digest({"position": 2})
         if action == "WRITE_MUTATION_HIGH_WATER"
-        else digest({"recovered": 8})
+        else digest({
+            "scope_hash": scope_hash,
+            "source_epoch": 2,
+            "source_version": 8,
+            "projection_hash": digest({"recovered_projection": 8}),
+        })
     )
     update_ref = update_ref_override or (
         digest({"update": "u2"})
@@ -151,11 +156,24 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
             previous_epoch=1,
             next_epoch=2,
             previous_source_version=7,
+            next_source_version=8,
             previous_projection_hash=digest({"projection": 7}),
+            recovered_projection_hash=digest({"recovered_projection": 8}),
             previous_high_water_event_hash=digest({"event": 7}),
             recovery_evidence_reference=digest({"recovery": "evidence"}),
             reason_code="RESTORE_FROM_VERIFIED_HIGH_WATER",
-            proposed_recovery_state_hash=digest({"recovered": 8}),
+            proposed_recovery_state_hash=recovery_state_hash(
+                scope_hash=scope_hash,
+                previous_epoch=1,
+                next_epoch=2,
+                previous_source_version=7,
+                next_source_version=8,
+                previous_projection_hash=digest({"projection": 7}),
+                recovered_projection_hash=digest({"recovered_projection": 8}),
+                previous_high_water_event_hash=digest({"event": 7}),
+                recovery_evidence_reference=digest({"recovery": "evidence"}),
+                recovery_operation_id="synthetic-recovery-operation",
+            ),
             recovery_operation_id="synthetic-recovery-operation",
             max_uses=1,
             proposal_hash=digest(proposal["payload"]),
@@ -254,6 +272,8 @@ def test_recovery_epoch_exact_increment_allows():
         current_source_version=7,
         current_projection_hash=g["previous_projection_hash"],
         expected_high_water_event_hash=g["previous_high_water_event_hash"],
+        expected_next_source_version=g["next_source_version"],
+        expected_recovered_projection_hash=g["recovered_projection_hash"],
         expected_recovery_state_hash=g["proposed_recovery_state_hash"],
         expected_parent_authority_id=g["parent_authority_id"],
         expected_parent_authority_hash=g["parent_authority_hash"],
@@ -274,6 +294,8 @@ def test_recovery_epoch_skip_denied():
         current_source_version=7,
         current_projection_hash=g["previous_projection_hash"],
         expected_high_water_event_hash=g["previous_high_water_event_hash"],
+        expected_next_source_version=g["next_source_version"],
+        expected_recovered_projection_hash=g["recovered_projection_hash"],
         expected_recovery_state_hash=g["proposed_recovery_state_hash"],
         expected_parent_authority_id=g["parent_authority_id"],
         expected_parent_authority_hash=g["parent_authority_hash"],
@@ -316,3 +338,24 @@ def test_writer_reviewed_proposal_position_mismatch_denied():
         expected_parent_authority_hash=grant["payload"]["parent_authority_hash"],
     )
     assert result["decision"] == "DENY"
+
+
+def test_recovery_version_reset_denied():
+    trust, proposal, reviews, grant, scope_hash, _, _ = _fixture(
+        "ADVANCE_MUTATION_RECOVERY_EPOCH")
+    g = deepcopy(grant["payload"])
+    result = verify_recovery_epoch_grant(
+        proposal, reviews, grant, trust=trust, now=NOW,
+        expected_scope_hash=scope_hash,
+        current_epoch=1,
+        current_source_version=7,
+        current_projection_hash=g["previous_projection_hash"],
+        expected_high_water_event_hash=g["previous_high_water_event_hash"],
+        expected_next_source_version=1,
+        expected_recovered_projection_hash=g["recovered_projection_hash"],
+        expected_recovery_state_hash=g["proposed_recovery_state_hash"],
+        expected_parent_authority_id=g["parent_authority_id"],
+        expected_parent_authority_hash=g["parent_authority_hash"],
+    )
+    assert result["decision"] == "DENY"
+    assert result["reason"] == "RECOVERY_EPOCH_INVALID"
