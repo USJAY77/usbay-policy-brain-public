@@ -77,6 +77,11 @@ class SyntheticUpdaterAuthority(MutationCurrentnessUpdaterAuthority):
                 "previous": kwargs["previous_projection_hash"],
                 "proposed": kwargs["proposed_projection_hash"],
             }),
+            "consumption": {
+                "grant_id": "synthetic-high-water-grant",
+                "nonce": "synthetic-high-water-nonce",
+                "replay_identity": digest({"synthetic-update": kwargs["update_id"]}),
+            },
         }
 
 
@@ -361,3 +366,41 @@ def test_projection_updater_without_authority_fails_closed(tmp_path):
     )
     assert result["decision"] == "DENY"
     assert result["reason"] == "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE"
+
+
+def test_projection_updater_reuses_no_high_water_grant(tmp_path):
+    f, _, anchor = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    previous_hash = projection_payload_hash(previous)
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["issuer_status"] = "REVOKED"
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=SyntheticUpdaterAuthority(),
+        high_water=anchor,
+    )
+    first = updater.update(
+        f.command["payload"], proposed,
+        expected_epoch=1,
+        expected_version=1,
+        expected_projection_hash=previous_hash,
+        update_id="synthetic-one-time-update",
+    )
+    assert first["decision"] == "ALLOW"
+
+    with sqlite3.connect(f.path) as conn:
+        current = conn.execute(
+            "SELECT source_epoch,source_version,projection_hash "
+            "FROM mutation_currentness_projection"
+        ).fetchone()
+    rollback = deepcopy(previous)
+    rollback["authority_status"]["issuer_status"] = "ACTIVE"
+    second = updater.update(
+        f.command["payload"], rollback,
+        expected_epoch=current[0],
+        expected_version=current[1],
+        expected_projection_hash=current[2],
+        update_id="synthetic-one-time-update-2",
+    )
+    assert second["decision"] == "DENY"
+    assert second["reason"] in ("REPLAY_DETECTED", "GRANT_ALREADY_CONSUMED")
