@@ -39,7 +39,10 @@ PROJECTION_FIELDS = {
     "root_authority", "issuer_grant", "review_policy", "currentness",
     "target_object", "target_state", "parent_status_signer",
     "root_status_signer", "commit_fence_signer", "expected_current_head",
-    "revocation_reference",
+    "revocation_reference", "authority_status",
+}
+AUTHORITY_STATUS_FIELDS = {
+    "parent_status", "root_status", "issuer_status", "issuance_state",
 }
 SIGNER_FIELDS = {"issuer_id", "issuer_key_id"}
 STATUS_ROLES = {
@@ -91,6 +94,21 @@ class MutationCurrentnessProjectionUpdater:
         raise EnrollmentDenied("AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
 
 
+class MutationCurrentnessUpdaterAuthority:
+    """Privileged updater-authority interface; default always denies."""
+
+    def authorize_update(self, **kwargs):
+        raise EnrollmentDenied("AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+
+
+class MutationCurrentnessUpdateRejected(EnrollmentDenied):
+    """High-water/update provider rejected before SQLite COMMIT."""
+
+
+class MutationCurrentnessUpdateUncertain(Exception):
+    """High-water/update provider cannot prove whether SQLite COMMIT completed."""
+
+
 def _validate_signer_reference(value):
     require(type(value) is dict and set(value) == SIGNER_FIELDS,
             "AUTHORITY_CURRENTNESS_UNPROVEN")
@@ -129,6 +147,15 @@ def _validate_projection(payload, command):
             == command["expected_current_head"], "EXPECTED_HEAD_MISMATCH")
     require(payload["revocation_reference"]
             == payload["currentness"]["revocations"]["payload"].get("revocation_reference"),
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    require(type(payload["authority_status"]) is dict
+            and set(payload["authority_status"]) == AUTHORITY_STATUS_FIELDS,
+            "AUTHORITY_CURRENTNESS_UNPROVEN")
+    status = payload["authority_status"]
+    require(status["parent_status"] in ("ACTIVE", "REVOKED")
+            and status["root_status"] in ("ACTIVE", "REVOKED")
+            and status["issuer_status"] in ("ACTIVE", "REVOKED")
+            and status["issuance_state"] in ("AVAILABLE", "CONSUMED"),
             "AUTHORITY_CURRENTNESS_UNPROVEN")
     for name in ("parent_status_signer", "root_status_signer",
                  "commit_fence_signer"):
@@ -201,7 +228,7 @@ class _ProjectionStatusSource:
             parent_authority_hash=digest(parent),
             subject_issuer_id=parent["subject_issuer_id"],
             issuance_scope=AUTHORITY_DOMAIN,
-            parent_status="ACTIVE",
+            parent_status=p["authority_status"]["parent_status"],
             state_sequence=self._version,
             state_epoch=self._epoch,
             expected_current_head=p["expected_current_head"],
@@ -243,9 +270,9 @@ class _ProjectionStatusSource:
             issuer_grant_id=issuer["issuer_grant_id"],
             issuer_grant_hash=digest(issuer),
             subject_issuer_id=issuer["issuer_id"],
-            root_status="ACTIVE",
-            issuer_status="ACTIVE",
-            issuance_state="AVAILABLE",
+            root_status=p["authority_status"]["root_status"],
+            issuer_status=p["authority_status"]["issuer_status"],
+            issuance_state=p["authority_status"]["issuance_state"],
             state_sequence=self._version,
             state_epoch=self._epoch,
             expected_current_head=p["expected_current_head"],
@@ -258,6 +285,156 @@ class _ProjectionStatusSource:
         IssuerAuthorityStatusV1.from_payload(payload)
         return self._signed_status(
             payload, IssuerAuthorityStatusV1, STATUS_ROLES["root"])
+
+
+class SQLiteMutationCurrentnessProjectionUpdater(MutationCurrentnessProjectionUpdater):
+    """Bounded non-production projection updater.
+
+    The updater creates no authority and has no default authorizer or high-water
+    implementation. A successful update requires an independently composed
+    updater authority plus a high-water object whose update hold spans COMMIT.
+    """
+
+    def __init__(self, view, *, updater_authority, high_water):
+        self._view = view
+        self._updater_authority = updater_authority
+        self._high_water = high_water
+
+    def update(self, command, projection, *, expected_epoch, expected_version,
+               expected_projection_hash, update_id):
+        conn = None
+        commit_attempted = False
+        try:
+            require(isinstance(self._updater_authority,
+                               MutationCurrentnessUpdaterAuthority),
+                    "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+            require(isinstance(self._high_water, MutationCurrentnessHighWater),
+                    "AUTHORITY_CURRENTNESS_UNPROVEN")
+            require(type(update_id) is str and 0 < len(update_id) <= 128
+                    and "*" not in update_id, "CURRENTNESS_UPDATE_INVALID")
+            conn = self._view._connect_existing()
+            conn.execute("BEGIN IMMEDIATE")
+            state = self._view._snapshot(conn, require_finalized=False)
+            scope_hash = projection_scope_hash(command)
+            epoch, version, current, current_hash = (
+                SQLiteMutationCurrentnessFence._load(conn, scope_hash))
+            require((epoch, version, current_hash) ==
+                    (expected_epoch, expected_version,
+                     expected_projection_hash), "CURRENTNESS_UPDATE_STALE")
+            proposed = _validate_projection(deepcopy(projection), command)
+            proposed_hash = projection_payload_hash(proposed)
+            require(proposed_hash != current_hash, "CURRENTNESS_UPDATE_INVALID")
+            auth = self._updater_authority.authorize_update(
+                command=deepcopy(command),
+                previous_projection_hash=current_hash,
+                proposed_projection_hash=proposed_hash,
+                source_epoch=epoch,
+                source_version=version,
+                update_id=update_id,
+                now=self._view.clock(),
+            )
+            require(type(auth) is dict
+                    and set(auth) == {"decision", "evidence_hash",
+                                      "source_status_hash"}
+                    and auth["decision"] == "ALLOW"
+                    and all(type(auth[k]) is str
+                            and auth[k].startswith("sha256:")
+                            for k in ("evidence_hash", "source_status_hash")),
+                    "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+            expected = {
+                "scope_hash": scope_hash,
+                "source_epoch": epoch,
+                "source_version": version,
+                "projection_hash": current_hash,
+            }
+            proposed_position = {
+                "scope_hash": scope_hash,
+                "source_epoch": epoch,
+                "source_version": version + 1,
+                "projection_hash": proposed_hash,
+            }
+            hold_update = getattr(self._high_water, "hold_update", None)
+            require(callable(hold_update),
+                    "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+            with hold_update(
+                    scope_hash=scope_hash, expected=deepcopy(expected),
+                    proposed=deepcopy(proposed_position),
+                    update_id=update_id) as anchor:
+                require(anchor.current() == expected,
+                        "AUTHORITY_CURRENTNESS_UNPROVEN")
+                cursor = conn.execute(
+                    "UPDATE mutation_currentness_projection "
+                    "SET source_version=?,projection=?,projection_hash=? "
+                    "WHERE scope_hash=? AND source_epoch=? AND source_version=? "
+                    "AND projection_hash=?",
+                    (version + 1, canonical(proposed).decode(), proposed_hash,
+                     scope_hash, epoch, version, current_hash),
+                )
+                require(cursor.rowcount == 1, "CURRENTNESS_UPDATE_STALE")
+                event = {
+                    "kind": "MUTATION_CURRENTNESS_PROJECTED_NON_PRODUCTION",
+                    "scope_reference": scope_hash,
+                    "source_epoch": epoch,
+                    "previous_source_version": version,
+                    "source_version": version + 1,
+                    "previous_projection_hash": current_hash,
+                    "projection_hash": proposed_hash,
+                    "update_id_reference": digest({"update_id": update_id}),
+                    "updater_evidence_hash": auth["evidence_hash"],
+                    "source_status_hash": auth["source_status_hash"],
+                }
+                event_hash = self._view._append(conn, state, event)
+                commit_update = getattr(anchor, "commit_update", None)
+                require(callable(commit_update),
+                        "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+                commit_attempted = True
+                commit_update(
+                    conn, expected=deepcopy(expected),
+                    proposed=deepcopy(proposed_position),
+                    update_id=update_id,
+                )
+                require(not conn.in_transaction, "CURRENTNESS_UPDATE_STATE_UNKNOWN")
+            from governance.tenant_enrollment_contracts import decision
+            return decision(
+                "CURRENTNESS_PROJECTION_UPDATED_NON_PRODUCTION",
+                allowed=True,
+                update_outcome="COMMITTED_NON_EXECUTING",
+                mutation_executed=False,
+                event_hash=event_hash,
+                source_epoch=epoch,
+                source_version=version + 1,
+                projection_hash=proposed_hash,
+            )
+        except MutationCurrentnessUpdateRejected as error:
+            if conn is not None and conn.in_transaction:
+                conn.rollback()
+            from governance.tenant_enrollment_contracts import decision
+            return decision(str(error))
+        except MutationCurrentnessUpdateUncertain:
+            from governance.tenant_enrollment_contracts import decision
+            return decision(
+                "CURRENTNESS_UPDATE_STATE_UNKNOWN",
+                update_outcome="UNKNOWN",
+                reconciliation_required=True,
+                retry_allowed=False,
+            )
+        except Exception as error:
+            from governance.tenant_enrollment_contracts import decision
+            if commit_attempted:
+                return decision(
+                    "CURRENTNESS_UPDATE_STATE_UNKNOWN",
+                    update_outcome="UNKNOWN",
+                    reconciliation_required=True,
+                    retry_allowed=False,
+                )
+            if conn is not None and conn.in_transaction:
+                conn.rollback()
+            reason = (str(error) if type(error) is EnrollmentDenied
+                      else "CURRENTNESS_UPDATE_INVALID")
+            return decision(reason)
+        finally:
+            if conn is not None:
+                conn.close()
 
 
 class SQLiteMutationCurrentnessFence(MutationAuthorityCurrentnessFence):
@@ -304,6 +481,22 @@ class SQLiteMutationCurrentnessFence(MutationAuthorityCurrentnessFence):
         payload = parse_json(encoded)
         require(stored_hash == projection_payload_hash(payload),
                 "AUTHORITY_CURRENTNESS_UNPROVEN")
+        if version > 1:
+            events = [
+                parse_json(item[0]) for item in connection.execute(
+                    "SELECT payload FROM enrollment_events ORDER BY sequence")
+            ]
+            matches = [
+                event for event in events
+                if event.get("kind") == "MUTATION_CURRENTNESS_PROJECTED_NON_PRODUCTION"
+                and event.get("scope_reference") == scope_hash
+            ]
+            require(bool(matches), "AUTHORITY_CURRENTNESS_UNPROVEN")
+            latest = matches[-1]
+            require(latest.get("source_epoch") == epoch
+                    and latest.get("source_version") == version
+                    and latest.get("projection_hash") == stored_hash,
+                    "AUTHORITY_CURRENTNESS_UNPROVEN")
         return epoch, version, payload, stored_hash
 
     @contextmanager
