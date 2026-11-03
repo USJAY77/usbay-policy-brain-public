@@ -259,13 +259,21 @@ def verify_high_water_writer_grant(proposal, reviews, grant, *,
                                    expected_update_id_reference,
                                    expected_signer_identity_reference,
                                    expected_signer_key_id,
-                                   expected_signer_key_fingerprint):
+                                   expected_signer_key_fingerprint,
+                                   expected_parent_authority_id,
+                                   expected_parent_authority_hash):
     try:
-        _, _, g = _reviewed(
+        p, _, g = _reviewed(
             proposal, reviews, grant, trust, now,
             MutationHighWaterWriterGrantV1)
         require(g["allowed_scope_hash"] == expected_scope_hash,
                 "TENANT_MISMATCH")
+        require(g["parent_authority_id"] == expected_parent_authority_id
+                and g["parent_authority_hash"] == expected_parent_authority_hash,
+                "HIGH_WATER_PARENT_AUTHORITY_MISMATCH")
+        require(p["proposed_position_hash"] == g["proposed_position_hash"]
+                and p["update_id_reference"] == g["update_id_reference"],
+                "HIGH_WATER_POSITION_MISMATCH")
         require(g["proposed_position_hash"] == expected_position_hash
                 and g["update_id_reference"] == expected_update_id_reference,
                 "HIGH_WATER_POSITION_MISMATCH")
@@ -295,13 +303,22 @@ def verify_recovery_epoch_grant(proposal, reviews, grant, *,
                                 current_epoch, current_source_version,
                                 current_projection_hash,
                                 expected_high_water_event_hash,
-                                expected_recovery_state_hash):
+                                expected_recovery_state_hash,
+                                expected_parent_authority_id,
+                                expected_parent_authority_hash):
     try:
-        _, _, g = _reviewed(
+        p, _, g = _reviewed(
             proposal, reviews, grant, trust, now,
             MutationRecoveryEpochGrantV1)
         require(g["allowed_scope_hash"] == expected_scope_hash,
                 "TENANT_MISMATCH")
+        require(g["parent_authority_id"] == expected_parent_authority_id
+                and g["parent_authority_hash"] == expected_parent_authority_hash,
+                "HIGH_WATER_PARENT_AUTHORITY_MISMATCH")
+        require(p["proposed_position_hash"] == g["proposed_recovery_state_hash"]
+                and p["update_id_reference"]
+                == digest({"recovery_operation_id": g["recovery_operation_id"]}),
+                "RECOVERY_EPOCH_INVALID")
         require(g["previous_epoch"] == current_epoch
                 and g["next_epoch"] == current_epoch + 1
                 and g["previous_source_version"] == current_source_version
