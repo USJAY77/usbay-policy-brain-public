@@ -78,6 +78,7 @@ class SyntheticUpdaterAuthority(MutationCurrentnessUpdaterAuthority):
                 "proposed": kwargs["proposed_projection_hash"],
             }),
             "consumption": {
+                "issuer_id": "synthetic-high-water-issuer",
                 "grant_id": "synthetic-high-water-grant",
                 "nonce": "synthetic-high-water-nonce",
                 "replay_identity": digest({"synthetic-update": kwargs["update_id"]}),
