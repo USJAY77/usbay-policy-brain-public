@@ -133,6 +133,73 @@ class GitlessRuntimeIntegrationTests(unittest.TestCase):
             self.assertEqual(deployment_authority.context_dict()["current_commit"], authority.verified.source_commit)
             deployment.assert_runtime_provenance_authority(deployment_authority)
 
+    def test_enforcement_source_identity_uses_shared_artifact_authority(self):
+        from runtime import enforcement_gateway
+
+        artifact = self.authority()
+        with (
+            patch.object(enforcement_gateway, "ROOT", self.package),
+            patch.object(subprocess, "run", side_effect=AssertionError("Runtime subprocess forbidden")),
+        ):
+            self.assertEqual(enforcement_gateway._git_commit_hash(), artifact.verified.source_commit)
+            self.assertIs(self.authority(), artifact)
+            (self.package / "application.py").write_text("changed runtime bytes")
+            with self.assertRaises(provenance.RuntimeArtifactError):
+                enforcement_gateway._git_commit_hash()
+
+    def test_enforcement_missing_manifest_never_falls_back_to_git(self):
+        from runtime import enforcement_gateway
+
+        (self.package / MANIFEST_NAME).unlink()
+        with (
+            patch.object(enforcement_gateway, "ROOT", self.package),
+            patch.object(subprocess, "run", side_effect=AssertionError("Runtime subprocess forbidden")),
+        ):
+            with self.assertRaises(provenance.RuntimeArtifactError):
+                enforcement_gateway._git_commit_hash()
+
+    def test_packaged_legacy_git_helpers_fail_closed_before_subprocess(self):
+        from governance import release_integrity
+
+        with patch.object(subprocess, "run", side_effect=AssertionError("Runtime subprocess forbidden")):
+            for call in (
+                lambda: deployment._git_ancestor("a" * 40, "a" * 40),
+                lambda: deployment._git_parents("a" * 40),
+                lambda: gateway._run_runtime_git(self.package, "status"),
+                lambda: release_integrity._run_git(self.package, ["rev-parse", "HEAD"]),
+                lambda: release_integrity.baseline_tag_commit(self.package, "unverified-tag"),
+            ):
+                with self.subTest(call=call):
+                    with self.assertRaisesRegex(
+                        RuntimeError, "runtime_git_forbidden|release_integrity_build_metadata_required",
+                    ):
+                        call()
+
+    def test_production_runtime_identity_does_not_inspect_git_metadata(self):
+        from runtime import enforcement_gateway
+
+        self.resign({"producer_scope": "production"})
+        os.environ.update(USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production")
+        original_stat, original_lstat = Path.stat, Path.lstat
+
+        def checked(original):
+            def inspect(path, *args, **kwargs):
+                if ".git" in path.parts:
+                    raise AssertionError("Runtime Git metadata access forbidden")
+                return original(path, *args, **kwargs)
+            return inspect
+
+        with (
+            patch.object(enforcement_gateway, "ROOT", self.package),
+            patch.object(Path, "stat", checked(original_stat)),
+            patch.object(Path, "lstat", checked(original_lstat)),
+            patch.object(subprocess, "run", side_effect=AssertionError("Runtime subprocess forbidden")),
+        ):
+            artifact = self.authority()
+            self.assertEqual(enforcement_gateway._git_commit_hash(), artifact.verified.source_commit)
+            self.assertEqual(deployment.current_git_commit(), artifact.verified.source_commit)
+            gateway.validate_no_forbidden_runtime_files(self.package, artifact_authority=artifact)
+
     def test_bounded_actual_startup_reaches_next_independent_validator(self):
         class BoundaryReached(RuntimeError):
             pass

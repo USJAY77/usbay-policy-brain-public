@@ -1928,6 +1928,8 @@ def _runtime_git_environment():
 
 
 def _run_runtime_git(root, *arguments):
+    if artifact_runtime_required(root):
+        raise PolicyRegistryError("runtime_git_forbidden")
     try:
         result = subprocess.run(
             ("git", "-C", str(root), *arguments),

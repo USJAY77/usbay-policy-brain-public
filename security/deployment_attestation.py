@@ -198,6 +198,8 @@ def _valid_git_sha(value: str | None) -> str | None:
 
 
 def _git_ancestor(candidate: str, descendant: str) -> bool:
+    if artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_git_forbidden")
     if candidate == descendant:
         return True
     try:
@@ -214,6 +216,8 @@ def _git_ancestor(candidate: str, descendant: str) -> bool:
 
 
 def _git_parents(commit: str) -> set[str]:
+    if artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_git_forbidden")
     try:
         completed = subprocess.run(
             ["git", "rev-list", "--parents", "-n", "1", commit],

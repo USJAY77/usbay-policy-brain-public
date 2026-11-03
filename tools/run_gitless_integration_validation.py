@@ -26,10 +26,13 @@ SOURCE_FILES = (
     "docs/runtime-artifact-producer-trust.md", "tests/test_deployment_provenance.py",
     "tools/startup_evidence_support.py", "tests/test_extended_startup_evidence.py",
     "docs/startup-publisher-evidence.md",
+    "runtime/enforcement_gateway.py", "governance/release_integrity.py",
 )
 
 EXPECTED_COMMIT = "9bb15226a0964f2675c5077cdc7ed28c94909a42"
 EXPECTED_TREE = "f8d20179dc0eeca5b166b04be7251ea90e93767a"
+EXPECTED_CHECKOUT_COMMIT = "5367d6946f8ea81f8acb21e8b6cabbf842a9ad69"
+EXPECTED_CHECKOUT_TREE = "580473010e3cfb1550fc42fa0e870fe47f79ecc7"
 
 
 def exact_candidate_source(destination: Path, environment: dict) -> None:
@@ -45,7 +48,7 @@ def exact_candidate_source(destination: Path, environment: dict) -> None:
         ).stdout
 
     identity = original("rev-parse", "HEAD", "HEAD^{tree}").decode().splitlines()
-    if identity != [EXPECTED_COMMIT, EXPECTED_TREE]:
+    if identity != [EXPECTED_CHECKOUT_COMMIT, EXPECTED_CHECKOUT_TREE]:
         raise RuntimeError("BASELINE_CHANGED")
     raw = original("ls-tree", "-r", "-t", "-z", EXPECTED_COMMIT)
     objects = {EXPECTED_COMMIT, EXPECTED_TREE}
@@ -413,7 +416,9 @@ def main() -> int:
         elif phase == "candidate-package":
             phase_root = exact_source
         elif phase == "extended-startup":
-            phase_root = exact_source / "full-package"
+            # Exercise the current development overlay, not only the historical
+            # immutable candidate reconstructed for publisher-boundary evidence.
+            phase_root = temporary / "package/full-package"
             if not phase_root.is_dir():
                 result[phase] = "BLOCKED_BY_CANDIDATE_PACKAGE"
                 continue
@@ -428,7 +433,7 @@ def main() -> int:
             USBAY_GENERATED_GOVERNANCE_RELEASE_DIR=str(phase_root / "tmp/generated-release"),
         )
         if phase in {"startup", "extended-startup"}:
-            prefix = "candidate" if phase == "extended-startup" else "packaged"
+            prefix = "packaged"
             env.update(json.loads((evidence / (prefix + "-public-trust.json")).read_text()))
             env.update(
                 PATH="/nonexistent",

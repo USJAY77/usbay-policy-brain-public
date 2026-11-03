@@ -79,6 +79,26 @@ evidence. Tests do not supply these production inputs. An unavailable real input
 must remain BLOCKED, never be represented as a synthetic production approval.
 
 All results must be reported from captured logs rather than this test plan.
+
+## Development runtime Git closure
+
+The bounded runner now exercises extended startup against the newly built
+development-overlay package; the historical exact candidate remains a separate
+publisher-boundary phase. Neither package is a provider deployment.
+
+The enforcement gateway resolves source identity through the existing shared
+RuntimeArtifactAuthority in packaged/production mode and propagates verification
+or freshness failure without Git fallback. Legacy scanner/CI lineage helpers
+reject packaged calls before launching Git. The separate legacy governance
+release-integrity schema requires parent/tag metadata not attested by the runtime
+manifest: its Git-backed operations are build-only and explicitly fail closed
+with `release_integrity_build_metadata_required` in packaged runtime. No lineage,
+tag authority or production release authority is inferred from a source SHA.
+
+Development checkout Git branches remain for existing local/CI regressions;
+they are not reachable from packaged production startup/provenance. Build-time
+source inventory, modes, hashes and Git identity checks remain unchanged.
+
 PRODUCTION_TRUST_PROVISIONED_BY_THIS_TASK = false
 DEPLOYMENT_AUTHORIZED = false
 ACTIVATION_AUTHORIZED = false
