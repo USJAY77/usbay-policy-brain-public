@@ -116,10 +116,11 @@ class SyntheticCommit:
         p=deepcopy(p);p['command_fingerprint']=commit_fingerprint(p,'command')
         return self.f.sign(p)
 
-    def verify(self,attempt,command=None):
+    def verify(self,attempt,command=None,revocation_effect=None):
         from governance.mutation_commit import verify_mutation_for_commit
         return verify_mutation_for_commit(attempt,self.command if command is None else command,
-            proposal=self.f.proposal,reviews=self.f.reviews,grant=self.f.grant)
+            proposal=self.f.proposal,reviews=self.f.reviews,grant=self.f.grant,
+            revocation_effect=revocation_effect)
 
     def new_command(self,**changes):
         p=deepcopy(self.command['payload']);p.update(changes)
