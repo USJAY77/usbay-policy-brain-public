@@ -279,10 +279,6 @@ def verify_policy_revocation_effect(
             "MUTATION_AUTHORITY_INVALID")
         require(
             grant["issuer_authority_hash"]
-                == mutation_material["issuer_grant"]["payload"].get(
-                    "issuer_grant_hash",
-                    digest(mutation_material["issuer_grant"]["payload"]))
-                or grant["issuer_authority_hash"]
                 == digest(mutation_material["issuer_grant"]["payload"]),
             "MUTATION_AUTHORITY_INVALID")
         require(
