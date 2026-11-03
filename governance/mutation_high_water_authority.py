@@ -56,7 +56,8 @@ FIELDS = {
     },
     "recovery_grant": BASE | {
         "grant_id", "grant_nonce", "previous_epoch", "next_epoch",
-        "previous_source_version", "previous_projection_hash",
+        "previous_source_version", "next_source_version",
+        "previous_projection_hash", "recovered_projection_hash",
         "previous_high_water_event_hash", "recovery_evidence_reference",
         "reason_code", "proposed_recovery_state_hash",
         "recovery_operation_id", "max_uses", "proposal_hash",
@@ -70,6 +71,25 @@ FP = {
     "writer_grant": "grant_fingerprint",
     "recovery_grant": "grant_fingerprint",
 }
+
+
+def recovery_state_hash(*, scope_hash, previous_epoch, next_epoch,
+                        previous_source_version, next_source_version,
+                        previous_projection_hash, recovered_projection_hash,
+                        previous_high_water_event_hash,
+                        recovery_evidence_reference, recovery_operation_id):
+    return digest({
+        "scope_hash": scope_hash,
+        "previous_epoch": previous_epoch,
+        "next_epoch": next_epoch,
+        "previous_source_version": previous_source_version,
+        "next_source_version": next_source_version,
+        "previous_projection_hash": previous_projection_hash,
+        "recovered_projection_hash": recovered_projection_hash,
+        "previous_high_water_event_hash": previous_high_water_event_hash,
+        "recovery_evidence_reference": recovery_evidence_reference,
+        "recovery_operation_id": recovery_operation_id,
+    })
 
 
 def fingerprint(payload, kind):
@@ -171,12 +191,15 @@ class _Contract:
             require(type(p["previous_epoch"]) is int
                     and type(p["next_epoch"]) is int
                     and type(p["previous_source_version"]) is int
+                    and type(p["next_source_version"]) is int
                     and p["previous_epoch"] >= 1
                     and p["next_epoch"] == p["previous_epoch"] + 1
-                    and p["previous_source_version"] >= 1,
+                    and p["previous_source_version"] >= 1
+                    and p["next_source_version"] > p["previous_source_version"],
                     "RECOVERY_EPOCH_INVALID")
             for field in (
-                "previous_projection_hash", "previous_high_water_event_hash",
+                "previous_projection_hash", "recovered_projection_hash",
+                "previous_high_water_event_hash",
                 "recovery_evidence_reference", "proposed_recovery_state_hash",
                 "proposal_hash", "reviewer_a_decision_hash",
                 "reviewer_b_decision_hash",
@@ -309,6 +332,8 @@ def verify_recovery_epoch_grant(proposal, reviews, grant, *,
                                 current_epoch, current_source_version,
                                 current_projection_hash,
                                 expected_high_water_event_hash,
+                                expected_next_source_version,
+                                expected_recovered_projection_hash,
                                 expected_recovery_state_hash,
                                 expected_parent_authority_id,
                                 expected_parent_authority_hash):
@@ -321,16 +346,40 @@ def verify_recovery_epoch_grant(proposal, reviews, grant, *,
         require(g["parent_authority_id"] == expected_parent_authority_id
                 and g["parent_authority_hash"] == expected_parent_authority_hash,
                 "HIGH_WATER_PARENT_AUTHORITY_MISMATCH")
-        require(p["proposed_position_hash"] == g["proposed_recovery_state_hash"]
+        expected_position_hash = digest({
+            "scope_hash": expected_scope_hash,
+            "source_epoch": g["next_epoch"],
+            "source_version": g["next_source_version"],
+            "projection_hash": g["recovered_projection_hash"],
+        })
+        require(p["proposed_position_hash"] == expected_position_hash
                 and p["update_id_reference"]
                 == digest({"recovery_operation_id": g["recovery_operation_id"]}),
                 "RECOVERY_EPOCH_INVALID")
+        computed_recovery_state = recovery_state_hash(
+            scope_hash=expected_scope_hash,
+            previous_epoch=g["previous_epoch"],
+            next_epoch=g["next_epoch"],
+            previous_source_version=g["previous_source_version"],
+            next_source_version=g["next_source_version"],
+            previous_projection_hash=g["previous_projection_hash"],
+            recovered_projection_hash=g["recovered_projection_hash"],
+            previous_high_water_event_hash=g["previous_high_water_event_hash"],
+            recovery_evidence_reference=g["recovery_evidence_reference"],
+            recovery_operation_id=g["recovery_operation_id"],
+        )
         require(g["previous_epoch"] == current_epoch
                 and g["next_epoch"] == current_epoch + 1
                 and g["previous_source_version"] == current_source_version
+                and g["next_source_version"] == expected_next_source_version
+                and g["next_source_version"] > current_source_version
                 and g["previous_projection_hash"] == current_projection_hash
+                and g["recovered_projection_hash"]
+                == expected_recovered_projection_hash
                 and g["previous_high_water_event_hash"]
                 == expected_high_water_event_hash
+                and g["proposed_recovery_state_hash"]
+                == computed_recovery_state
                 and g["proposed_recovery_state_hash"]
                 == expected_recovery_state_hash,
                 "RECOVERY_EPOCH_INVALID")
