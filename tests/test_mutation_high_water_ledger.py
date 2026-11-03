@@ -6,8 +6,9 @@ from threading import RLock
 import pytest
 
 from governance.mutation_high_water_ledger import (
-    HIGH_WATER_ACTION, HIGH_WATER_SCHEMA, ImmutableLedgerMutationHighWater,
-    MutationHighWaterLedgerWriter, _position_hash,
+    HIGH_WATER_ACTION, HIGH_WATER_SCHEMA, RECOVERY_ACTION, RECOVERY_SCHEMA,
+    ImmutableLedgerMutationHighWater, MutationHighWaterLedgerWriter,
+    _position_hash,
 )
 from governance.mutation_currentness_source import (
     SQLiteMutationCurrentnessProjectionUpdater, projection_payload_hash,
@@ -67,6 +68,43 @@ class SyntheticLedgerWriter(MutationHighWaterLedgerWriter):
             "position": deepcopy(proposed),
             "event_hash": self.records[-1]["current_event_hash"],
         }
+    def append_recovery_position(
+            self, *, tenant_id, previous, recovered,
+            recovery_state_hash, recovery_evidence_reference,
+            recovery_operation_id):
+        previous_hash = (
+            self.records[-1]["decision"]["position_hash"]
+            if self.records else digest({"genesis": recovered["scope_hash"]})
+        )
+        decision = {
+            "schema_version": RECOVERY_SCHEMA,
+            "tenant_id": tenant_id,
+            "scope_hash": recovered["scope_hash"],
+            "source_epoch": recovered["source_epoch"],
+            "source_version": recovered["source_version"],
+            "projection_hash": recovered["projection_hash"],
+            "update_id_reference":
+                digest({"recovery_operation_id": recovery_operation_id}),
+            "previous_position_hash": previous_hash,
+            "position_hash": _position_hash(recovered),
+            "storage_boundary_reference": self.storage_boundary_reference,
+            "recovery_state_hash": recovery_state_hash,
+            "recovery_evidence_reference": recovery_evidence_reference,
+            "recovery_operation_id_reference":
+                digest({"recovery_operation_id": recovery_operation_id}),
+        }
+        self.records.append({
+            "action": RECOVERY_ACTION,
+            "tenant_id": tenant_id,
+            "decision": decision,
+            "current_event_hash":
+                digest({"recovery_event": len(self.records) + 1}),
+        })
+        return {
+            "position": deepcopy(recovered),
+            "event_hash": self.records[-1]["current_event_hash"],
+        }
+
 
 
 def _record(tenant, boundary, position, previous_hash):
@@ -328,3 +366,43 @@ def test_reviewed_grant_drives_projection_and_ledger_once(tmp_path):
         update_id="reviewed-ledger-update-3",
     )
     assert second["decision"] == "DENY"
+
+
+def test_ledger_high_water_recovery_epoch_transition():
+    high_water, writer, p1 = _fixture()
+    recovered = dict(
+        p1,
+        source_epoch=2,
+        source_version=3,
+        projection_hash=digest({"projection": "recovered"}),
+    )
+    with high_water.hold_recovery(
+            scope_hash=p1["scope_hash"],
+            previous=p1,
+            recovered=recovered,
+            recovery_state_hash=digest({"recovery_state": 1}),
+            recovery_evidence_reference=digest({"recovery_evidence": 1}),
+            recovery_operation_id="recovery-op-1") as anchor:
+        receipt = anchor.append_recovery()
+        assert receipt["position"] == recovered
+    evidence = high_water.current_evidence(p1["scope_hash"])
+    assert evidence["position"] == recovered
+    assert evidence["event_hash"] == writer.records[-1]["current_event_hash"]
+
+
+def test_ordinary_update_cannot_cross_epoch():
+    high_water, _, p1 = _fixture()
+    bad = dict(
+        p1,
+        source_epoch=2,
+        source_version=2,
+        projection_hash=digest({"projection": "bad-epoch"}),
+    )
+    import pytest
+    with pytest.raises(Exception):
+        with high_water.hold_update(
+                scope_hash=p1["scope_hash"],
+                expected=p1,
+                proposed=bad,
+                update_id="ordinary-cannot-recover"):
+            pass
