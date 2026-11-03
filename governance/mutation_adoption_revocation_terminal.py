@@ -59,10 +59,8 @@ def verify_adoption_revocation_terminal_transition(
                 ==scope(new_revocations),"POLICY_SCOPE_INVALID")
         require(object_id(EnrollmentPolicy,new_policy)==object_id(EnrollmentPolicy,old_policy),
                 "OBJECT_ID_MISMATCH")
-        require(digest(new_policy)==digest(old_policy),"OBJECT_VERSION_MISMATCH")
         require(object_id(PolicyAdoption,new_adoption)==object_id(PolicyAdoption,target),
                 "OBJECT_ID_MISMATCH")
-        require(digest(new_adoption)==digest(target),"OBJECT_VERSION_MISMATCH")
         require(new_adoption["policy_id"]==new_policy["policy_id"]
                 and new_adoption["policy_version"]==new_policy["policy_version"]
                 and new_adoption["policy_hash"]==digest(new_policy),
