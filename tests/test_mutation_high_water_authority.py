@@ -56,8 +56,16 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER"):
         authority_flags=dict.fromkeys(FLAGS, False),
     )
     scope_hash = digest({"scope": tenant})
-    position_hash = digest({"position": 2})
-    update_ref = digest({"update": "u2"})
+    position_hash = (
+        digest({"position": 2})
+        if action == "WRITE_MUTATION_HIGH_WATER"
+        else digest({"recovered": 8})
+    )
+    update_ref = (
+        digest({"update": "u2"})
+        if action == "WRITE_MUTATION_HIGH_WATER"
+        else digest({"recovery_operation_id": "synthetic-recovery-operation"})
+    )
     base = dict(
         actor_id="synthetic-high-water-actor",
         allowed_action=action,
@@ -167,6 +175,8 @@ def test_writer_grant_exact_binding_allows():
         expected_signer_identity_reference=g["signer_identity_reference"],
         expected_signer_key_id=g["signer_key_id"],
         expected_signer_key_fingerprint=g["signer_key_fingerprint"],
+        expected_parent_authority_id=g["parent_authority_id"],
+        expected_parent_authority_hash=g["parent_authority_hash"],
     )
     assert result["decision"] == "ALLOW"
     assert result["max_updates"] == 1
@@ -217,6 +227,8 @@ def test_writer_requires_both_reviewers():
         expected_signer_identity_reference=g["signer_identity_reference"],
         expected_signer_key_id=g["signer_key_id"],
         expected_signer_key_fingerprint=g["signer_key_fingerprint"],
+        expected_parent_authority_id=g["parent_authority_id"],
+        expected_parent_authority_hash=g["parent_authority_hash"],
     )
     assert result["decision"] == "DENY"
     assert result["reason"] == "REVIEW_THRESHOLD_NOT_MET"
@@ -234,6 +246,8 @@ def test_recovery_epoch_exact_increment_allows():
         current_projection_hash=g["previous_projection_hash"],
         expected_high_water_event_hash=g["previous_high_water_event_hash"],
         expected_recovery_state_hash=g["proposed_recovery_state_hash"],
+        expected_parent_authority_id=g["parent_authority_id"],
+        expected_parent_authority_hash=g["parent_authority_hash"],
     )
     assert result["decision"] == "ALLOW"
     assert result["next_epoch"] == 2
@@ -252,6 +266,44 @@ def test_recovery_epoch_skip_denied():
         current_projection_hash=g["previous_projection_hash"],
         expected_high_water_event_hash=g["previous_high_water_event_hash"],
         expected_recovery_state_hash=g["proposed_recovery_state_hash"],
+        expected_parent_authority_id=g["parent_authority_id"],
+        expected_parent_authority_hash=g["parent_authority_hash"],
     )
     assert result["decision"] == "DENY"
     assert result["reason"] == "RECOVERY_EPOCH_INVALID"
+
+
+def test_writer_parent_authority_substitution_denied():
+    trust, proposal, reviews, grant, scope_hash, position_hash, update_ref = _fixture()
+    g = grant["payload"]
+    result = verify_high_water_writer_grant(
+        proposal, reviews, grant, trust=trust, now=NOW,
+        expected_scope_hash=scope_hash,
+        expected_position_hash=position_hash,
+        expected_update_id_reference=update_ref,
+        expected_signer_identity_reference=g["signer_identity_reference"],
+        expected_signer_key_id=g["signer_key_id"],
+        expected_signer_key_fingerprint=g["signer_key_fingerprint"],
+        expected_parent_authority_id="other-parent",
+        expected_parent_authority_hash=g["parent_authority_hash"],
+    )
+    assert result["decision"] == "DENY"
+    assert result["reason"] == "HIGH_WATER_PARENT_AUTHORITY_MISMATCH"
+
+
+def test_writer_reviewed_proposal_position_mismatch_denied():
+    trust, proposal, reviews, grant, scope_hash, position_hash, update_ref = _fixture()
+    grant = deepcopy(grant)
+    grant["payload"]["proposed_position_hash"] = digest({"position": "different"})
+    result = verify_high_water_writer_grant(
+        proposal, reviews, grant, trust=trust, now=NOW,
+        expected_scope_hash=scope_hash,
+        expected_position_hash=grant["payload"]["proposed_position_hash"],
+        expected_update_id_reference=update_ref,
+        expected_signer_identity_reference=grant["payload"]["signer_identity_reference"],
+        expected_signer_key_id=grant["payload"]["signer_key_id"],
+        expected_signer_key_fingerprint=grant["payload"]["signer_key_fingerprint"],
+        expected_parent_authority_id=grant["payload"]["parent_authority_id"],
+        expected_parent_authority_hash=grant["payload"]["parent_authority_hash"],
+    )
+    assert result["decision"] == "DENY"
