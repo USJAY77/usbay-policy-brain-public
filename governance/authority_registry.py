@@ -728,3 +728,237 @@ def verify_media_authority(
         return registry.verify_authority(contract, authorization, consume=consume)
     except Exception:
         return _deny("AUTHORITY_REGISTRY_FAILURE")
+
+
+class EnrollmentAuthorityView:
+    """Open-only typed view of the SAME authority database, not a new registry.
+
+    No provisioning, migration, issuer registration, first-head establishment or
+    recovery API. The existing media constructor/semantics are unchanged. A live
+    schema deployment and trust composition are explicitly outside this package.
+
+    Local enrollment commits are facts, not admission/execute authority. Until a
+    separately verified signed receipt exists, return DENY with the committed fact
+    instead of inventing an ALLOW. No external transaction is claimed atomic.
+    """
+    def __init__(self, path: Path | str, trust=None, *, clock=None):
+        from security.enrollment_policy_currentness import EnrollmentTrust
+        from governance.tenant_enrollment_contracts import utc_now
+        self.path = Path(path)
+        self.trust = EnrollmentTrust() if trust is None else trust
+        self.clock = utc_now if clock is None else clock
+
+    def _connect_existing(self, *, read_only=False):
+        from governance.tenant_enrollment_contracts import require
+        require(self.path.is_file() and not self.path.is_symlink(), "ENROLLMENT_STORE_MISSING")
+        conn = sqlite3.connect(self.path.resolve().as_uri() + ("?mode=ro" if read_only else "?mode=rw"), uri=True,
+                               timeout=0, isolation_level=None)
+        try:
+            conn.execute("PRAGMA busy_timeout=0")
+            conn.execute("PRAGMA synchronous=FULL")
+            names = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+            require({"media_actor_identity", "approval_issuer", "enrollment_meta", "enrollment_events",
+                     "enrollment_uses", "enrollment_tenants"} <= names, "ENROLLMENT_SCHEMA_MISSING")
+            return conn
+        except Exception:
+            conn.close()
+            raise
+
+    @staticmethod
+    def _snapshot(conn, *, require_finalized=True):
+        from governance.tenant_enrollment_contracts import require, parse_json, digest
+        rows = conn.execute("SELECT value FROM enrollment_meta WHERE name='state'").fetchall()
+        require(len(rows) == 1, "STOPPED_UNVERIFIED_POLICY_HEAD")
+        state = parse_json(rows[0][0])
+        require(type(state) is dict and set(state) == {"schema", "head", "publication", "event_tip"}
+                and state["schema"] == "usbay.enrollment.storage.v3"
+                and state["publication"] in ("FINALIZED", "PENDING") and type(state["head"]) is dict
+                and state["head"], "STOPPED_UNVERIFIED_POLICY_HEAD")
+        previous = "sha256:" + "0" * 64
+        expected_sequence = 1
+        consumption = []
+        tenants = {}
+        for seq, encoded, event_hash in conn.execute("SELECT sequence,payload,event_hash FROM enrollment_events ORDER BY sequence"):
+            event = parse_json(encoded)
+            require(seq == expected_sequence and event["previous_event_hash"] == previous and event["sequence"] == seq
+                    and event_hash == digest(event), "ENROLLMENT_HISTORY_INVALID")
+            expected_sequence += 1
+            consumption = event["consumption"]
+            if event["kind"] == "REGISTERED_NON_EXECUTING":
+                from governance.tenant_enrollment_contracts import TenantRegistrationRecord, scope
+                record = TenantRegistrationRecord.from_payload(event["record"]).payload
+                tenants[digest(list(scope(record)))] = record
+            previous = event_hash
+        require(state["event_tip"] == previous, "ENROLLMENT_HISTORY_INVALID")
+        require(consumption == [list(row) for row in conn.execute("SELECT kind,identity FROM enrollment_uses ORDER BY kind,identity")],
+                "ENROLLMENT_HISTORY_INVALID")
+        require(tenants == {key: parse_json(record) for key, record in conn.execute("SELECT scope,record FROM enrollment_tenants")},
+                "ENROLLMENT_HISTORY_INVALID")
+        if require_finalized:
+            require(state["publication"] == "FINALIZED", "STOPPED_UNVERIFIED_POLICY_HEAD")
+        return state
+
+    def history(self) -> dict:
+        from governance.tenant_enrollment_contracts import decision, EnrollmentDenied, parse_json
+        conn = None
+        try:
+            conn = self._connect_existing()
+            conn.execute("BEGIN")
+            self._snapshot(conn)
+            rows = [parse_json(row[0]) for row in conn.execute("SELECT payload FROM enrollment_events ORDER BY sequence")]
+            return decision("HISTORY_ONLY", events=rows)
+        except Exception as error:
+            return decision(str(error) if type(error) is EnrollmentDenied else "ENROLLMENT_STORE_UNAVAILABLE")
+        finally:
+            if conn is not None:
+                conn.close()
+
+    @staticmethod
+    def _consume(conn, kind, payload):
+        from governance.tenant_enrollment_contracts import digest
+        # The grant ID, nonce AND replay identity remain consumed. Different
+        # request IDs or rotated credentials cannot reopen any of these keys.
+        issuer = payload["issuer_id"]
+        for label in ("grant_id", "nonce", "replay_identity"):
+            conn.execute("INSERT INTO enrollment_uses(kind,identity) VALUES(?,?)",
+                         (kind + ":" + label, digest({"issuer": issuer, "value": payload[label]})))
+
+    def _replay_evidence(self, inputs):
+        """Read-only denial diagnostics, NEVER an admission precheck.
+
+        Primary admission order remains unchanged. Validate stored history and
+        signatures before attributing any consumed state. Corrupt/orphan history
+        cannot manufacture a verified replay classification. No raw IDs/payloads
+        or signatures are returned, and no reservation is released.
+        """
+        from governance.tenant_enrollment_contracts import PolicyAdoption, HeadAdvance, digest, require, scope
+        from security.enrollment_policy_currentness import EnrollmentTrust
+        conn = None
+        try:
+            require(type(self.trust) is EnrollmentTrust, "DIAGNOSTICS_UNAVAILABLE")
+            conn = self._connect_existing(read_only=True)
+            conn.execute("BEGIN")
+            state = self._snapshot(conn, require_finalized=False)
+            require(type(inputs) is dict and set(inputs) == {"policy", "adoption", "advance", "prior"}, "INPUTS_INVALID")
+            now = self.clock()
+            a = self.trust.verify(inputs["adoption"], PolicyAdoption, "adoption", now)
+            b = self.trust.verify(inputs["advance"], HeadAdvance, "advance", now)
+            require(scope(a) == scope(b) == scope(state["head"]), "DIAGNOSTIC_SCOPE_INVALID")
+            from governance.tenant_enrollment_contracts import parse_json
+            events = [parse_json(row[0]) for row in conn.execute("SELECT payload FROM enrollment_events ORDER BY sequence")]
+            reasons = []
+            for kind, payload, field, reason in (
+                ("adoption", a, "adoption_core_hash", "ADOPTION_REPLAY"),
+                ("advance", b, "head_advance_grant_hash", "HEAD_ADVANCE_REPLAY"),
+            ):
+                bound_event = any(event["kind"] == "ADOPTION_PENDING" and event.get(field) == digest(payload) for event in events)
+                consumed = all(conn.execute("SELECT 1 FROM enrollment_uses WHERE kind=? AND identity=?",
+                    (kind + ":" + label, digest({"issuer": payload["issuer_id"], "value": payload[label]}))).fetchone() is not None
+                    for label in ("grant_id", "nonce", "replay_identity"))
+                if bound_event and consumed:
+                    reasons.append(reason)
+            return {"internal_result": "REPLAY_DETECTED" if reasons else "NO_VERIFIED_REPLAY_EVIDENCE", "internal_reasons": reasons}
+        except Exception:
+            return {"internal_result": "REPLAY_DIAGNOSTICS_UNAVAILABLE", "internal_reasons": []}
+        finally:
+            if conn is not None:
+                conn.close()
+
+    @staticmethod
+    def _append(conn, state, event):
+        from governance.tenant_enrollment_contracts import canonical, digest
+        sequence = conn.execute("SELECT COALESCE(MAX(sequence),0)+1 FROM enrollment_events").fetchone()[0]
+        event.update(sequence=sequence, previous_event_hash=state["event_tip"])
+        event["consumption"] = [list(row) for row in conn.execute("SELECT kind,identity FROM enrollment_uses ORDER BY kind,identity")]
+        event_hash = digest(event)
+        conn.execute("INSERT INTO enrollment_events(sequence,payload,event_hash) VALUES(?,?,?)",
+                     (sequence, canonical(event).decode(), event_hash))
+        state["event_tip"] = event_hash
+        conn.execute("UPDATE enrollment_meta SET value=? WHERE name='state'", (canonical(state).decode(),))
+        return event_hash
+
+    def mutation_attempt(self, *, currentness_fence=None):
+        """Dormant infrastructure only; default source denies every commit.
+
+        No policy/adoption/revocation writer or live source is installed here.
+        """
+        from governance.mutation_commit import MutationAttempt
+        return MutationAttempt(self, currentness_fence)
+
+    def enroll(self, inputs) -> dict:
+        from governance.tenant_enrollment_contracts import (
+            EnrollmentDenied, TenantRegistrationRecord, canonical, decision, digest, scope,
+        )
+        from governance.tenant_enrollment_verification import verify_enrollment
+        conn = None
+        commit_started = False
+        try:
+            conn = self._connect_existing()
+            conn.execute("BEGIN IMMEDIATE")
+            state = self._snapshot(conn)
+            now = self.clock()
+            verified = verify_enrollment(self.trust, inputs, expected=state["head"], now=now)
+            g, request = verified["grant"], verified["request"]
+            self._consume(conn, "enrollment", g)
+            # Enforce authenticated request replay independently of grant replay.
+            for name in ("nonce", "replay_identity", "request_id"):
+                conn.execute("INSERT INTO enrollment_uses(kind,identity) VALUES(?,?)",
+                             ("request:" + name, digest({"issuer": request["issuer_id"], "value": request[name]})))
+            record = {k: g[k] for k in ("trust_domain", "policy_domain", "tenant_id", "environment", "purpose",
+                "registry_instance_reference", "authority_flags", "delegation_allowed", "policy_id", "policy_version", "policy_hash",
+                "issuer_id", "registrar_actor", "replay_identity", "currentness_reference", "revocation_reference", "enrollment_valid_until")}
+            record.update(schema_version="usbay.enrollment.record.v3", record_id=digest({"grant": digest(g), "scope": list(scope(g))}),
+                grant_hash=digest(g), request_digest=digest(request), nonce_reference=digest({"nonce": g["nonce"]}),
+                previous_event_hash=state["event_tip"], evidence_fingerprint=digest(verified),
+                created_at=now.strftime("%Y-%m-%dT%H:%M:%SZ"), grant_valid_from=g["valid_from"], grant_expires_at=g["expires_at"],
+                registration_status="REGISTERED_NON_EXECUTING", tenant_exists=True, allowed_actions=[])
+            TenantRegistrationRecord.from_payload(record)
+            # No update/reenroll path, including with a different grant.
+            conn.execute("INSERT INTO enrollment_tenants(scope,record) VALUES(?,?)",
+                         (digest(list(scope(g))), canonical(record).decode()))
+            event_hash = self._append(conn, state, {"kind": "REGISTERED_NON_EXECUTING", "record": record})
+            # A second full verification under the same write lock rejects time
+            # expiry and any mutable caller input change before commit.
+            verify_enrollment(self.trust, inputs, expected=state["head"], now=self.clock())
+            commit_started = True
+            conn.execute("COMMIT")
+            return decision("SIGNED_RECEIPT_REQUIRED", registration_outcome="COMMITTED_NON_EXECUTING", event_hash=event_hash)
+        except Exception as error:
+            reason = str(error) if type(error) is EnrollmentDenied else "ENROLLMENT_STORE_UNAVAILABLE"
+            return decision(reason, registration_outcome="UNKNOWN" if commit_started else "NOT_COMMITTED")
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def propose_adoption(self, inputs) -> dict:
+        from governance.tenant_enrollment_contracts import EnrollmentDenied, decision, digest
+        from governance.tenant_enrollment_verification import verify_adoption
+        conn = None
+        commit_started = False
+        try:
+            conn = self._connect_existing()
+            conn.execute("BEGIN IMMEDIATE")
+            state = self._snapshot(conn)
+            p, a, b = verify_adoption(self.trust, inputs, previous=state["head"], now=self.clock())
+            self._consume(conn, "adoption", a)
+            self._consume(conn, "advance", b)
+            state["publication"] = "PENDING"
+            event_hash = self._append(conn, state, {"kind": "ADOPTION_PENDING", "policy_hash": digest(p),
+                "adoption_core_hash": digest(a), "head_advance_grant_hash": digest(b), "target_head": b["head_hash"]})
+            verify_adoption(self.trust, inputs, previous=state["head"], now=self.clock())
+            commit_started = True
+            conn.execute("COMMIT")
+            return decision("STOPPED_UNVERIFIED_POLICY_HEAD", publication="PENDING", event_hash=event_hash)
+        except Exception as error:
+            # Discard any uncommitted local rows before a separate read-only
+            # snapshot classifies DURABLE consumption. Never label this failed
+            # attempt's own rolled-back reservation as a prior replay.
+            if conn is not None:
+                conn.close()
+                conn = None
+            return decision(str(error) if type(error) is EnrollmentDenied else "ENROLLMENT_STORE_UNAVAILABLE",
+                            adoption_outcome="UNKNOWN" if commit_started else "NOT_COMMITTED",
+                            **self._replay_evidence(inputs))
+        finally:
+            if conn is not None:
+                conn.close()
