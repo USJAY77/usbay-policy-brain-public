@@ -159,8 +159,7 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consu
         f.commit_target=pending['adoption']
     elif action=='REVOKE_POLICY_OBJECT':
         f.commit_target=f.enrollment.inputs['policy']
-    else:
-        assert action=='REVOKE_GRANT_OBJECT'
+    elif action=='REVOKE_GRANT_OBJECT':
         target=f.enrollment.inputs['grant']['payload']
         target_id=object_id(EnrollmentGrant,target)
         for envelope in (f.parent,f.proposal,f.grant):
@@ -177,6 +176,24 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consu
         f.refresh()
         attach_synthetic_issuance(f)
         f.commit_target=f.enrollment.inputs['grant']
+    else:
+        assert action=='REVOKE_ADOPTION'
+        target=f.enrollment.inputs['adoption']['payload']
+        target_id=object_id(PolicyAdoption,target)
+        for envelope in (f.parent,f.proposal,f.grant):
+            envelope['payload'].update(
+                allowed_action='REVOKE_ADOPTION',
+                resource_type='ADOPTION_RECORD',
+                resource_id=target_id,
+                object_id=target_id,
+                object_version_hash=digest(target),
+                policy_id=target['policy_id'],
+                adoption_id=target_id,
+                target_grant_id=None,
+            )
+        f.refresh()
+        attach_synthetic_issuance(f)
+        f.commit_target=f.enrollment.inputs['adoption']
     private=Ed25519PrivateKey.generate();f.private['test-commit-source']=private
     base=f.grant['payload']
     key=ScopedPublicKey('synthetic-commit-source','test-commit-source',private.public_key().public_bytes(Encoding.Raw,PublicFormat.Raw),
@@ -217,6 +234,12 @@ def synthetic_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consu
             expected_current_head=base['expected_current_head'],grant_id=target['grant_id'],
             grant_version_hash=base['object_version_hash'],
             expected_consumption_state='CONSUMED' if grant_consumed else 'UNCONSUMED',
+            expected_revocation_state='NOT_REVOKED',revocation_effect_scope='ALL_VERSIONS_OF_OBJECT')
+    if action=='REVOKE_ADOPTION':
+        target=f.enrollment.inputs['adoption']['payload']
+        state=dict(tenant_id=base['tenant_id'],object_id=base['object_id'],object_version_hash=base['object_version_hash'],
+            expected_current_head=base['expected_current_head'],adoption_id=base['adoption_id'],
+            adoption_version_hash=base['object_version_hash'],expected_finalization_state='FINALIZED',
             expected_revocation_state='NOT_REVOKED',revocation_effect_scope='ALL_VERSIONS_OF_OBJECT')
     # TEST ONLY projection table. No production schema/bootstrap is added.
     with sqlite3.connect(path) as conn:
