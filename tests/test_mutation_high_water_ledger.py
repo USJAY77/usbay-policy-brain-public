@@ -72,6 +72,11 @@ class SyntheticLedgerWriter(MutationHighWaterLedgerWriter):
             self, *, tenant_id, previous, recovered,
             recovery_state_hash, recovery_evidence_reference,
             recovery_operation_id):
+        if self.fail_uncertain:
+            from governance.mutation_currentness_source import (
+                MutationCurrentnessUpdateUncertain,
+            )
+            raise MutationCurrentnessUpdateUncertain()
         previous_hash = (
             self.records[-1]["decision"]["position_hash"]
             if self.records else digest({"genesis": recovered["scope_hash"]})
