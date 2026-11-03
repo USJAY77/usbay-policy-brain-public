@@ -779,6 +779,7 @@ class EnrollmentAuthorityView:
         consumption = []
         tenants = {}
         terminal_revocations = {}
+        terminal_grant_revocations = {}
         for seq, encoded, event_hash in conn.execute("SELECT sequence,payload,event_hash FROM enrollment_events ORDER BY sequence"):
             event = parse_json(encoded)
             require(seq == expected_sequence and event["previous_event_hash"] == previous and event["sequence"] == seq
@@ -794,6 +795,22 @@ class EnrollmentAuthorityView:
                 require(key not in terminal_revocations, "ENROLLMENT_HISTORY_INVALID")
                 terminal_revocations[key] = (
                     event["object_version_hash"],
+                    event["revocation_reference"],
+                    event["revocation_hash"],
+                    event["terminal_projection_hash"],
+                    event["terminal_proof_hash"],
+                    event["source_epoch"],
+                    event["source_version"],
+                    event["command_hash"],
+                    event["transaction_id"],
+                )
+            if event["kind"] == "GRANT_REVOCATION_TERMINAL_NON_PRODUCTION":
+                key = (event["scope_hash"], event["object_id"])
+                require(key not in terminal_grant_revocations, "ENROLLMENT_HISTORY_INVALID")
+                terminal_grant_revocations[key] = (
+                    event["object_version_hash"],
+                    event["target_grant_id"],
+                    event["consumption_state"],
                     event["revocation_reference"],
                     event["revocation_hash"],
                     event["terminal_projection_hash"],
@@ -827,6 +844,22 @@ class EnrollmentAuthorityView:
                     "ENROLLMENT_HISTORY_INVALID")
         else:
             require(not terminal_revocations, "ENROLLMENT_HISTORY_INVALID")
+        if "grant_revocation_terminal" in table_names:
+            materialized_grants = {
+                (row[0], row[1]): tuple(row[2:])
+                for row in conn.execute(
+                    "SELECT scope_hash,object_id,object_version_hash,"
+                    "target_grant_id,consumption_state,"
+                    "revocation_reference,revocation_hash,"
+                    "terminal_projection_hash,terminal_proof_hash,"
+                    "source_epoch,source_version,command_hash,transaction_id "
+                    "FROM grant_revocation_terminal")
+            }
+            require(materialized_grants == terminal_grant_revocations,
+                    "ENROLLMENT_HISTORY_INVALID")
+        else:
+            require(not terminal_grant_revocations,
+                    "ENROLLMENT_HISTORY_INVALID")
         if require_finalized:
             require(state["publication"] == "FINALIZED", "STOPPED_UNVERIFIED_POLICY_HEAD")
         return state
