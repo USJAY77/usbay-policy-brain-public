@@ -81,7 +81,6 @@ def inspect_mutation_reconciliation(
             return decision(
                 "RECONCILIATION_BLOCKED",
                 classification="BLOCKED",
-                retry_allowed=False,
                 recovery_allowed=False,
             )
 
@@ -105,14 +104,12 @@ def inspect_mutation_reconciliation(
                 return decision(
                     "RECONCILIATION_BLOCKED",
                     classification="BLOCKED",
-                    retry_allowed=False,
-                    recovery_allowed=False,
+                        recovery_allowed=False,
                 )
             return decision(
                 "RECONCILIATION_COMMITTED",
                 allowed=True,
                 classification="COMMITTED",
-                retry_allowed=False,
                 recovery_allowed=False,
                 position=deepcopy(proposed_position),
             )
@@ -122,13 +119,11 @@ def inspect_mutation_reconciliation(
                 return decision(
                     "RECONCILIATION_BLOCKED",
                     classification="BLOCKED",
-                    retry_allowed=False,
-                    recovery_allowed=False,
+                        recovery_allowed=False,
                 )
             return decision(
                 "RECONCILIATION_NOT_COMMITTED",
                 classification="NOT_COMMITTED",
-                retry_allowed=False,
                 recovery_allowed=False,
                 position=deepcopy(previous_position),
             )
@@ -140,13 +135,11 @@ def inspect_mutation_reconciliation(
                 return decision(
                     "RECONCILIATION_BLOCKED",
                     classification="BLOCKED",
-                    retry_allowed=False,
-                    recovery_allowed=False,
+                        recovery_allowed=False,
                 )
             return decision(
                 "RECONCILIATION_RECOVERY_REQUIRED",
                 classification="RECOVERY_REQUIRED",
-                retry_allowed=False,
                 recovery_allowed=True,
                 previous_position=deepcopy(previous_position),
                 ledger_position=deepcopy(proposed_position),
@@ -155,7 +148,6 @@ def inspect_mutation_reconciliation(
         return decision(
             "RECONCILIATION_BLOCKED",
             classification="BLOCKED",
-            retry_allowed=False,
             recovery_allowed=False,
         )
     except Exception as error:
@@ -163,7 +155,6 @@ def inspect_mutation_reconciliation(
             str(error) if type(error) is EnrollmentDenied
             else "RECONCILIATION_BLOCKED",
             classification="BLOCKED",
-            retry_allowed=False,
             recovery_allowed=False,
         )
     finally:
