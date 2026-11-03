@@ -193,6 +193,8 @@ def test_writer_grant_signer_substitution_denied():
         expected_signer_identity_reference=digest({"signer": "other"}),
         expected_signer_key_id=grant["payload"]["signer_key_id"],
         expected_signer_key_fingerprint=grant["payload"]["signer_key_fingerprint"],
+        expected_parent_authority_id=grant["payload"]["parent_authority_id"],
+        expected_parent_authority_hash=grant["payload"]["parent_authority_hash"],
     )
     assert result["decision"] == "DENY"
     assert result["reason"] == "HIGH_WATER_SIGNER_MISMATCH"
@@ -212,6 +214,8 @@ def test_writer_grant_redelegation_never_allowed():
         expected_signer_identity_reference=grant["payload"]["signer_identity_reference"],
         expected_signer_key_id=grant["payload"]["signer_key_id"],
         expected_signer_key_fingerprint=grant["payload"]["signer_key_fingerprint"],
+        expected_parent_authority_id=grant["payload"]["parent_authority_id"],
+        expected_parent_authority_hash=grant["payload"]["parent_authority_hash"],
     )
     assert result["decision"] == "DENY"
 
