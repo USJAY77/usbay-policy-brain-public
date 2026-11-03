@@ -639,7 +639,8 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             raise CommitFenceRejected("COMMIT_FENCE_STALE") from exc
 
     def commit_transition_if_current(
-            self, connection, *, fence, now, proposed_position, update_id):
+            self, connection, *, fence, now, proposed_position, update_id,
+            terminal=False):
         require(connection is self._connection and connection.in_transaction,
                 "TRANSACTION_CONFLICT")
         try:
