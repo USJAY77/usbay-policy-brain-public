@@ -9,7 +9,14 @@ from governance.mutation_high_water_ledger import (
     HIGH_WATER_ACTION, HIGH_WATER_SCHEMA, ImmutableLedgerMutationHighWater,
     MutationHighWaterLedgerWriter, _position_hash,
 )
+from governance.mutation_currentness_source import (
+    SQLiteMutationCurrentnessProjectionUpdater, projection_payload_hash,
+    projection_scope_hash,
+)
 from governance.tenant_enrollment_contracts import EnrollmentDenied, digest
+from tests.test_mutation_currentness_source import (
+    SyntheticUpdaterAuthority, _stored_projection, projected_commit,
+)
 
 
 class SyntheticLedgerWriter(MutationHighWaterLedgerWriter):
@@ -177,3 +184,54 @@ def test_ledger_high_water_requires_preprovisioned_writer():
     with pytest.raises(EnrollmentDenied):
         with high_water.hold(scope_hash=p1["scope_hash"]):
             pass
+
+
+def test_ledger_high_water_integrates_with_projection_updater(tmp_path):
+    f, _, _ = projected_commit(tmp_path)
+    previous = _stored_projection(f)
+    scope_hash = projection_scope_hash(f.command["payload"])
+    previous_position = {
+        "scope_hash": scope_hash,
+        "source_epoch": 1,
+        "source_version": 1,
+        "projection_hash": projection_payload_hash(previous),
+    }
+    boundary = digest({"storage": "synthetic-independent-ledger"})
+    records = [_record(
+        previous["scope"]["tenant_id"],
+        boundary,
+        previous_position,
+        digest({"genesis": scope_hash}),
+    )]
+    writer = SyntheticLedgerWriter(records, boundary)
+    high_water = ImmutableLedgerMutationHighWater(
+        "unused",
+        tenant_id=previous["scope"]["tenant_id"],
+        writer=writer,
+        storage_boundary_reference=boundary,
+        reader=lambda _: deepcopy(records),
+    )
+    proposed = deepcopy(previous)
+    proposed["authority_status"]["issuer_status"] = "REVOKED"
+    updater = SQLiteMutationCurrentnessProjectionUpdater(
+        f.view,
+        updater_authority=SyntheticUpdaterAuthority(),
+        high_water=high_water,
+    )
+    result = updater.update(
+        f.command["payload"],
+        proposed,
+        expected_epoch=1,
+        expected_version=1,
+        expected_projection_hash=previous_position["projection_hash"],
+        update_id="ledger-integrated-update-2",
+    )
+    assert result["decision"] == "ALLOW"
+    assert result["source_version"] == 2
+    with high_water.hold(scope_hash=scope_hash) as anchor:
+        assert anchor.current() == {
+            "scope_hash": scope_hash,
+            "source_epoch": 1,
+            "source_version": 2,
+            "projection_hash": projection_payload_hash(proposed),
+        }
