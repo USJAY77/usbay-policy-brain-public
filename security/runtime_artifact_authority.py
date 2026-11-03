@@ -14,7 +14,8 @@ from threading import RLock
 
 from security.runtime_artifact_provenance import (
     MAX_MANIFEST_BYTES, ProducerTrust, RuntimeArtifactError, VerifiedRuntimeArtifact,
-    producer_trust_from_environment, validate_managed_path, verify_runtime_artifact,
+    producer_trust_from_environment, runtime_environment_mode,
+    validate_managed_path, verify_runtime_artifact,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -36,9 +37,8 @@ _authority_lock = RLock()
 def artifact_runtime_required(root: Path | None = None) -> bool:
     """Production/explicit packaged mode never falls back to Git on failure."""
     root = REPO_ROOT if root is None else root
-    modes = (os.getenv("USBAY_ENV", ""), os.getenv("USBAY_ENVIRONMENT", ""))
     return (
-        any(mode.strip().lower() in {"prod", "production"} for mode in modes)
+        runtime_environment_mode(default="test") == "production"
         or bool(os.getenv("USBAY_RUNTIME_SOURCE_MANIFEST"))
         or not (Path(root) / ".git").is_dir()
     )

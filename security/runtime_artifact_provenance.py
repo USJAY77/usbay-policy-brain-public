@@ -84,6 +84,27 @@ class ProducerTrust:
             raise RuntimeArtifactError("runtime_artifact_producer_key_id_mismatch")
 
 
+def runtime_environment_mode(
+    environment: Mapping[str, str] | None = None, *, default: str = "production",
+) -> str:
+    """One fail-closed interpretation of explicit runtime mode declarations."""
+    config = os.environ if environment is None else environment
+    aliases = {
+        "production": "production", "prod": "production",
+        "test": "test", "development": "test", "dev": "test",
+    }
+    modes = []
+    for name in ("USBAY_ENV", "USBAY_ENVIRONMENT"):
+        if name in config:
+            raw = config[name]
+            if not isinstance(raw, str) or raw.strip().lower() not in aliases:
+                raise RuntimeArtifactError("runtime_artifact_mode_invalid")
+            modes.append(aliases[raw.strip().lower()])
+    if len(set(modes)) > 1:
+        raise RuntimeArtifactError("runtime_artifact_mode_conflict")
+    return modes[0] if modes else default
+
+
 def producer_trust_from_environment(
     environment: Mapping[str, str] | None = None,
 ) -> ProducerTrust:
@@ -94,10 +115,7 @@ def producer_trust_from_environment(
     scope = config.get("USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE")
     if not public or not key_id or not scope:
         raise RuntimeArtifactError("runtime_artifact_producer_trust_unavailable")
-    mode = config.get("USBAY_ENV", "production").lower()
-    alternate = config.get("USBAY_ENVIRONMENT", mode).lower()
-    if alternate != mode:
-        raise RuntimeArtifactError("runtime_artifact_mode_conflict")
+    mode = runtime_environment_mode(config)
     trust = ProducerTrust(
         _decode_base64(public, 32, "runtime_artifact_producer_trust_invalid"),
         key_id, scope, mode,

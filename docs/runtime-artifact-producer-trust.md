@@ -36,7 +36,9 @@ the signed source inventory does not authorize or authenticate mutable state.
 An independently valid governance release with the **exact signed source commit**
 is still required through existing release-path configuration. Packaging does
 not invent a release, lineage, tenant authority or production credentials.
-The legacy release HMAC fallback remains a production blocker, not producer trust.
+Release signing and verification reject missing/blank material and the known
+development HMAC in production. The default is allowed only in explicitly
+test/development-scoped execution. This restriction does not provision a key.
 Docker packaging, external publisher identity and live source binding are not
 established by this development implementation.
 
@@ -110,15 +112,25 @@ files and the actual publisher/image binding
 remain separate requirements. A nonce alone does not prevent replay of an
 unchanged, valid older manifest.
 
-## Existing release HMAC risk
+## Release signing boundary
 
-`security/deployment_attestation.py` currently falls back to fixed development
-signing material when `USBAY_DEPLOYMENT_SIGNING_MATERIAL` is absent. Its
-signature verification does not have a production-mode guard against this
-fallback. This is a PROVEN static risk in the existing release path, not evidence
-that production currently lacks a secret. The HMAC is NOT reused or enlarged to
-authorize runtime artifact issuance. Changing existing release secret handling
-is outside this patch.
+The former unconditional development HMAC fallback is rejected in production,
+including when supplied explicitly through configuration or the signing API.
+Missing/blank release material fails closed unless the mode is explicitly
+test/development. No declared mode does not authorize a development fallback.
+The existing HMAC remains separate from Ed25519 artifact producer trust.
+
+Release, artifact selection and producer trust now share strict interpretation
+of `USBAY_ENV` / `USBAY_ENVIRONMENT`. Unknown/blank declarations and conflicting
+modes fail closed before Git/development fallback. `prod` means production;
+`dev`/`development` mean test scope. Automatic runtime release generation is
+denied in production and packaged runtime, including explicit force requests.
+This does not change policy, tenant, replay, identity or startup sequencing.
+
+The operator must independently approve/provision release signing material,
+producer public trust and the exact matching signed governance release. Code
+checks cannot establish key ownership, entropy, external publisher identity,
+deployment binding or approval. No production material is provisioned here.
 
 ## Validation boundary
 
@@ -126,8 +138,10 @@ The new standalone unittest suite imports only these producer/verifier modules,
 standard-library utilities and existing cryptography. Synthetic keys stay in
 memory; synthetic Git commits exist only in temporary test fixtures. Running it
 does not load Gateway, project pytest fixtures or operational stores. Native
-Gateway/provenance/scanner regressions remain required in a separately approved
-isolated context; this suite is not a substitute for them.
+Gateway/provenance/scanner regressions are separately exercised by the bounded
+isolated-copy runner; the standalone suite is not a substitute for them.
+Synthetic production-scoped fixtures test rejection and acceptance paths, never
+create real production trust, and stop actual startup before tenant validation.
 
 PRODUCTION_PRODUCER_TRUST = NOT_PROVISIONED (by this task).
 No deployment or activation is authorized. EGAP-HYDRA-REMOTE-TRANSPORT-AUTH = OPEN.

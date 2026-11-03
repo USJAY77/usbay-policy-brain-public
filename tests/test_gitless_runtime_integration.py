@@ -326,12 +326,188 @@ class GitlessRuntimeIntegrationTests(unittest.TestCase):
             )
         self.assertFalse(output.exists())
 
+    def test_packaged_runtime_cannot_autogenerate_release(self):
+        target = self.base / "must-not-create-release.json"
+        with self.assertRaisesRegex(deployment.DeploymentAttestationError, "runtime_release_generation_denied"):
+            deployment.ensure_runtime_release_manifest(target, force=True)
+        self.assertFalse(target.exists())
+
+    def test_production_each_missing_public_trust_field_denies_startup(self):
+        for field in (
+            "USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY",
+            "USBAY_RUNTIME_ARTIFACT_PRODUCER_KEY_ID",
+            "USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE",
+        ):
+            with self.subTest(field=field), patch.dict(os.environ, self.environment, clear=True):
+                os.environ["USBAY_ENV"] = "production"
+                os.environ.pop(field)
+                with patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+                    with self.assertRaisesRegex(provenance.RuntimeArtifactError, "trust_unavailable"):
+                        gateway.validate_policy_registry_startup()
+
+    def test_production_malformed_public_key_denies_startup(self):
+        os.environ.update(USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production")
+        for value in ("not-base64", "AAAA"):
+            with self.subTest(value=value):
+                os.environ["USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY"] = value
+                with patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+                    with self.assertRaisesRegex(provenance.RuntimeArtifactError, "trust_invalid"):
+                        gateway.validate_policy_registry_startup()
+
+    def test_production_wrong_producer_denies_startup(self):
+        other = Ed25519PrivateKey.generate().public_key().public_bytes(
+            serialization.Encoding.Raw, serialization.PublicFormat.Raw,
+        )
+        os.environ.update(
+            USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production",
+            USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY=base64.b64encode(other).decode(),
+            USBAY_RUNTIME_ARTIFACT_PRODUCER_KEY_ID=provenance.public_key_id(other),
+        )
+        with patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+            with self.assertRaisesRegex(provenance.RuntimeArtifactError, "producer_untrusted"):
+                self.authority()
+
+    def test_production_test_producer_blocks_actual_startup(self):
+        os.environ["USBAY_ENV"] = "production"
+        with patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+            with self.assertRaisesRegex(provenance.RuntimeArtifactError, "test_producer_denied"):
+                gateway.validate_policy_registry_startup()
+
+    def test_synthetic_production_startup_shares_authority_without_git(self):
+        # Synthetic in-memory fixture only: no production key is provisioned.
+        self.resign({"producer_scope": "production"})
+        os.environ.update(
+            USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production",
+            USBAY_DEPLOYMENT_SIGNING_MATERIAL="synthetic-production-path-test-only",
+        )
+        release = json.loads(self.release_path.read_text())
+        release["release_signature"] = deployment.sign_release_manifest(release)
+        self.release_path.write_text(json.dumps(release))
+        self.test_bounded_actual_startup_reaches_next_independent_validator()
+
+    def test_valid_production_artifact_does_not_replace_release_signing_trust(self):
+        self.resign({"producer_scope": "production"})
+        os.environ.update(USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production")
+        self.authority()
+        with patch.object(gateway, "REPO_ROOT", self.package), patch.object(
+            subprocess, "run", side_effect=AssertionError("Git forbidden"),
+        ):
+            with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+                gateway.validate_policy_registry_startup()
+
+    def test_valid_production_artifact_cannot_admit_development_hmac(self):
+        material = deployment._signing_material()
+        self.resign({"producer_scope": "production"})
+        os.environ.update(
+            USBAY_ENV="production", USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE="production",
+            USBAY_DEPLOYMENT_SIGNING_MATERIAL=material,
+        )
+        self.authority()
+        with patch.object(gateway, "REPO_ROOT", self.package), patch.object(
+            subprocess, "run", side_effect=AssertionError("Git forbidden"),
+        ):
+            with self.assertRaisesRegex(deployment.DeploymentAttestationError, "development_signing_material_denied"):
+                gateway.validate_policy_registry_startup()
+
     def test_packager_never_overwrites_existing_destination(self):
         with self.assertRaises(provenance.RuntimeArtifactError):
             package_runtime_artifact(
                 self.source, self.package, signing_key=self.key,
                 producer_key_id=self.key_id, producer_scope="test",
             )
+
+
+class ReleaseSigningBoundaryTests(unittest.TestCase):
+    """Synthetic HMAC checks; never consult the inherited process environment."""
+
+    def setUp(self):
+        environment = patch.dict(os.environ, {"USBAY_ENV": "test"}, clear=True)
+        environment.start()
+        self.addCleanup(environment.stop)
+        self.manifest = {"release_id": "synthetic-signing-boundary"}
+        self.development_signature = deployment.sign_release_manifest(self.manifest)
+        self.signed = dict(self.manifest, release_signature=self.development_signature)
+        self.development_material = deployment._signing_material()
+
+    def test_production_missing_material_denies_signing_and_verification(self):
+        for config in ({"USBAY_ENV": "production"}, {"USBAY_ENVIRONMENT": "prod"}):
+            with self.subTest(config=config), patch.dict(os.environ, config, clear=True):
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+                    deployment.sign_release_manifest(self.manifest)
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+                    deployment.verify_release_signature(self.signed)
+
+    def test_production_blank_material_denied(self):
+        os.environ["USBAY_ENV"] = "production"
+        for value in ("", " ", "\t\n"):
+            with self.subTest(value=repr(value)):
+                os.environ["USBAY_DEPLOYMENT_SIGNING_MATERIAL"] = value
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+                    deployment.verify_release_signature(self.signed)
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+                    deployment.sign_release_manifest(self.manifest, signing_material=value)
+
+    def test_production_explicit_development_material_denied(self):
+        os.environ["USBAY_ENV"] = "production"
+        os.environ["USBAY_DEPLOYMENT_SIGNING_MATERIAL"] = self.development_material
+        with self.assertRaisesRegex(deployment.DeploymentAttestationError, "development_signing_material_denied"):
+            deployment.verify_release_signature(self.signed)
+        with self.assertRaisesRegex(deployment.DeploymentAttestationError, "development_signing_material_denied"):
+            deployment.sign_release_manifest(self.manifest, signing_material=self.development_material)
+
+    def test_development_forgery_rejected_with_explicit_synthetic_production_material(self):
+        os.environ.update(
+            USBAY_ENV="production", USBAY_DEPLOYMENT_SIGNING_MATERIAL="synthetic-independent-test-material",
+        )
+        self.assertFalse(deployment.verify_release_signature(self.signed))
+        signed = dict(self.manifest, release_signature=deployment.sign_release_manifest(self.manifest))
+        self.assertTrue(deployment.verify_release_signature(signed))
+
+    def test_fallback_requires_explicit_development_scope(self):
+        os.environ.clear()
+        with self.assertRaisesRegex(deployment.DeploymentAttestationError, "signing_material_required"):
+            deployment.sign_release_manifest(self.manifest)
+        os.environ["USBAY_DEPLOYMENT_SIGNING_MATERIAL"] = self.development_material
+        with self.assertRaisesRegex(deployment.DeploymentAttestationError, "development_signing_material_denied"):
+            deployment.verify_release_signature(self.signed)
+
+    def test_explicit_development_fallback_remains_scoped(self):
+        for config in (
+            {"USBAY_ENV": "test"}, {"USBAY_ENV": "development"},
+            {"USBAY_ENVIRONMENT": "dev"}, {"USBAY_ENV": "test", "USBAY_ENVIRONMENT": "development"},
+        ):
+            with self.subTest(config=config), patch.dict(os.environ, config, clear=True):
+                self.assertEqual(deployment.sign_release_manifest(self.manifest), self.development_signature)
+                self.assertTrue(deployment.verify_release_signature(self.signed))
+
+    def test_conflicting_modes_fail_before_git_or_signing(self):
+        for primary, alternate in (("test", "production"), ("production", "test")):
+            with self.subTest(primary=primary), patch.dict(os.environ, {
+                "USBAY_ENV": primary, "USBAY_ENVIRONMENT": alternate,
+            }, clear=True), patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "mode_conflict"):
+                    deployment.sign_release_manifest(self.manifest)
+                with self.assertRaisesRegex(provenance.RuntimeArtifactError, "mode_conflict"):
+                    authority_module.artifact_runtime_required()
+                with self.assertRaisesRegex(deployment.DeploymentAttestationError, "mode_conflict"):
+                    deployment.ensure_runtime_release_manifest(force=True)
+
+    def test_unknown_or_empty_explicit_modes_cannot_downgrade(self):
+        for variable in ("USBAY_ENV", "USBAY_ENVIRONMENT"):
+            for value in ("", "production-typo"):
+                with self.subTest(variable=variable, value=value), patch.dict(
+                    os.environ, {variable: value}, clear=True,
+                ), patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+                    with self.assertRaisesRegex(deployment.DeploymentAttestationError, "mode_invalid"):
+                        deployment.sign_release_manifest(self.manifest)
+                    with self.assertRaisesRegex(provenance.RuntimeArtifactError, "mode_invalid"):
+                        authority_module.artifact_runtime_required()
+
+    def test_production_cannot_autogenerate_release_even_when_forced(self):
+        os.environ["USBAY_ENV"] = "production"
+        with patch.object(subprocess, "run", side_effect=AssertionError("Git forbidden")):
+            with self.assertRaisesRegex(deployment.DeploymentAttestationError, "runtime_release_generation_denied"):
+                deployment.ensure_runtime_release_manifest(force=True)
 
 
 if __name__ == "__main__":

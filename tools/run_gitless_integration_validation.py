@@ -18,6 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DEPENDENCIES = Path("/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages")
 SOURCE_FILES = (
     ".replit", ".gitignore", "gateway/app.py", "security/deployment_attestation.py",
+    "security/runtime_artifact_provenance.py",
     "security/runtime_artifact_authority.py", "security/runtime_artifact_package.py",
     "tests/test_gitless_runtime_integration.py", "tools/run_gitless_integration_validation.py",
     "docs/runtime-artifact-producer-trust.md", "tests/test_deployment_provenance.py",
@@ -225,6 +226,7 @@ def main() -> int:
         env = dict(
             environment, TMPDIR=str(temps), PYTEST_DISABLE_PLUGIN_AUTOLOAD="1",
             USBAY_ENV="test", PYTHONDONTWRITEBYTECODE="1",
+            USBAY_DEPLOYMENT_SIGNING_MATERIAL="synthetic-validation-only-release-hmac",
             USBAY_GENERATED_GOVERNANCE_RELEASE_DIR=str(phase_root / "tmp/generated-release"),
         )
         if phase == "startup":

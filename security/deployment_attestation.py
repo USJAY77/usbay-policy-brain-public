@@ -157,8 +157,12 @@ def current_git_commit() -> str:
 
 
 def environment_mode() -> str:
-    raw = os.getenv("USBAY_ENV", os.getenv("USBAY_ENVIRONMENT", "test")).strip().lower()
-    return "production" if raw in {"prod", "production"} else "test"
+    from security.runtime_artifact_provenance import runtime_environment_mode
+
+    try:
+        return runtime_environment_mode(default="test")
+    except RuntimeArtifactError as exc:
+        raise DeploymentAttestationError(str(exc)) from None
 
 
 def _artifact_authority(
@@ -504,8 +508,24 @@ def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:
     return context.ancestor_continuity or release_commit in context.accepted_commit_set
 
 
-def _signing_material() -> str:
-    return os.getenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", "usbay-local-deployment-signing-material-v1")
+def _signing_material(signing_material: str | None = None) -> str:
+    # A development default is never an independent production authority.
+    mode = environment_mode()
+    explicit_development = mode == "test" and any(
+        name in os.environ for name in ("USBAY_ENV", "USBAY_ENVIRONMENT")
+    )
+    development_material = "usbay-local-deployment-signing-material-v1"
+    material = (
+        os.getenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL")
+        if signing_material is None else signing_material
+    )
+    if material is None or not material.strip():
+        if explicit_development:
+            return development_material
+        raise DeploymentAttestationError("deployment_signing_material_required")
+    if material.strip() == development_material and not explicit_development:
+        raise DeploymentAttestationError("development_signing_material_denied")
+    return material
 
 
 def signature_payload(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -520,7 +540,7 @@ def release_hash(manifest: dict[str, Any]) -> str:
 
 def sign_release_manifest(manifest: dict[str, Any], signing_material: str | None = None) -> str:
     digest = hmac.new(
-        (signing_material or _signing_material()).encode("utf-8"),
+        _signing_material(signing_material).encode("utf-8"),
         canonical_json(signature_payload(manifest)).encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
@@ -698,6 +718,8 @@ def ensure_runtime_release_manifest(
     tenant_id: str = "t1",
     force: bool = False,
 ) -> Path:
+    if environment_mode() == "production" or artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_release_generation_denied")
     if _is_default_release_path(path):
         configured = os.getenv("USBAY_GOVERNANCE_RELEASE_PATH", "").strip()
         target = Path(configured) if configured else _generated_release_manifest_path()
