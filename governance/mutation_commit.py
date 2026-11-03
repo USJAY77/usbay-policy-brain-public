@@ -42,6 +42,7 @@ FENCE_FIELDS = {'transaction_id','command_hash','action','resource_id','object_i
     'expected_object_version','expected_state','currentness_snapshot_identity','authority_evidence_hash',
     'source_version','source_epoch','storage_event_tip','replay_reservation_identity',
     'fence_created_at','fence_valid_until','verification_valid_until','fence_fingerprint'}
+REVOCATION_EFFECT_FIELDS = {'revocation_effect_scope','revocation_effect_grant_hash'}
 
 
 def _text(value):
@@ -106,7 +107,12 @@ class _CommitContract:
     @classmethod
     def from_payload(cls,p):
         fields=COMMAND_FIELDS if cls.kind=='command' else FENCE_FIELDS
-        require(type(p) is dict and set(p)==COMMON|fields,'MUTATION_COMMAND_INVALID' if cls.kind=='command' else 'COMMIT_FENCE_MISMATCH')
+        require(type(p) is dict,'MUTATION_COMMAND_INVALID' if cls.kind=='command' else 'COMMIT_FENCE_MISMATCH')
+        effect_required=p.get('action')=='REVOKE_POLICY_OBJECT'
+        if effect_required:
+            require(REVOCATION_EFFECT_FIELDS <= set(p),'REVOCATION_SCOPE_MISMATCH')
+        expected_fields=COMMON|fields|(REVOCATION_EFFECT_FIELDS if effect_required else set())
+        require(set(p)==expected_fields,'MUTATION_COMMAND_INVALID' if cls.kind=='command' else 'COMMIT_FENCE_MISMATCH')
         canonical(p)
         require(p['schema_version']=='usbay.mutation_commit.'+cls.kind+'.v1','MUTATION_COMMAND_INVALID')
         from governance.mutation_authority import AUTHORITY_DOMAIN
@@ -130,6 +136,10 @@ class _CommitContract:
         require(p['resource_id']==p['object_id'],'RESOURCE_NOT_AUTHORIZED')
         state=validate_expected_state(p['action'],p['expected_state'])
         require(all(state[k]==p[k] for k in STATE_COMMON if k!='object_version_hash'),'EXPECTED_STATE_MISMATCH')
+        if effect_required:
+            require(p['revocation_effect_scope']==state['revocation_effect_scope']=='ALL_VERSIONS_OF_OBJECT',
+                    'REVOCATION_SCOPE_MISMATCH')
+            require(_hash(p['revocation_effect_grant_hash']),'MUTATION_COMMAND_INVALID')
         version=p['object_version_hash'] if cls.kind=='command' else p['expected_object_version']
         require(state['object_version_hash']==version,'OBJECT_VERSION_MISMATCH')
         require(p['algorithm']=='Ed25519' and instant(p['valid_from'])<instant(p['valid_until'])
@@ -280,15 +290,43 @@ class MutationAttempt:
             'issuer_grant','review_policy','root_source','currentness','target_object'},'AUTHORITY_CURRENTNESS_UNPROVEN')
         require(material['currentness']['expected']==state['head'],'EXPECTED_HEAD_MISMATCH')
         g=bundle['grant']['payload']
-        if c['action']!='FINALIZE_POLICY_ADOPTION':
-            # Existing v1 grants contain no all-version effect permission. Do not
-            # add a caller sidecar, change defaults or infer it from exact hashes.
-            require(g.get('revocation_effect_scope')==c['expected_state']['revocation_effect_scope'], 'REVOCATION_SCOPE_MISMATCH')
+        if c['action'] not in ('FINALIZE_POLICY_ADOPTION','REVOKE_POLICY_OBJECT'):
+            # Existing v1 grants remain insufficient for other revocation actions.
+            require(g.get('revocation_effect_scope')==c['expected_state']['revocation_effect_scope'],
+                    'REVOCATION_SCOPE_MISMATCH')
         result=verify_mutation_authority_grant(bundle['proposal'],bundle['reviews'],bundle['grant'],
             trust=self._view.trust,now=now,**material)
         if result['reason']=='ISSUANCE_REPLAY':
             self._replay(c)
         require(result['decision']=='ALLOW',result['reason'])
+        effect_result=None
+        if c['action']=='REVOKE_POLICY_OBJECT':
+            effect=bundle.get('revocation_effect')
+            require(type(effect) is dict
+                    and set(effect)=={'parent','proposal','reviews','grant'},
+                    'REVOCATION_SCOPE_MISMATCH')
+            from governance.mutation_policy_revocation_effect import (
+                verify_policy_revocation_effect,
+            )
+            effect_result=verify_policy_revocation_effect(
+                mutation_proposal=bundle['proposal'],
+                mutation_reviews=bundle['reviews'],
+                mutation_grant=bundle['grant'],
+                mutation_material=material,
+                effect_parent=effect['parent'],
+                effect_proposal=effect['proposal'],
+                effect_reviews=effect['reviews'],
+                effect_grant=effect['grant'],
+                trust=self._view.trust,
+                now=now,
+                expected_state=c['expected_state'],
+            )
+            require(effect_result['decision']=='ALLOW',
+                    effect_result.get('reason','REVOCATION_SCOPE_MISMATCH'))
+            require(c['revocation_effect_scope']==effect_result['effect_scope']
+                    and c['revocation_effect_grant_hash']
+                        == effect_result['effect_grant_hash'],
+                    'REVOCATION_SCOPE_MISMATCH')
         if c['action']=='FINALIZE_POLICY_ADOPTION':
             target=material['target_object']['payload']
             require(all(c['expected_state'][k]==target[k] for k in ('policy_id','policy_version','policy_hash')),
@@ -319,6 +357,10 @@ class MutationAttempt:
             currentness_snapshot_identity=digest({'currentness':material['currentness'],
                 'authority_evidence_hash':digest(result['issuance_evidence'])}),
             verification_valid_until=result['verification_valid_until'])
+        if c['action']=='REVOKE_POLICY_OBJECT':
+            expected.update(
+                revocation_effect_scope=c['revocation_effect_scope'],
+                revocation_effect_grant_hash=c['revocation_effect_grant_hash'])
         proof=self._guard.evidence(command=deepcopy(c),bindings=deepcopy(expected),now=now)
         try:
             fence,_=_signed(self._view.trust,proof,MutationCommitFenceV1,'mutation_commit_fence',now)
@@ -332,18 +374,26 @@ class MutationAttempt:
         if hasattr(self,'_source_position'):
             require((fence['source_epoch'],fence['source_version'])==self._source_position,'COMMIT_FENCE_STALE')
         self._source_position=(fence['source_epoch'],fence['source_version'])
-        return c,keys,fence,dict(command_hash=digest(c),grant_hash=digest(g),issuer_hash=c['issuer_authority_hash'],
+        evidence=dict(command_hash=digest(c),grant_hash=digest(g),issuer_hash=c['issuer_authority_hash'],
             parent_hash=c['parent_authority_hash'],proposal_hash=c['proposal_hash'],transaction_id=c['transaction_id'],
             reviewer_a_hash=c['reviewer_a_decision_hash'],reviewer_b_hash=c['reviewer_b_decision_hash'],
             tenant_reference=digest({'tenant':c['tenant_id']}),action=c['action'],resource_id=c['resource_id'],object_id=c['object_id'],
             expected_state_hash=digest(c['expected_state']),observed_state_hash=observed_hash,cas='MATCH',
             fence_hash=digest(fence),currentness_snapshot_identity=fence['currentness_snapshot_identity'],replay='AVAILABLE')
+        if effect_result is not None:
+            evidence.update(
+                revocation_effect_scope=effect_result['effect_scope'],
+                revocation_effect_grant_hash=effect_result['effect_grant_hash'],
+                revocation_effect_parent_hash=
+                    effect_result['parent_effect_authority_hash'])
+        return c,keys,fence,evidence
 
-    def verify(self,command,*,proposal,reviews,grant):
+    def verify(self,command,*,proposal,reviews,grant,revocation_effect=None):
         try:
             require(self._prepared is None,'TRANSACTION_CONFLICT')
             # Immutable copies prevent caller mutation between verification and commit.
-            bundle=deepcopy(dict(command=command,proposal=proposal,reviews=reviews,grant=grant))
+            bundle=deepcopy(dict(command=command,proposal=proposal,reviews=reviews,grant=grant,
+                revocation_effect=revocation_effect))
             _,_,_,evidence=self._evaluate(bundle)
             self._prepared=bundle
             return decision('COMMIT_FENCE_VERIFIED',allowed=True,evidence=evidence)
