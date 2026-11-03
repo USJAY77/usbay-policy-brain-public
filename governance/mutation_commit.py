@@ -202,7 +202,8 @@ class MutationFenceGuard:
         raise EnrollmentDenied('COMMIT_FENCE_UNAVAILABLE')
 
     def commit_transition_if_current(
-            self, connection, *, fence, now, proposed_position, update_id):
+            self, connection, *, fence, now, proposed_position, update_id,
+            terminal=False):
         raise EnrollmentDenied('COMMIT_FENCE_UNAVAILABLE')
 
 
