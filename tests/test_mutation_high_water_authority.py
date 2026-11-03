@@ -15,7 +15,9 @@ from security.enrollment_policy_currentness import EnrollmentTrust, ScopedPublic
 from tests.helpers.tenant_enrollment import NOW
 
 
-def _fixture(action="WRITE_MUTATION_HIGH_WATER"):
+def _fixture(action="WRITE_MUTATION_HIGH_WATER", *,
+             scope_hash_override=None, position_hash_override=None,
+             update_ref_override=None, expected_projection_hash_override=None):
     tenant = "synthetic-enrollment-tenant"
     registry = digest({"registry": "synthetic-only"})
     specs = {
@@ -55,13 +57,13 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER"):
         issued_at="2026-01-02T11:59:59Z",
         authority_flags=dict.fromkeys(FLAGS, False),
     )
-    scope_hash = digest({"scope": tenant})
-    position_hash = (
+    scope_hash = scope_hash_override or digest({"scope": tenant})
+    position_hash = position_hash_override or (
         digest({"position": 2})
         if action == "WRITE_MUTATION_HIGH_WATER"
         else digest({"recovered": 8})
     )
-    update_ref = (
+    update_ref = update_ref_override or (
         digest({"update": "u2"})
         if action == "WRITE_MUTATION_HIGH_WATER"
         else digest({"recovery_operation_id": "synthetic-recovery-operation"})
@@ -124,7 +126,10 @@ def _fixture(action="WRITE_MUTATION_HIGH_WATER"):
             signer_key_fingerprint=digest({"key": "preprovisioned"}),
             expected_source_epoch=1,
             expected_source_version=1,
-            expected_projection_hash=digest({"projection": 1}),
+            expected_projection_hash=(
+                expected_projection_hash_override
+                or digest({"projection": 1})
+            ),
             proposed_position_hash=position_hash,
             update_id_reference=update_ref,
             max_updates=1,
