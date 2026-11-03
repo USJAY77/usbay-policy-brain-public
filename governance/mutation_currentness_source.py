@@ -118,7 +118,8 @@ def _validate_projection(payload, command):
                 "AUTHORITY_CURRENTNESS_UNPROVEN")
     require(type(payload["currentness"]) is dict
             and set(payload["currentness"]) ==
-                {"policy", "adoption", "h", "w", "revocations", "expected"},
+                {"policy", "adoption", "h", "w", "revocations", "expected",
+                 "challenge", "request_digest"},
             "AUTHORITY_CURRENTNESS_UNPROVEN")
     for name in ("policy", "adoption", "h", "w", "revocations"):
         require(type(payload["currentness"][name]) is dict
