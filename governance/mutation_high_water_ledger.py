@@ -326,6 +326,41 @@ class _HeldLedgerAnchor:
             raise MutationCurrentnessUpdateRejected("COMMIT_FENCE_STALE")
         connection.execute("COMMIT")
 
+    def transition_and_commit(
+            self, connection, *, expected, proposed, update_id):
+        _validate_position(expected)
+        _validate_position(proposed)
+        require(expected["scope_hash"] == proposed["scope_hash"]
+                == self.scope_hash, "TENANT_MISMATCH")
+        require(proposed["source_epoch"] == expected["source_epoch"]
+                and proposed["source_version"] == expected["source_version"] + 1,
+                "CURRENTNESS_UPDATE_STALE")
+        if self.current() != expected:
+            raise MutationCurrentnessUpdateRejected("COMMIT_FENCE_STALE")
+        try:
+            receipt = self.source.writer.append_position(
+                tenant_id=self.source.tenant_id,
+                previous=deepcopy(expected),
+                proposed=deepcopy(proposed),
+                update_id=update_id,
+            )
+        except MutationCurrentnessUpdateUncertain:
+            raise
+        except Exception as exc:
+            raise MutationCurrentnessUpdateRejected(
+                "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE") from exc
+        require(type(receipt) is dict and receipt.get("position") == proposed
+                and type(receipt.get("event_hash")) is str
+                and bool(receipt["event_hash"]),
+                "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+        try:
+            connection.execute("COMMIT")
+        except Exception as exc:
+            raise MutationCurrentnessUpdateUncertain() from exc
+        if self.current() != proposed:
+            raise MutationCurrentnessUpdateUncertain()
+        return receipt
+
 
 class _HeldLedgerUpdateAnchor(_HeldLedgerAnchor):
     def __init__(self, source, scope_hash, expected, proposed, update_id):
