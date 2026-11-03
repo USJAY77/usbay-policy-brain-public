@@ -15,7 +15,10 @@ from contextlib import contextmanager
 from copy import deepcopy
 import sqlite3
 
-from governance.mutation_currentness_source import projection_payload_hash, projection_scope_hash
+from governance.mutation_currentness_source import (
+    MutationCurrentnessUpdateUncertain,
+    projection_payload_hash, projection_scope_hash,
+)
 from governance.mutation_high_water_authority import (
     verify_recovery_epoch_grant,
 )
@@ -300,7 +303,8 @@ class GovernedMutationRecoveryWriter:
                     conn.rollback()
                 except Exception:
                     pass
-            if ledger_appended or commit_attempted:
+            if (ledger_appended or commit_attempted
+                    or isinstance(error, MutationCurrentnessUpdateUncertain)):
                 return decision(
                     "RECOVERY_STATE_UNKNOWN",
                     recovery_outcome="UNKNOWN",
