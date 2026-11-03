@@ -211,6 +211,42 @@ class ImmutableLedgerMutationHighWater(MutationCurrentnessHighWater):
             previous_hash = decision["position_hash"]
         return deepcopy(previous)
 
+    def current_evidence(self, scope_hash):
+        matches = []
+        for record in self._records():
+            action = record.get("action")
+            try:
+                if action == HIGH_WATER_ACTION:
+                    position, decision = _validate_record(
+                        record, tenant_id=self.tenant_id,
+                        scope_hash=scope_hash,
+                        storage_boundary_reference=
+                            self.storage_boundary_reference)
+                elif action == RECOVERY_ACTION:
+                    position, decision = _validate_recovery_record(
+                        record, tenant_id=self.tenant_id,
+                        scope_hash=scope_hash,
+                        storage_boundary_reference=
+                            self.storage_boundary_reference)
+                else:
+                    continue
+            except EnrollmentDenied:
+                continue
+            matches.append((position, decision, record))
+        require(bool(matches), "AUTHORITY_CURRENTNESS_UNPROVEN")
+        position = self._current(scope_hash)
+        latest = matches[-1]
+        require(latest[0] == position,
+                "AUTHORITY_CURRENTNESS_UNPROVEN")
+        event_hash = latest[2].get("current_event_hash")
+        require(type(event_hash) is str and bool(event_hash),
+                "AUTHORITY_CURRENTNESS_UNPROVEN")
+        return {
+            "position": deepcopy(position),
+            "event_hash": event_hash,
+            "position_hash": latest[1]["position_hash"],
+        }
+
     @contextmanager
     def hold(self, *, scope_hash: str):
         require(isinstance(self.writer, MutationHighWaterLedgerWriter),
