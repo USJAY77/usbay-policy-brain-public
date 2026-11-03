@@ -201,6 +201,10 @@ class MutationFenceGuard:
     def commit_if_current(self, connection, *, fence, now):
         raise EnrollmentDenied('COMMIT_FENCE_UNAVAILABLE')
 
+    def commit_transition_if_current(
+            self, connection, *, fence, now, proposed_position, update_id):
+        raise EnrollmentDenied('COMMIT_FENCE_UNAVAILABLE')
+
 
 def reservation_identity(command):
     return digest({k:command[k] for k in ('tenant_id','mutation_authority_grant_id','transaction_id',
@@ -402,6 +406,13 @@ class MutationAttempt:
             reason=str(error) if type(error) is EnrollmentDenied else 'MUTATION_COMMAND_INVALID'
             return decision(reason,evidence=dict(command_hash=getattr(self,'_command_hash',None),
                 final_governance_decision='DENY',reason=reason))
+
+    def _writer_context(self):
+        require(self._prepared is not None and not self._closed
+                and not self._poisoned and self._conn is not None
+                and self._conn.in_transaction,'TRANSACTION_CONFLICT')
+        c,keys,fence,evidence=self._evaluate(self._prepared)
+        return c,keys,fence,evidence,self._conn,self._guard
 
     def commit(self):
         attempted=False
