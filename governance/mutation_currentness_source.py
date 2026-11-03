@@ -637,3 +637,45 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             raise
         except Exception as exc:
             raise CommitFenceRejected("COMMIT_FENCE_STALE") from exc
+
+    def commit_transition_if_current(
+            self, connection, *, fence, now, proposed_position, update_id):
+        require(connection is self._connection and connection.in_transaction,
+                "TRANSACTION_CONFLICT")
+        try:
+            epoch, version, projection, projection_hash = self._source._load(
+                connection, projection_scope_hash(self._command))
+            if (epoch, version, projection_hash) != (
+                    self._epoch, self._version, self._projection_hash):
+                raise CommitFenceRejected("COMMIT_FENCE_STALE")
+            if projection_payload_hash(
+                    _validate_projection(projection, self._command)
+            ) != self._projection_hash:
+                raise CommitFenceRejected("COMMIT_FENCE_STALE")
+            if not (instant(fence["valid_from"])
+                    <= now < instant(fence["fence_valid_until"])):
+                raise CommitFenceRejected("COMMIT_FENCE_STALE")
+            expected = {
+                "scope_hash": projection_scope_hash(self._command),
+                "source_epoch": self._epoch,
+                "source_version": self._version,
+                "projection_hash": self._projection_hash,
+            }
+            require(proposed_position["scope_hash"] == expected["scope_hash"]
+                    and proposed_position["source_epoch"] == self._epoch
+                    and proposed_position["source_version"] == self._version + 1,
+                    "CURRENTNESS_UPDATE_STALE")
+            if self._anchor.current() != expected:
+                raise CommitFenceRejected("COMMIT_FENCE_STALE")
+            transition = getattr(self._anchor, "transition_and_commit", None)
+            require(callable(transition),
+                    "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
+            return transition(
+                connection,
+                expected=deepcopy(expected),
+                proposed=deepcopy(proposed_position),
+                update_id=update_id,
+            )
+        except CommitFenceRejected:
+            raise
+
