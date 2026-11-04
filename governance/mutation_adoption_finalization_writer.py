@@ -208,13 +208,27 @@ class GovernedAdoptionFinalizationWriter:
                             == composition_hash,
                         "FINALIZATION_EVIDENCE_INVALID")
 
-                    projection = self._projection(c, composition)
-                    proposed_position = {
-                        "scope_hash": projection_scope_hash(c),
-                        "source_epoch": fence["source_epoch"],
-                        "source_version": fence["source_version"] + 1,
-                        "projection_hash": digest(projection),
+                    post_state = self._projection(c, composition)
+                    successor_currentness = {
+                        "policy": deepcopy(artifacts["policy"]),
+                        "adoption": deepcopy(artifacts["adoption"]),
+                        "h": deepcopy(artifacts["h"]),
+                        "w": deepcopy(artifacts["w"]),
+                        "revocations": deepcopy(
+                            material["currentness"]["revocations"]),
+                        "expected": deepcopy(artifacts["expected"]),
+                        "challenge": artifacts["challenge"],
+                        "request_digest": artifacts["request_digest"],
                     }
+                    prepared_transition = fence_guard.prepare_transition(
+                        conn,
+                        command=deepcopy(c),
+                        successor_currentness=successor_currentness,
+                        post_state=deepcopy(post_state),
+                        terminal=False,
+                    )
+                    proposed_position = deepcopy(
+                        prepared_transition["proposed_position"])
 
                     for kind, identity, _ in keys:
                         conn.execute(
@@ -304,10 +318,10 @@ class GovernedAdoptionFinalizationWriter:
                         conn,
                         fence=deepcopy(fence),
                         now=self.view.clock(),
-                        proposed_position=deepcopy(
-                            proposed_position),
+                        prepared_transition=deepcopy(
+                            prepared_transition),
                         update_id=c["transaction_id"],
-                        terminal=False,
+                        transition_evidence_hash=composition_hash,
                     )
                     require(not conn.in_transaction,
                             "COMMIT_STATE_UNKNOWN")
