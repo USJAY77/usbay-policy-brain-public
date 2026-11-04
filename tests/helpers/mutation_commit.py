@@ -106,20 +106,48 @@ class SyntheticGuard(MutationFenceGuard):
         connection.execute('COMMIT')
         if self.source.fail_after_commit:raise OSError('synthetic lost commit acknowledgment')
 
-    def commit_transition_if_current(self,connection,*,fence,now,proposed_position,update_id,terminal=False):
+    def prepare_transition(self,connection,*,command,successor_currentness,post_state,terminal):
+        assert connection is self.conn and connection.in_transaction and self.source.guard_active
+        assert command['tenant_id']==self.source.f.command['payload']['tenant_id']
+        prepared=dict(
+            action=command['action'],terminal=terminal,
+            previous_position=dict(scope_hash=digest({
+                'tenant_id':command['tenant_id'],'authority_domain':command['authority_domain']}),
+                source_epoch=self.source.epoch,source_version=self.source.version,
+                projection_hash=digest({'synthetic-projection':self.source.version})),
+            proposed_position=dict(scope_hash=digest({
+                'tenant_id':command['tenant_id'],'authority_domain':command['authority_domain']}),
+                source_epoch=self.source.epoch,source_version=self.source.version+1,
+                projection_hash=digest({
+                    'successor_currentness':successor_currentness,
+                    'post_state':post_state,'action':command['action'],
+                    'terminal':terminal})),
+            projection=dict(successor_currentness=deepcopy(successor_currentness),
+                post_state=deepcopy(post_state)),
+            command_hash=digest(command))
+        prepared['prepared_hash']=digest({k:v for k,v in prepared.items() if k!='prepared_hash'})
+        self._prepared_transition=deepcopy(prepared)
+        return deepcopy(prepared)
+
+    def commit_transition_if_current(self,connection,*,fence,now,prepared_transition,update_id,transition_evidence_hash):
         assert connection is self.conn and self.source.guard_active
+        assert prepared_transition==self._prepared_transition
+        assert type(transition_evidence_hash) is str and transition_evidence_hash.startswith('sha256:')
         if self.source.before_confirm is not None:self.source.before_confirm(self.source)
         if self.position!=(self.source.epoch,self.source.version):raise CommitFenceRejected('COMMIT_FENCE_STALE')
         if self.source.f.root_source.root_status!='ACTIVE':raise CommitFenceRejected('MUTATION_AUTHORITY_REVOKED')
         if not (instant(fence['valid_from'])<=self.source.clock()<instant(fence['fence_valid_until'])):
             raise CommitFenceRejected('COMMIT_FENCE_STALE')
+        proposed_position=prepared_transition['proposed_position']
         if proposed_position['source_epoch']!=self.source.epoch or proposed_position['source_version']!=self.source.version+1:
             raise CommitFenceRejected('COMMIT_FENCE_STALE')
         self.source.version+=1
         connection.execute('COMMIT')
-        if terminal:self.source.terminal=True
+        if prepared_transition['terminal']:self.source.terminal=True
         if self.source.fail_after_commit:raise OSError('synthetic lost commit acknowledgment')
-        return dict(position=deepcopy(proposed_position),event_hash=digest({'synthetic-transition':update_id}))
+        return dict(position=deepcopy(proposed_position),
+            event_hash=digest({'synthetic-transition':update_id}),
+            projection_event_hash=digest({'synthetic-projection-event':prepared_transition['prepared_hash']}))
 
 
 @dataclass
