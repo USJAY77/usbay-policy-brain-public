@@ -7,7 +7,7 @@ from tests.helpers.tenant_enrollment import common
 
 
 def build_finalization_artifacts(f):
-    pending=f.pending
+    pending=f.f.pending
     p=pending["policy"]["payload"]
     a=pending["adoption"]["payload"]
     b=pending["advance"]["payload"]
