@@ -67,6 +67,19 @@ class SyntheticAnchor(MutationCurrentnessHighWater):
         connection.execute("COMMIT")
         self.record = deepcopy(proposed)
 
+    def transition_and_commit(
+            self, connection, *, expected, proposed, update_id):
+        assert self.record == expected
+        connection.execute("COMMIT")
+        self.record = deepcopy(proposed)
+        return {
+            "position": deepcopy(proposed),
+            "event_hash": digest({
+                "synthetic-ledger-transition": update_id,
+                "position": proposed,
+            }),
+        }
+
 
 class SyntheticUpdaterAuthority(MutationCurrentnessUpdaterAuthority):
     def authorize_update(self, **kwargs):
@@ -102,8 +115,9 @@ def _add_key(f, issuer, key_id, roles):
     return SyntheticSigner(issuer, key_id, private)
 
 
-def projected_commit(tmp_path):
-    f = synthetic_commit(tmp_path)
+def projected_commit(tmp_path, *, action="FINALIZE_POLICY_ADOPTION", grant_consumed=False):
+    f = synthetic_commit(
+        tmp_path, action=action, grant_consumed=grant_consumed)
     parent = _add_key(
         f, "synthetic-parent-status", "test-parent-status",
         ("mutation_parent_currentness",))
