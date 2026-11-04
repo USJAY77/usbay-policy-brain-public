@@ -56,6 +56,12 @@ def sha256_text(value: str) -> str:
 
 
 def _run_git(root: Path, args: list[str]) -> str:
+    from security.runtime_artifact_authority import artifact_runtime_required
+
+    if artifact_runtime_required(root):
+        # This legacy schema needs Git parents/tags, which the runtime source
+        # manifest does not attest. Do not invent lineage or consult Git.
+        raise GovernanceReleaseIntegrityError("release_integrity_build_metadata_required")
     completed = subprocess.run(
         ["git", *args],
         cwd=root,
@@ -82,6 +88,10 @@ def git_parent_commits(root: Path, commit: str) -> tuple[str, ...]:
 
 
 def baseline_tag_commit(root: Path, baseline_tag: str) -> str:
+    from security.runtime_artifact_authority import artifact_runtime_required
+
+    if artifact_runtime_required(root):
+        raise GovernanceReleaseIntegrityError("release_integrity_build_metadata_required")
     try:
         commit = _run_git(root, ["rev-parse", f"{baseline_tag}^{{commit}}"])
     except GovernanceReleaseIntegrityError:
