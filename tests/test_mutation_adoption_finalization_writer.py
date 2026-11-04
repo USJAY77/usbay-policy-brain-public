@@ -160,23 +160,16 @@ def test_adoption_finalization_wrong_finality_reference_denies(tmp_path):
     assert result["reason"]=="FINALIZATION_EVIDENCE_INVALID"
 
 
-def test_adoption_finalization_rejects_missing_prior_consumption(tmp_path):
-    f,_,_,_,command,_,writer=_prepare(tmp_path)
+def test_adoption_finalization_prior_consumption_is_immutable(tmp_path):
+    import pytest
+    f,_,_,_,_,_,_=_prepare(tmp_path)
     with sqlite3.connect(f.path) as conn:
-        conn.execute(
-            "DELETE FROM enrollment_uses WHERE kind='advance:nonce'")
-        state=parse_json(conn.execute(
-            "SELECT value FROM enrollment_meta WHERE name='state'").fetchone()[0])
-        events=[
-            (seq,parse_json(payload),event_hash)
-            for seq,payload,event_hash in conn.execute(
-                "SELECT sequence,payload,event_hash FROM enrollment_events "
-                "ORDER BY sequence")
-        ]
-        # This test intentionally creates inconsistent storage; snapshot must
-        # fail closed before finalization rather than repairing consumption.
-    result=_run(f,command,writer)
-    assert result["decision"]=="DENY"
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "DELETE FROM enrollment_uses WHERE kind='advance:nonce'")
+        with pytest.raises(sqlite3.IntegrityError):
+            conn.execute(
+                "DELETE FROM enrollment_uses WHERE kind='adoption:nonce'")
 
 
 def test_adoption_finalization_lost_commit_ack_is_unknown(tmp_path):
