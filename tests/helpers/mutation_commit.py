@@ -108,7 +108,7 @@ class SyntheticGuard(MutationFenceGuard):
 
     def prepare_transition(self,connection,*,command,successor_currentness,post_state,terminal):
         assert connection is self.conn and connection.in_transaction and self.source.guard_active
-        assert command['tenant_id']==self.source.f.command['payload']['tenant_id']
+        assert command['tenant_id']==self.source.f.grant['payload']['tenant_id']
         prepared=dict(
             action=command['action'],terminal=terminal,
             previous_position=dict(scope_hash=digest({
