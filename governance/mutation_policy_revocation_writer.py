@@ -137,13 +137,16 @@ class GovernedPolicyRevocationWriter:
                             "POLICY_REVOCATION_TRANSITION_INVALID")
                     successor = transition["revoked_currentness"]
 
-                    projection = self._terminal_projection(c, successor)
-                    proposed_position = {
-                        "scope_hash": projection_scope_hash(c),
-                        "source_epoch": fence["source_epoch"],
-                        "source_version": fence["source_version"] + 1,
-                        "projection_hash": digest(projection),
-                    }
+                    post_state = self._terminal_projection(c, successor)
+                    prepared_transition = fence_guard.prepare_transition(
+                        conn,
+                        command=deepcopy(c),
+                        successor_currentness=deepcopy(successor),
+                        post_state=deepcopy(post_state),
+                        terminal=True,
+                    )
+                    proposed_position = deepcopy(
+                        prepared_transition["proposed_position"])
 
                     for kind, identity, _ in keys:
                         conn.execute(
@@ -286,10 +289,10 @@ class GovernedPolicyRevocationWriter:
                         conn,
                         fence=deepcopy(fence),
                         now=self.view.clock(),
-                        proposed_position=deepcopy(
-                            proposed_position),
+                        prepared_transition=deepcopy(
+                            prepared_transition),
                         update_id=c["transaction_id"],
-                        terminal=True,
+                        transition_evidence_hash=proof_hash,
                     )
                     require(not conn.in_transaction,
                             "COMMIT_STATE_UNKNOWN")
