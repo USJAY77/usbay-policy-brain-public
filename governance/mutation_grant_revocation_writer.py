@@ -171,6 +171,8 @@ class GovernedGrantRevocationWriter:
                         "SELECT value FROM enrollment_meta WHERE name='state'").fetchone()[0])
                     terminal_event_hash=self.view._append(conn,state,{
                         "kind":"GRANT_REVOCATION_TERMINAL_NON_PRODUCTION",
+                        "successor_currentness_hash":digest(successor),
+                        "post_state_hash":digest(post_state),
                         "scope_hash":proposed_position["scope_hash"],
                         "object_id":c["object_id"],"object_version_hash":c["object_version_hash"],
                         "target_grant_id":target["grant_id"],"consumption_state":consumption_state,

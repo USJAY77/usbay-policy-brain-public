@@ -223,7 +223,7 @@ class GovernedAdoptionFinalizationWriter:
                     prepared_transition = fence_guard.prepare_transition(
                         conn,
                         command=deepcopy(c),
-                        successor_currentness=successor_currentness,
+                        successor_currentness=deepcopy(successor_currentness),
                         post_state=deepcopy(post_state),
                         terminal=False,
                     )
@@ -279,6 +279,8 @@ class GovernedAdoptionFinalizationWriter:
                         state,
                         {
                             "kind": "ADOPTION_FINALIZED_NON_PRODUCTION",
+                            "successor_currentness_hash": digest(successor_currentness),
+                            "post_state_hash": digest(post_state),
                             "scope_hash":
                                 proposed_position["scope_hash"],
                             "adoption_id": composition["adoption_id"],

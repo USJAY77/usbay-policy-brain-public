@@ -35,6 +35,13 @@ from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
 
 
+@pytest.fixture(autouse=True)
+def synthetic_release_signing_material(monkeypatch):
+    # This module exercises release/provenance semantics with synthetic fixtures.
+    # Production/default-material denial is covered separately by the gitless suite.
+    monkeypatch.setenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", "synthetic-provenance-regression-material")
+
+
 def _node_policy(tmp_path: Path) -> tuple[Path, str]:
     activating_node_id = "usbay-node-activation-test"
     policy = {
@@ -257,7 +264,7 @@ def test_build_release_manifest_rejects_unknown_activating_node(tmp_path: Path) 
         )
 
 
-def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:
+def test_production_missing_producer_trust_blocks_before_git(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("USBAY_ENV", "production")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
@@ -265,7 +272,14 @@ def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> Non
     node_policy, node_id = _node_policy(tmp_path)
     path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id, git_commit="c" * 40))
 
-    with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch"):
+    # Production now requires independently configured artifact trust before any
+    # commit comparison. Exact signed-source matching is exercised by the
+    # gitless integration tests, not by a mocked unsigned Git commit.
+    monkeypatch.delenv("USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY", raising=False)
+    def forbidden_git():
+        raise AssertionError("Production must not resolve source through Git")
+    monkeypatch.setattr("security.deployment_attestation.current_git_commit", forbidden_git)
+    with pytest.raises(DeploymentAttestationError, match="runtime_artifact_producer_trust_unavailable"):
         validate_release_manifest(
             path,
             expected_git_commit="d" * 40,
