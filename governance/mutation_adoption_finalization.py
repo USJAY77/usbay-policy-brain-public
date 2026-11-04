@@ -40,13 +40,18 @@ def verify_finalization_composition(
             "challenge","request_digest"},
             "FINALIZATION_EVIDENCE_INVALID")
 
+        prior={
+            key:deepcopy(value)
+            for key,value in previous_currentness.items()
+            if key!="expected"
+        }
         p,a,b=verify_adoption(
             trust,
             {
                 "policy":artifacts["policy"],
                 "adoption":artifacts["adoption"],
                 "advance":artifacts["advance"],
-                "prior":deepcopy(previous_currentness),
+                "prior":prior,
             },
             previous=deepcopy(previous_head),
             now=now,
