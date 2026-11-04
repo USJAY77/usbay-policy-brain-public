@@ -781,6 +781,7 @@ class EnrollmentAuthorityView:
         terminal_revocations = {}
         terminal_grant_revocations = {}
         terminal_adoption_revocations = {}
+        adoption_finalizations = {}
         for seq, encoded, event_hash in conn.execute("SELECT sequence,payload,event_hash FROM enrollment_events ORDER BY sequence"):
             event = parse_json(encoded)
             require(seq == expected_sequence and event["previous_event_hash"] == previous and event["sequence"] == seq
@@ -833,6 +834,22 @@ class EnrollmentAuthorityView:
                     event["revocation_hash"],
                     event["terminal_projection_hash"],
                     event["terminal_proof_hash"],
+                    event["source_epoch"],
+                    event["source_version"],
+                    event["command_hash"],
+                    event["transaction_id"],
+                )
+            if event["kind"] == "ADOPTION_FINALIZED_NON_PRODUCTION":
+                key = (event["scope_hash"], event["adoption_id"])
+                require(key not in adoption_finalizations, "ENROLLMENT_HISTORY_INVALID")
+                adoption_finalizations[key] = (
+                    event["adoption_version_hash"],
+                    event["policy_id"],
+                    event["policy_hash"],
+                    event["previous_head"],
+                    event["target_head"],
+                    event["pending_event_hash"],
+                    event["composition_hash"],
                     event["source_epoch"],
                     event["source_version"],
                     event["command_hash"],
@@ -894,6 +911,25 @@ class EnrollmentAuthorityView:
         else:
             require(not terminal_adoption_revocations,
                     "ENROLLMENT_HISTORY_INVALID")
+        if "adoption_finalization" in table_names:
+            materialized_finalizations = {
+                (row[0], row[1]): tuple(row[2:])
+                for row in conn.execute(
+                    "SELECT scope_hash,adoption_id,adoption_version_hash,"
+                    "policy_id,policy_hash,previous_head,target_head,"
+                    "pending_event_hash,composition_hash,source_epoch,"
+                    "source_version,command_hash,transaction_id "
+                    "FROM adoption_finalization")
+            }
+            require(materialized_finalizations == adoption_finalizations,
+                    "ENROLLMENT_HISTORY_INVALID")
+            if adoption_finalizations:
+                latest = list(adoption_finalizations.values())[-1]
+                require(state["publication"] == "FINALIZED"
+                        and state["head"]["head_hash"] == latest[4],
+                        "ENROLLMENT_HISTORY_INVALID")
+        else:
+            require(not adoption_finalizations, "ENROLLMENT_HISTORY_INVALID")
         if require_finalized:
             require(state["publication"] == "FINALIZED", "STOPPED_UNVERIFIED_POLICY_HEAD")
         return state
