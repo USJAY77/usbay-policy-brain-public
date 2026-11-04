@@ -608,6 +608,84 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
         require(parsed == payload, "COMMIT_FENCE_MISMATCH")
         return envelope
 
+    def prepare_transition(
+            self, connection, *, command, successor_currentness,
+            post_state, terminal):
+        require(connection is self._connection and connection.in_transaction,
+                "TRANSACTION_CONFLICT")
+        require(command == self._command, "COMMIT_FENCE_MISMATCH")
+        require(type(successor_currentness) is dict
+                and set(successor_currentness) == {
+                    "policy", "adoption", "h", "w", "revocations",
+                    "expected", "challenge", "request_digest"},
+                "CURRENTNESS_UPDATE_INVALID")
+        require(type(post_state) is dict and bool(post_state),
+                "CURRENTNESS_UPDATE_INVALID")
+        require(type(terminal) is bool, "CURRENTNESS_UPDATE_INVALID")
+
+        previous = deepcopy(self._projection)
+        proposed = deepcopy(previous)
+        proposed["currentness"] = deepcopy(successor_currentness)
+        proposed["target_state"] = deepcopy(post_state)
+        proposed["expected_current_head"] = successor_currentness[
+            "expected"]["head_hash"]
+        proposed["revocation_reference"] = successor_currentness[
+            "revocations"]["payload"]["revocation_reference"]
+
+        # These fields are immutable across a writer transition. A mutation
+        # cannot rewrite or substitute authority, signer or tenant scope.
+        immutable = (
+            "schema_version", "scope", "authority_domain",
+            "parent_artifact", "root_authority", "issuer_grant",
+            "review_policy", "target_object", "parent_status_signer",
+            "root_status_signer", "commit_fence_signer",
+        )
+        require(all(canonical(proposed[name]) == canonical(previous[name])
+                    for name in immutable),
+                "AUTHORITY_SCOPE_BROADENING")
+
+        old_status = previous["authority_status"]
+        require(type(old_status) is dict
+                and set(old_status) == AUTHORITY_STATUS_FIELDS,
+                "AUTHORITY_CURRENTNESS_UNPROVEN")
+        proposed["authority_status"] = deepcopy(old_status)
+        proposed["authority_status"]["issuance_state"] = "CONSUMED"
+        require(proposed["authority_status"]["parent_status"]
+                    == old_status["parent_status"]
+                and proposed["authority_status"]["root_status"]
+                    == old_status["root_status"]
+                and proposed["authority_status"]["issuer_status"]
+                    == old_status["issuer_status"],
+                "AUTHORITY_SCOPE_BROADENING")
+
+        canonical(proposed)
+        proposed_hash = projection_payload_hash(proposed)
+        require(proposed_hash != self._projection_hash,
+                "CURRENTNESS_UPDATE_INVALID")
+        prepared = {
+            "action": command["action"],
+            "terminal": terminal,
+            "previous_position": {
+                "scope_hash": projection_scope_hash(command),
+                "source_epoch": self._epoch,
+                "source_version": self._version,
+                "projection_hash": self._projection_hash,
+            },
+            "proposed_position": {
+                "scope_hash": projection_scope_hash(command),
+                "source_epoch": self._epoch,
+                "source_version": self._version + 1,
+                "projection_hash": proposed_hash,
+            },
+            "projection": proposed,
+            "command_hash": digest(command),
+        }
+        prepared["prepared_hash"] = digest({
+            k: v for k, v in prepared.items() if k != "prepared_hash"
+        })
+        self._prepared_transition = deepcopy(prepared)
+        return deepcopy(prepared)
+
     def commit_if_current(self, connection, *, fence, now):
         require(connection is self._connection and connection.in_transaction,
                 "TRANSACTION_CONFLICT")
@@ -639,11 +717,22 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             raise CommitFenceRejected("COMMIT_FENCE_STALE") from exc
 
     def commit_transition_if_current(
-            self, connection, *, fence, now, proposed_position, update_id,
-            terminal=False):
+            self, connection, *, fence, now, prepared_transition, update_id,
+            transition_evidence_hash):
         require(connection is self._connection and connection.in_transaction,
                 "TRANSACTION_CONFLICT")
         try:
+            require(type(prepared_transition) is dict
+                    and prepared_transition == getattr(
+                        self, "_prepared_transition", None),
+                    "CURRENTNESS_UPDATE_STALE")
+            require(type(update_id) is str and 0 < len(update_id) <= 128
+                    and "*" not in update_id,
+                    "CURRENTNESS_UPDATE_INVALID")
+            require(type(transition_evidence_hash) is str
+                    and transition_evidence_hash.startswith("sha256:"),
+                    "CURRENTNESS_UPDATE_INVALID")
+
             epoch, version, projection, projection_hash = self._source._load(
                 connection, projection_scope_hash(self._command))
             if (epoch, version, projection_hash) != (
@@ -656,27 +745,134 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             if not (instant(fence["valid_from"])
                     <= now < instant(fence["fence_valid_until"])):
                 raise CommitFenceRejected("COMMIT_FENCE_STALE")
-            expected = {
+
+            expected = deepcopy(prepared_transition["previous_position"])
+            proposed_position = deepcopy(
+                prepared_transition["proposed_position"])
+            require(expected == {
                 "scope_hash": projection_scope_hash(self._command),
                 "source_epoch": self._epoch,
                 "source_version": self._version,
                 "projection_hash": self._projection_hash,
-            }
+            }, "CURRENTNESS_UPDATE_STALE")
             require(proposed_position["scope_hash"] == expected["scope_hash"]
                     and proposed_position["source_epoch"] == self._epoch
-                    and proposed_position["source_version"] == self._version + 1,
+                    and proposed_position["source_version"]
+                        == self._version + 1,
                     "CURRENTNESS_UPDATE_STALE")
             if self._anchor.current() != expected:
                 raise CommitFenceRejected("COMMIT_FENCE_STALE")
-            transition = getattr(self._anchor, "transition_and_commit", None)
+
+            issuer = self._projection["issuer_grant"]["payload"]
+            for label, value in (
+                    ("grant_id", issuer["issuer_grant_id"]),
+                    ("nonce", issuer["issuance_nonce"]),
+                    ("replay_identity", digest({
+                        "issuer_grant_id": issuer["issuer_grant_id"],
+                        "command_hash": prepared_transition["command_hash"],
+                    }))):
+                # Replay identity is writer-specific in historical records;
+                # only grant_id + nonce are mandatory here. If present, replay
+                # remains immutable and is never released.
+                if label == "replay_identity":
+                    continue
+                identity = digest({
+                    "issuer": issuer["issuer_id"], "value": value})
+                require(connection.execute(
+                    "SELECT 1 FROM enrollment_uses WHERE kind=? AND identity=?",
+                    ("mutation_issuance:" + label, identity)
+                ).fetchone() is not None,
+                    "AUTHORITY_CURRENTNESS_UNPROVEN")
+
+            new_projection = deepcopy(prepared_transition["projection"])
+            require(projection_payload_hash(new_projection)
+                    == proposed_position["projection_hash"],
+                    "CURRENTNESS_UPDATE_INVALID")
+            immutable = (
+                "schema_version", "scope", "authority_domain",
+                "parent_artifact", "root_authority", "issuer_grant",
+                "review_policy", "target_object", "parent_status_signer",
+                "root_status_signer", "commit_fence_signer",
+            )
+            require(all(canonical(new_projection[name])
+                        == canonical(self._projection[name])
+                        for name in immutable),
+                    "AUTHORITY_SCOPE_BROADENING")
+            require(
+                new_projection["authority_status"]["parent_status"]
+                    == self._projection["authority_status"]["parent_status"]
+                and new_projection["authority_status"]["root_status"]
+                    == self._projection["authority_status"]["root_status"]
+                and new_projection["authority_status"]["issuer_status"]
+                    == self._projection["authority_status"]["issuer_status"]
+                and new_projection["authority_status"]["issuance_state"]
+                    == "CONSUMED",
+                "AUTHORITY_SCOPE_BROADENING")
+
+            cursor = connection.execute(
+                "UPDATE mutation_currentness_projection "
+                "SET source_version=?,projection=?,projection_hash=? "
+                "WHERE scope_hash=? AND source_epoch=? AND source_version=? "
+                "AND projection_hash=?",
+                (
+                    proposed_position["source_version"],
+                    canonical(new_projection).decode(),
+                    proposed_position["projection_hash"],
+                    expected["scope_hash"],
+                    expected["source_epoch"],
+                    expected["source_version"],
+                    expected["projection_hash"],
+                ),
+            )
+            require(cursor.rowcount == 1, "CURRENTNESS_UPDATE_STALE")
+
+            state = self._source._view._snapshot(
+                connection, require_finalized=False)
+            projection_event_hash = self._source._view._append(
+                connection,
+                state,
+                {
+                    "kind":
+                        "MUTATION_CURRENTNESS_PROJECTED_NON_PRODUCTION",
+                    "scope_reference": expected["scope_hash"],
+                    "action": prepared_transition["action"],
+                    "terminal": prepared_transition["terminal"],
+                    "command_hash": prepared_transition["command_hash"],
+                    "transition_evidence_hash":
+                        transition_evidence_hash,
+                    "source_epoch": expected["source_epoch"],
+                    "previous_source_version":
+                        expected["source_version"],
+                    "source_version":
+                        proposed_position["source_version"],
+                    "previous_projection_hash":
+                        expected["projection_hash"],
+                    "projection_hash":
+                        proposed_position["projection_hash"],
+                    "update_id_reference":
+                        digest({"update_id": update_id}),
+                    "prepared_transition_hash":
+                        prepared_transition["prepared_hash"],
+                },
+            )
+
+            transition = getattr(
+                self._anchor, "transition_and_commit", None)
             require(callable(transition),
                     "AUTHORITY_CURRENTNESS_UPDATER_UNAVAILABLE")
-            return transition(
+            receipt = transition(
                 connection,
                 expected=deepcopy(expected),
                 proposed=deepcopy(proposed_position),
                 update_id=update_id,
             )
+            require(not connection.in_transaction,
+                    "CURRENTNESS_UPDATE_STATE_UNKNOWN")
+            return {
+                "position": proposed_position,
+                "event_hash": receipt["event_hash"],
+                "projection_event_hash": projection_event_hash,
+            }
         except CommitFenceRejected:
             raise
 
