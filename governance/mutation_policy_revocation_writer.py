@@ -253,6 +253,8 @@ class GovernedPolicyRevocationWriter:
                         {
                             "kind":
                                 "POLICY_REVOCATION_TERMINAL_NON_PRODUCTION",
+                            "successor_currentness_hash": digest(successor),
+                            "post_state_hash": digest(post_state),
                             "scope_hash":
                                 proposed_position["scope_hash"],
                             "object_id": c["object_id"],

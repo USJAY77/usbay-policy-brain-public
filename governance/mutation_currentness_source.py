@@ -606,6 +606,7 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             self._source._view.trust, envelope, MutationCommitFenceV1,
             STATUS_ROLES["commit"], now)
         require(parsed == payload, "COMMIT_FENCE_MISMATCH")
+        self._issued_fence = deepcopy(parsed)
         return envelope
 
     def prepare_transition(
@@ -622,6 +623,28 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
         require(type(post_state) is dict and bool(post_state),
                 "CURRENTNESS_UPDATE_INVALID")
         require(type(terminal) is bool, "CURRENTNESS_UPDATE_INVALID")
+        require(command["action"] in {
+                    "FINALIZE_POLICY_ADOPTION", "REVOKE_POLICY_OBJECT",
+                    "REVOKE_GRANT_OBJECT", "REVOKE_ADOPTION"}
+                and terminal == (command["action"] in {
+                    "REVOKE_POLICY_OBJECT", "REVOKE_ADOPTION"}),
+                "CURRENTNESS_UPDATE_INVALID")
+        require(all(successor_currentness["expected"][name] == command[name]
+                    for name in SCOPE_FIELDS), "TENANT_MISMATCH")
+        states = {
+            "FINALIZE_POLICY_ADOPTION": ("adoption_finalization", "FINALIZED_NON_PRODUCTION"),
+            "REVOKE_POLICY_OBJECT": ("policy_revocation", "REVOKED_NON_PRODUCTION"),
+            "REVOKE_GRANT_OBJECT": ("grant_revocation", "GRANT_REVOKED_NON_PRODUCTION"),
+            "REVOKE_ADOPTION": ("adoption_revocation", "ADOPTION_REVOKED_NON_PRODUCTION"),
+        }
+        schema, status = states[command["action"]]
+        require(post_state.get("schema_version")
+                    == "usbay." + schema + "_terminal_projection.v1"
+                and post_state.get("status") == status
+                and post_state.get("scope_hash") == projection_scope_hash(command)
+                and post_state.get("command_hash") == digest(command)
+                and post_state.get("transaction_id") == command["transaction_id"],
+                "CURRENTNESS_UPDATE_INVALID")
 
         previous = deepcopy(self._projection)
         proposed = deepcopy(previous)
@@ -657,6 +680,10 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
                 and proposed["authority_status"]["issuer_status"]
                     == old_status["issuer_status"],
                 "AUTHORITY_SCOPE_BROADENING")
+
+        _validate_projection(proposed, dict(
+            command, expected_current_head=proposed["expected_current_head"],
+            expected_state=post_state))
 
         canonical(proposed)
         proposed_hash = projection_payload_hash(proposed)
@@ -723,12 +750,16 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
                 "TRANSACTION_CONFLICT")
         try:
             require(type(prepared_transition) is dict
-                    and prepared_transition == getattr(
-                        self, "_prepared_transition", None),
+                    and canonical(prepared_transition) == canonical(getattr(
+                        self, "_prepared_transition", None)),
                     "CURRENTNESS_UPDATE_STALE")
             require(type(update_id) is str and 0 < len(update_id) <= 128
-                    and "*" not in update_id,
+                    and "*" not in update_id
+                    and update_id == self._command["transaction_id"],
                     "CURRENTNESS_UPDATE_INVALID")
+            require(canonical(fence) == canonical(getattr(
+                        self, "_issued_fence", None)),
+                    "COMMIT_FENCE_MISMATCH")
             require(type(transition_evidence_hash) is str
                     and transition_evidence_hash.startswith("sha256:"),
                     "CURRENTNESS_UPDATE_INVALID")
@@ -767,15 +798,7 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             for label, value in (
                     ("grant_id", issuer["issuer_grant_id"]),
                     ("nonce", issuer["issuance_nonce"]),
-                    ("replay_identity", digest({
-                        "issuer_grant_id": issuer["issuer_grant_id"],
-                        "command_hash": prepared_transition["command_hash"],
-                    }))):
-                # Replay identity is writer-specific in historical records;
-                # only grant_id + nonce are mandatory here. If present, replay
-                # remains immutable and is never released.
-                if label == "replay_identity":
-                    continue
+                    ("replay_identity", prepared_transition["command_hash"])):
                 identity = digest({
                     "issuer": issuer["issuer_id"], "value": value})
                 require(connection.execute(
@@ -809,6 +832,38 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
                     == "CONSUMED",
                 "AUTHORITY_SCOPE_BROADENING")
 
+            # Bind the descriptor to the verified writer's exact materialized
+            # event before changing either durable position. Merely accepting
+            # a caller-provided hash prefix is not a proof binding.
+            state = self._source._view._snapshot(
+                connection, require_finalized=False)
+            row = connection.execute(
+                "SELECT payload FROM enrollment_events WHERE event_hash=?",
+                (state["event_tip"],),
+            ).fetchone()
+            require(row is not None, "CURRENTNESS_UPDATE_INVALID")
+            event = parse_json(row[0])
+            kinds = {
+                "FINALIZE_POLICY_ADOPTION": "ADOPTION_FINALIZED_NON_PRODUCTION",
+                "REVOKE_POLICY_OBJECT": "POLICY_REVOCATION_TERMINAL_NON_PRODUCTION",
+                "REVOKE_GRANT_OBJECT": "GRANT_REVOCATION_TERMINAL_NON_PRODUCTION",
+                "REVOKE_ADOPTION": "ADOPTION_REVOCATION_TERMINAL_NON_PRODUCTION",
+            }
+            proof_field = ("composition_hash" if self._command["action"]
+                           == "FINALIZE_POLICY_ADOPTION" else "terminal_proof_hash")
+            require(event["kind"] == kinds[self._command["action"]]
+                    and event["command_hash"] == prepared_transition["command_hash"]
+                    and event["transaction_id"] == update_id
+                    and event["scope_hash"] == expected["scope_hash"]
+                    and event["source_epoch"] == proposed_position["source_epoch"]
+                    and event["source_version"] == proposed_position["source_version"]
+                    and event[proof_field] == transition_evidence_hash
+                    and event["successor_currentness_hash"]
+                        == digest(new_projection["currentness"])
+                    and event["post_state_hash"]
+                        == digest(new_projection["target_state"]),
+                    "CURRENTNESS_UPDATE_INVALID")
+
             cursor = connection.execute(
                 "UPDATE mutation_currentness_projection "
                 "SET source_version=?,projection=?,projection_hash=? "
@@ -826,8 +881,6 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
             )
             require(cursor.rowcount == 1, "CURRENTNESS_UPDATE_STALE")
 
-            state = self._source._view._snapshot(
-                connection, require_finalized=False)
             projection_event_hash = self._source._view._append(
                 connection,
                 state,
@@ -867,6 +920,12 @@ class _SQLiteMutationCurrentnessGuard(MutationFenceGuard):
                 update_id=update_id,
             )
             require(not connection.in_transaction,
+                    "CURRENTNESS_UPDATE_STATE_UNKNOWN")
+            require(type(receipt) is dict
+                    and receipt.get("position") == proposed_position
+                    and type(receipt.get("event_hash")) is str
+                    and bool(receipt["event_hash"])
+                    and self._anchor.current() == proposed_position,
                     "CURRENTNESS_UPDATE_STATE_UNKNOWN")
             return {
                 "position": proposed_position,
