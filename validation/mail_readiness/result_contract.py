@@ -49,7 +49,7 @@ def suite_pass(expected, groups, controller_exit):
     return seen == wanted
 
 
-FAILURE_STAGES = frozenset({'NAMESPACE_LAUNCH', 'MOUNT_NAMESPACE_PRIVATE',
+FAILURE_STAGES = frozenset({'SOURCE_OWNER_BINDING', 'NAMESPACE_LAUNCH', 'MOUNT_NAMESPACE_PRIVATE',
     'RUNTIME_BIND', 'SOURCE_BIND', 'DEVICE_BIND', 'CHROOT', 'DROP_CAPABILITIES',
     'KERNEL_RESTRICTIONS', 'FRESH_CHILD_CONTROLS'})
 FAILURE_TYPES = frozenset({'PermissionError', 'OSError', 'RuntimeError',
@@ -89,3 +89,23 @@ def namespace_launch_prefix(privileged):
     if privileged:
         return ['/usr/bin/sudo', '--non-interactive', '--', '/usr/bin/unshare']
     return ['/usr/bin/unshare']
+
+
+
+def namespace_mapping_args(privileged, uid, gid):
+    if type(privileged) is not bool:
+        raise ValueError('BOOTSTRAP_MODE_INVALID')
+    if not privileged:
+        return ['--user', '--map-root-user']
+    if any(type(value) is not int or not 1 <= value <= 2147483647 for value in (uid, gid)):
+        raise ValueError('CI_OWNER_ID_INVALID')
+    return ['--user', f'--map-users=0:{uid}:1', f'--map-groups=0:{gid}:1',
+            '--setgroups=deny', '--setuid=0', '--setgid=0']
+
+
+def supported_unshare_version(text):
+    import re
+    if type(text) is not str or len(text) > 256:
+        return False
+    match = re.fullmatch(r'unshare from util-linux (2)\.([0-9]+)(?:\.[0-9]+)?(?:[\s]+)?', text)
+    return bool(match and int(match.group(2)) >= 39)

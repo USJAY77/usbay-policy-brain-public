@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass, failure_summary, namespace_launch_prefix
+from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass, failure_summary, namespace_launch_prefix, namespace_mapping_args, supported_unshare_version
 
 
 class ResultContractTests(unittest.TestCase):
@@ -107,6 +107,40 @@ class BootstrapArgvTests(unittest.TestCase):
     def test_command_string_cannot_be_substituted(self):
         with self.assertRaises(ValueError):
             namespace_launch_prefix('/bin/sh')
+
+
+class NamespaceMappingTests(unittest.TestCase):
+    def test_maps_exactly_original_nonroot_ids(self):
+        self.assertEqual(namespace_mapping_args(True, 1001, 1002),
+                         ['--user', '--map-users=0:1001:1', '--map-groups=0:1002:1',
+                          '--setgroups=deny', '--setuid=0', '--setgid=0'])
+
+    def test_unprivileged_mode_is_unchanged(self):
+        self.assertEqual(namespace_mapping_args(False, 1001, 1002), ['--user', '--map-root-user'])
+
+    def test_host_root_uid_is_rejected(self):
+        with self.assertRaises(ValueError): namespace_mapping_args(True, 0, 1001)
+
+    def test_host_root_gid_is_rejected(self):
+        with self.assertRaises(ValueError): namespace_mapping_args(True, 1001, 0)
+
+    def test_boolean_id_is_rejected(self):
+        with self.assertRaises(ValueError): namespace_mapping_args(True, True, 1001)
+
+    def test_wildcard_or_string_id_is_rejected(self):
+        with self.assertRaises(ValueError): namespace_mapping_args(True, '*', 1001)
+
+    def test_supported_version(self):
+        self.assertTrue(supported_unshare_version('unshare from util-linux 2.39.3\n'))
+
+    def test_old_version_is_rejected(self):
+        self.assertFalse(supported_unshare_version('unshare from util-linux 2.38.1'))
+
+    def test_unknown_major_is_rejected(self):
+        self.assertFalse(supported_unshare_version('unshare from util-linux 3.0'))
+
+    def test_arbitrary_version_text_is_rejected(self):
+        self.assertFalse(supported_unshare_version('PRIVATE_CANARY'))
 
 
 if __name__ == '__main__':

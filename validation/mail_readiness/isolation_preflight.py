@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from result_contract import controls_pass, failure_summary, namespace_launch_prefix
+from result_contract import controls_pass, failure_summary, namespace_launch_prefix, namespace_mapping_args, supported_unshare_version
 
 PYTHON = str(Path(sys.executable).resolve())
 GIT = '/usr/bin/git'
@@ -67,7 +67,10 @@ def kernel_restrictions():
 
 def inside(temporary):
     global SETUP_STAGE
+    SETUP_STAGE = 'SOURCE_OWNER_BINDING'
     base = Path(temporary).resolve(strict=True)
+    if base.stat().st_uid != os.geteuid() or os.geteuid() != 0:
+        raise RuntimeError('SOURCE_OWNER_BINDING_MISMATCH')
     root = base / 'root'
     if not PYTHON.startswith('/usr/') or os.uname().machine != 'x86_64':
         raise RuntimeError('UNSUPPORTED_RUNTIME_LAYOUT')
@@ -187,6 +190,13 @@ def main():
         report.update(source_verified=True, head=actual)
         if os.uname().machine != 'x86_64':
             raise RuntimeError('UNSUPPORTED_ARCHITECTURE')
+        owner_uid, owner_gid = os.geteuid(), os.getegid()
+        mapping = namespace_mapping_args(args.privileged_namespace_bootstrap, owner_uid, owner_gid)
+        if args.privileged_namespace_bootstrap:
+            version = subprocess.check_output(['/usr/bin/unshare', '--version'], text=True, stderr=subprocess.DEVNULL, timeout=5)
+            if not supported_unshare_version(version):
+                raise RuntimeError('UNSHARE_VERSION_UNSUPPORTED')
+            report['namespace_mapping'] = {'host_uid':owner_uid, 'host_gid':owner_gid, 'inner_uid':0, 'inner_gid':0, 'count':1}
         with tempfile.TemporaryDirectory(prefix='usbay-synthetic-preflight-') as name:
             base = Path(name)
             for relative in ('root/usr', 'root/lib', 'root/lib64', 'root/source',
@@ -197,7 +207,7 @@ def main():
             for device in ('null', 'urandom'):
                 (base / 'root/dev' / device).touch()
             env = {'PATH':'/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE':'1'}
-            child = subprocess.run([*namespace_launch_prefix(args.privileged_namespace_bootstrap), '--user', '--map-root-user', '--net',
+            child = subprocess.run([*namespace_launch_prefix(args.privileged_namespace_bootstrap), *mapping, '--net',
                                     '--mount', '--pid', '--fork', PYTHON, '-I', '-B',
                                     str(Path(__file__).resolve()), '--inside', str(base)],
                                    env=env, capture_output=True, text=True, timeout=60)
