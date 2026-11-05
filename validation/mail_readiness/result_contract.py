@@ -79,3 +79,13 @@ def failure_summary(stdout, stderr):
         'errno': code if type(code) is int else None,
         'stderr_categories': [item for item in ERROR_CATEGORIES if item in safe_stderr],
     }
+
+
+
+def namespace_launch_prefix(privileged):
+    """Fixed argv for an explicitly selected CI mode; not an authority grant."""
+    if type(privileged) is not bool:
+        raise ValueError('BOOTSTRAP_MODE_INVALID')
+    if privileged:
+        return ['/usr/bin/sudo', '--non-interactive', '--', '/usr/bin/unshare']
+    return ['/usr/bin/unshare']

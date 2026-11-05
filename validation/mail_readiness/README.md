@@ -1,57 +1,43 @@
-# Governed Mail synthetic isolation preflight proposal
+# Explicit ephemeral CI namespace bootstrap proposal
 
-Status: PREPARED_NOT_PUBLISHED_NOT_RUN_IN_CI.
+Status: PREPARED_NOT_PUBLISHED_NOT_EXECUTED.
+Parent: 4ce82a3406a6d56f3844b5ad79b7e4621bc45dd2.
 
-This candidate tests an ephemeral Ubuntu runner with synthetic canaries only.
-It does not upload the unpublished Replit mail implementation or original mail
-fixtures, invoke mail tests, start the app, connect a provider or issue authority.
-Application execution and production readiness stay false in every report.
+The observed launcher exited1 with allowlisted categories Operation not permitted
+and write failed. No child controls ran. The exact denied operation remains
+UNKNOWN. This proposal tests whether an explicit privileged namespace bootstrap
+can establish the existing synthetic boundary on a disposable Ubuntu runner.
+It is an engineering hypothesis, not a proven fix or a new operational grant.
 
-The proposed CI job checks out the exact PR head without persisted credentials,
-uses read-only repository permissions, runs the result-contract unit tests, then
-attempts a user/network/mount/PID namespace and a minimal chroot. The historical
-kernel-restriction function is reused with its AST unchanged. The child loses
-capabilities, receives a sanitized environment and inherits Landlock/seccomp.
-A fresh interpreter must pass the exact ten-control set. Missing kernel support,
-failed setup, timeout, incomplete controls or artifact upload failure fails CI.
-There is no sudo, dependency installation, privileged fallback or automatic retry.
+GitHub documents passwordless sudo on hosted Linux virtual machines:
+https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+That platform facility is not owner authorization and does not guarantee that
+the proposed isolation setup will succeed.
 
-The synthetic probes cover source read/write, runtime write, an outside canary,
-host process metadata, socket creation, a non-allowlisted shell executable,
-chroot/namespace calls and writable scratch. They are bounded observations, not
-an exhaustive sandbox assessment. In particular, the historical syscall filter
-and process-command policy need independent review before application validation.
-The original Python audit command grammar is not installed by this capability
-probe. No probe result automatically authorizes the 475-case suite.
+Only the explicitly selected launcher receives the fixed prefix
+/usr/bin/sudo --non-interactive -- /usr/bin/unshare. The parent controller,
+source identity check, report creation and artifact upload stay unprivileged.
+The child then uses the existing namespace/chroot/read-only-mount preparation,
+drops capabilities and installs the unchanged Landlock/seccomp function before
+the fresh-child synthetic controls. The report records the selected mode.
 
-The separate suite_pass helper rejects incomplete or overlapping inventories,
-missing terminal reports, test/group/controller failures and failed/skipped
-subtests. Its unit tests pass locally. It is a proposed future harness integration
-contract; the old Replit controller has not been modified or validated by this
-proposal. Transitive dependency equivalence remains unproven.
+No arbitrary sudo command is accepted. The default mode is unchanged; there is
+no automatic privilege fallback or retry. No sysctl, AppArmor, secret handling,
+workflow token permission, product policy or host-wide security configuration
+is modified. No mail/application test, provider or live runtime is executed.
 
-Historical source intake was byte-verified against controller SHA256
-16890c0ad83f6d124e6a9d63f7350aa7d615f1bfa2d4bfc0965508725bf0746c.
-The original 475-node inventory remains bound to SHA256
-b14fa64f2d7a1e037cadde87b46e968440e18e9822ec52255dbb906725476d02.
-The original source-manifest SHA256 is
-04ec8e9a35b2620e114624b9362b048723984e64a1325aaf195e2e8d19b759e0.
-Those historical references are not new test outcomes or authority.
+The additional OS privilege use is confined to an ephemeral GitHub-hosted CI
+runner. It requires explicit owner authorization for publication and one new
+CI cycle. Merge, deployment, activation and production/provider/release authority
+remain outside scope. Human authorization permits only this test; positive
+machine-verifiable controls remain necessary before any success claim.
 
-Review base: GitHub main 53e4c0efea5d5f67c91f70ba6b2b488b067d1530,
-tree 33666efe14a83dfa867499c888bbafc1d0ac7250. No active app, main branch,
-dependency policy, release issuer, trust anchor or operational grant is changed.
+Local validation: 24 pure standard-library tests pass, including four fixed
+launcher-argument tests. The historical kernel function AST is unchanged.
+No sudo or privileged namespace operation was executed locally.
 
-Before publication, complete canonical PB routing. Independent static review is
-required before merge. Explicit publication and one CI-cycle authorization are required. The workflow
-will also run the repository's existing PR checks. No merge is authorized.
-
-Acceptance for this preparation is exact source intake, reproducible candidate
-hashes, valid Python, passing result-contract unit tests and no remote writes.
-Acceptance for a future CI preflight is a successful exact control set plus a
-downloadable report/checksum artifact. Retention is thirty days, not permanent
-archival or proof against an administrator modifying external evidence.
-
-Even after preflight acceptance, mail validation requires a separately reviewed
-source/dependency snapshot, exact inventory/exit integration and an applicable
-authorized execution scope. Provider, release/issuer and production gates remain.
+Acceptance is an exact-head native report proving the complete synthetic control
+set and a verified report/checksum artifact, or a preserved failure with no
+automatic retries. Even successful controls would not certify a general sandbox
+or authorize the 475-case mail suite. Independent review remains required before
+integration/merge and before application validation.

@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass, failure_summary
+from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass, failure_summary, namespace_launch_prefix
 
 
 class ResultContractTests(unittest.TestCase):
@@ -90,6 +90,23 @@ class FailureSummaryTests(unittest.TestCase):
     def test_malformed_and_oversized_output_remains_unknown(self):
         self.assertEqual(failure_summary('not-json', None)['stage'], 'UNKNOWN')
         self.assertEqual(failure_summary('x' * 16385, None)['stage'], 'UNKNOWN')
+
+
+class BootstrapArgvTests(unittest.TestCase):
+    def test_default_has_no_sudo(self):
+        self.assertEqual(namespace_launch_prefix(False), ['/usr/bin/unshare'])
+
+    def test_explicit_mode_has_fixed_noninteractive_command(self):
+        self.assertEqual(namespace_launch_prefix(True),
+                         ['/usr/bin/sudo', '--non-interactive', '--', '/usr/bin/unshare'])
+
+    def test_integer_is_not_explicit_boolean(self):
+        with self.assertRaises(ValueError):
+            namespace_launch_prefix(1)
+
+    def test_command_string_cannot_be_substituted(self):
+        with self.assertRaises(ValueError):
+            namespace_launch_prefix('/bin/sh')
 
 
 if __name__ == '__main__':

@@ -29,6 +29,7 @@ jobs:
         run: |
           /usr/bin/python3 -I -B validation/mail_readiness/isolation_preflight.py \
             --expected-head "$EXPECTED_HEAD" \
+            --privileged-namespace-bootstrap \
             --output "$RUNNER_TEMP/usbay-isolation/preflight.json"
       - name: Hash bounded report
         if: always()

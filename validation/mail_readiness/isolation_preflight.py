@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from result_contract import controls_pass, failure_summary
+from result_contract import controls_pass, failure_summary, namespace_launch_prefix
 
 PYTHON = str(Path(sys.executable).resolve())
 GIT = '/usr/bin/git'
@@ -154,6 +154,7 @@ print(json.dumps(controls, sort_keys=True))
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inside')
+    parser.add_argument('--privileged-namespace-bootstrap', action='store_true')
     parser.add_argument('--expected-head')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
@@ -173,6 +174,7 @@ def main():
               'python':sys.version.split()[0], 'controls':{},
               'limits':['Bounded synthetic controls only; not an exhaustive sandbox proof.',
                         'Not wired to the 475-case mail suite or the replay/fork suite.']}
+    report['namespace_bootstrap_mode'] = ('explicit_ephemeral_ci_sudo' if args.privileged_namespace_bootstrap else 'unprivileged_user_namespace')
     exit_code = 2
     try:
         if not re.fullmatch('[0-9a-f]{40}', args.expected_head or ''):
@@ -195,7 +197,7 @@ def main():
             for device in ('null', 'urandom'):
                 (base / 'root/dev' / device).touch()
             env = {'PATH':'/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE':'1'}
-            child = subprocess.run(['/usr/bin/unshare', '--user', '--map-root-user', '--net',
+            child = subprocess.run([*namespace_launch_prefix(args.privileged_namespace_bootstrap), '--user', '--map-root-user', '--net',
                                     '--mount', '--pid', '--fork', PYTHON, '-I', '-B',
                                     str(Path(__file__).resolve()), '--inside', str(base)],
                                    env=env, capture_output=True, text=True, timeout=60)
