@@ -97,8 +97,8 @@ class BootstrapArgvTests(unittest.TestCase):
         self.assertEqual(namespace_launch_prefix(False), ['/usr/bin/unshare'])
 
     def test_explicit_mode_has_fixed_noninteractive_command(self):
-        self.assertEqual(namespace_launch_prefix(True),
-                         ['/usr/bin/sudo', '--non-interactive', '--', '/usr/bin/unshare'])
+        with self.assertRaisesRegex(ValueError, 'USE_EPHEMERAL_MAPPING_BOOTSTRAP'):
+            namespace_launch_prefix(True)
 
     def test_integer_is_not_explicit_boolean(self):
         with self.assertRaises(ValueError):
@@ -113,7 +113,7 @@ class NamespaceMappingTests(unittest.TestCase):
     def test_maps_exactly_original_nonroot_ids(self):
         self.assertEqual(namespace_mapping_args(True, 1001, 1002),
                          ['--user', '--map-users=0:1001:1', '--map-groups=0:1002:1',
-                          '--setgroups=deny', '--setuid=0', '--setgid=0'])
+                          '--setgroups=deny', '--setuid=0'])
 
     def test_unprivileged_mode_is_unchanged(self):
         self.assertEqual(namespace_mapping_args(False, 1001, 1002), ['--user', '--map-root-user'])

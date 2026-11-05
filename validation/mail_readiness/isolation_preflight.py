@@ -13,7 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from result_contract import controls_pass, failure_summary, namespace_launch_prefix, namespace_mapping_args, supported_unshare_version
+from result_contract import controls_pass, failure_summary, namespace_launch_prefix, namespace_mapping_args, supported_unshare_version, namespace_identity_pass, fresh_identity_pass
 
 PYTHON = str(Path(sys.executable).resolve())
 GIT = '/usr/bin/git'
@@ -65,11 +65,26 @@ def kernel_restrictions():
     return abi
 
 
-def inside(temporary):
+def inside(temporary, host_uid, host_gid):
     global SETUP_STAGE
+    SETUP_STAGE = 'NAMESPACE_IDENTITY'
+    if any(type(value) is not int or not 1 <= value <= 2147483647 for value in (host_uid, host_gid)):
+        raise RuntimeError('CI_OWNER_ID_INVALID')
+    # Supplementary groups were cleared before unshare, which already denied setgroups.
+    if os.getgroups():
+        raise RuntimeError('SUPPLEMENTARY_GROUPS_NOT_EMPTY')
+    os.setresgid(0, 0, 0)
+    identity = {
+        'uids': list(os.getresuid()), 'gids': list(os.getresgid()), 'groups': os.getgroups(),
+        'uid_map': [[int(x) for x in line.split()] for line in Path('/proc/self/uid_map').read_text().splitlines()],
+        'gid_map': [[int(x) for x in line.split()] for line in Path('/proc/self/gid_map').read_text().splitlines()],
+        'setgroups_denied': Path('/proc/self/setgroups').read_text().strip() == 'deny',
+    }
+    if not namespace_identity_pass(identity, host_uid, host_gid):
+        raise RuntimeError('NAMESPACE_IDENTITY_MISMATCH')
     SETUP_STAGE = 'SOURCE_OWNER_BINDING'
     base = Path(temporary).resolve(strict=True)
-    if base.stat().st_uid != os.geteuid() or os.geteuid() != 0:
+    if base.stat().st_uid != os.geteuid() or base.stat().st_gid != os.getegid() or os.geteuid() != 0:
         raise RuntimeError('SOURCE_OWNER_BINDING_MISMATCH')
     root = base / 'root'
     if not PYTHON.startswith('/usr/') or os.uname().machine != 'x86_64':
@@ -143,27 +158,38 @@ libc = ctypes.CDLL(None, use_errno=True)
 controls['namespace_escape_denied'] = libc.unshare(0x20000) == -1
 pathlib.Path('/tmp/synthetic').write_bytes(b'synthetic-only')
 controls['scratch_write_allowed'] = pathlib.Path('/tmp/synthetic').read_bytes() == b'synthetic-only'
-print(json.dumps(controls, sort_keys=True))
+try:
+    os.setgroups([])
+except PermissionError as error:
+    setgroups_denied = error.errno == errno.EPERM
+else:
+    setgroups_denied = False
+fresh_identity = {'uids':list(os.getresuid()), 'gids':list(os.getresgid()),
+                  'groups':os.getgroups(), 'setgroups_denied':setgroups_denied}
+print(json.dumps({'controls':controls, 'fresh_identity':fresh_identity}, sort_keys=True))
 """
     if not Path('/usr/bin/dash').is_file():
         raise RuntimeError('NEGATIVE_EXECUTABLE_NOT_PRESENT')
     SETUP_STAGE = 'FRESH_CHILD_CONTROLS'
     child = subprocess.run([PYTHON, '-I', '-B', '-c', probe, str(base / 'outside-canary')],
                            capture_output=True, text=True, timeout=15, check=True)
-    controls = json.loads(child.stdout)
-    print(json.dumps({'controls': controls, 'landlock_abi': abi}, sort_keys=True))
+    payload = json.loads(child.stdout)
+    print(json.dumps({'controls': payload['controls'], 'landlock_abi': abi,
+                      'namespace_identity':identity, 'fresh_identity':payload['fresh_identity']}, sort_keys=True))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--inside')
+    parser.add_argument('--inside-host-uid', type=int)
+    parser.add_argument('--inside-host-gid', type=int)
     parser.add_argument('--privileged-namespace-bootstrap', action='store_true')
     parser.add_argument('--expected-head')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
     if args.inside:
         try:
-            inside(args.inside)
+            inside(args.inside, args.inside_host_uid, args.inside_host_gid)
             return 0
         except BaseException as error:
             print(json.dumps({'stage':SETUP_STAGE, 'error': type(error).__name__, 'errno': getattr(error, 'errno', None)}))
@@ -209,10 +235,16 @@ def main():
             for device in ('null', 'urandom'):
                 (base / 'root/dev' / device).touch()
             env = {'PATH':'/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE':'1'}
-            child = subprocess.run([*namespace_launch_prefix(args.privileged_namespace_bootstrap), *mapping, '--net',
-                                    '--mount', '--pid', '--fork', PYTHON, '-I', '-B',
-                                    str(Path(__file__).resolve()), '--inside', str(base)],
-                                   env=env, capture_output=True, text=True, timeout=60)
+            if args.privileged_namespace_bootstrap:
+                argv = ['/usr/bin/sudo', '--non-interactive', '--', '/usr/bin/python3', '-I', '-B',
+                        str(Path(__file__).resolve().with_name('runner_bootstrap.py')),
+                        '--expected-head', actual, '--uid', str(owner_uid), '--gid', str(owner_gid),
+                        '--temporary', str(base)]
+            else:
+                argv = [*namespace_launch_prefix(False), *mapping, '--net', '--mount', '--pid', '--fork',
+                        PYTHON, '-I', '-B', str(Path(__file__).resolve()), '--inside', str(base),
+                        '--inside-host-uid', str(owner_uid), '--inside-host-gid', str(owner_gid)]
+            child = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=65)
             report['child_exit'] = child.returncode
             if child.returncode != 0:
                 report['reason'] = 'ISOLATION_SETUP_OR_CHILD_FAILED'
@@ -221,7 +253,13 @@ def main():
                 payload = json.loads(child.stdout)
                 report['controls'] = payload.get('controls')
                 report['landlock_abi'] = payload.get('landlock_abi')
-                if controls_pass(report['controls']):
+                report['namespace_identity'] = payload.get('namespace_identity')
+                report['fresh_identity'] = payload.get('fresh_identity')
+                report['mapping_policy_restored'] = payload.get('mapping_policy_restored', False)
+                if (controls_pass(report['controls'])
+                        and namespace_identity_pass(report['namespace_identity'], owner_uid, owner_gid)
+                        and fresh_identity_pass(report['fresh_identity'])
+                        and report['mapping_policy_restored'] is True):
                     report['status'] = 'SYNTHETIC_CONTROL_SET_PASSED'
                     exit_code = 0
                 else:

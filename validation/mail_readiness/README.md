@@ -1,53 +1,21 @@
-# Bounded runner-owner mapping proposal
+# Governed Mail synthetic isolation preflight
 
-Status: PREPARED_NOT_PUBLISHED_NOT_PRIVILEGED_EXECUTED.
-Parent: e66b5f10bd026b5d4b0f1f1212982472d6fbd70c.
+This Draft proposal runs synthetic controls only. It grants no product execution authority and does not run mail/application tests.
 
-Observed native result: child_exit2, Permission denied, no controls. Exact denied
-operation remains UNKNOWN. A static review identifies a mapping mismatch risk:
-sudo changes the current effective host user before --map-root-user selects it.
-That does not prove it was the sole cause of the observed failure.
+## Ephemeral runner mapping repair
 
-Primary reference for map-root-user, explicit one-ID mapping and setuid/setgid:
-https://man7.org/linux/man-pages/man1/unshare.1.html
+The owner authorized a bounded implementation/publication batch and at most two new-head CI rounds using temporary OS mapping permissions. Merge, deployment and activation remain prohibited.
 
-The proposed launcher preserves sudo/unshare, user/network/mount/PID namespaces,
-capability dropping, chroot, read-only mounts and the unchanged kernel function.
-It replaces the privileged mode's implicit host-root mapping with exactly the
-original unprivileged controller's numeric UID and GID mapped to inner0, count1.
-Host-root IDs, booleans, strings, wildcard or arbitrary ranges are rejected.
-After mapping, the child explicitly selects inner UID/GID0; no supplementary
-groups are granted. A source-owner check precedes mounts. The report records
-the exact numeric mapping and source-bound mode, not an operational identity.
+The fixed bootstrap verifies the original nonroot sudo caller, repository owner, exact source HEAD and committed bootstrap/controller/contract bytes. Only the runner UID/GID are mapped to namespace ID0, count1. It preserves existing /etc/subuid and /etc/subgid bytes and metadata, rejects ambiguous/unsafe policy, and holds a root-owned nonblocking lock. It restores its exact changes after the child exits, and fails if either policy update or restoration cannot be verified. No sudoers change, package install or kernel relaxation is included.
 
-Colon mapping syntax requires a recognized util-linux2.x version >=2.39; old,
-malformed and unknown-major versions stop before privileged launch. There is no
-fallback. OS permissions and the ten positive/negative controls still determine
-the actual outcome. The default unprivileged mode is unchanged.
+Supplementary groups are cleared before unshare. The conflicting --setgid option is removed; the child sets real/effective/saved GID0 with setresgid, verifies empty supplementary groups, exact one-ID maps and permanent setgroups denial before mounting. The fresh constrained child independently verifies its real/effective/saved identity, empty groups and denied setgroups syscall.
 
-The workflow bytes and sudo prefix remain identical to the already authorized
-explicit-bootstrap proposal. No AppArmor/sysctl/seccomp relaxation, extra sudo
-command, wildcard identity mapping, product authority or application test is
-introduced. No root or namespace operation was executed locally for this proposal.
+The existing user/network/mount/PID namespaces, read-only source/runtime, FD closure, capability removal, no_new_privs and kernel restriction function are retained. The exact ten synthetic controls remain mandatory, as do namespace/fresh-child identity evidence and confirmed mapping-policy restoration. Missing evidence fails closed.
 
-Local validation:34 pure tests pass, including ten new owner-mapping and version
-contract tests. Kernel-function AST and workflow bytes are unchanged. Those
-tests prove data/argv behavior only, not live namespace behavior.
+## Limits and stop conditions
 
-Proposed next authorization is one bounded owner-mapping repair batch, with at
-most three new-head CI cycles after evidence-backed corrections within the same
-fixed sudo/unshare and synthetic-only boundary. No unchanged-run retries, kernel
-policy relaxation, new privilege scope or application/mail tests. Stop on success,
-the cycle limit, missing authority or a newly required permission. Preserve every
-failure and verified artifact. Merge, deployment and activation remain excluded.
+The hosted runner is disposable and provides sudo; this is not a hardened multi-tenant bootstrap service. Source identity/byte checks do not make a malicious concurrent owner process trustworthy. Root-level actors are outside the in-job locking threat model. Reuse on a persistent/shared runner is prohibited without separate design and authority.
 
+Pure tests cover exact/broad/root mappings, malformed policy, partial update, restoration, concurrent mutation and identity failures. They do not establish native isolation. No local privileged launch is performed. Native evidence must establish all controls on the exact published head; passing is not exhaustive sandbox proof or Governed Mail production readiness.
 
-## Bounded repair cycle2
-
-Cycle1 failed before controls with child_exit1 and no prior allowlisted launcher
-category. util-linux2.39.3 source inspection shows range mapping invokes the
-external newuidmap/newgidmap helpers even on this privileged launch path. This
-source observation does not establish the native failure cause. Cycle2 only
-adds fixed helper/range/set-ID categories, supported version and helper presence
-to diagnostics. No mapping, workflow, kernel, sudo or permission change.
-Primary source: https://github.com/util-linux/util-linux/blob/v2.39.3/sys-utils/unshare.c
+The original command grammar, full mail-suite integration, release/provider authority and EGAP-HYDRA-REMOTE-TRANSPORT-AUTH remain open. Stop on a new privilege requirement, unsafe state, unsupported ordering or the two-round budget; never repeat an unchanged failed run.

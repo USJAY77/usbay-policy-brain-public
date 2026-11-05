@@ -24,7 +24,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           persist-credentials: false
       - name: Verify result contract
-        run: /usr/bin/python3 -B -m unittest discover -s validation/mail_readiness -p test_result_contract.py -v
+        run: /usr/bin/python3 -B -m unittest discover -s validation/mail_readiness -p "test_*.py" -v
       - name: Run synthetic fresh-child controls only
         run: |
           /usr/bin/python3 -I -B validation/mail_readiness/isolation_preflight.py \
