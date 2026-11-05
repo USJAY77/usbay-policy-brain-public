@@ -17,6 +17,7 @@ on:
       - 'security/__init__.py'
       - 'security/runtime_artifact_authority.py'
       - 'security/runtime_artifact_provenance.py'
+      - 'security/runtime_artifact_package.py'
 
 permissions:
   contents: read
