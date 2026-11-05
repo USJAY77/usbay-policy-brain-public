@@ -13,6 +13,8 @@ class PolicyTests(unittest.TestCase):
     def test_bootstrap_error_reason_does_not_expose_input(self):
         self.assertEqual(b.safe_reason(RuntimeError('PRIVATE_CANARY')), 'BOOTSTRAP_ERROR')
         self.assertEqual(b.safe_reason(RuntimeError('MAPPING_POLICY_CHANGED')), 'MAPPING_POLICY_CHANGED')
+        self.assertEqual(b.safe_reason(RuntimeError('RUNTIME_DEPENDENCY_WHEEL_UNTRUSTED')),
+                         'RUNTIME_DEPENDENCY_WHEEL_UNTRUSTED')
 
     def test_append_only_exact_single_id(self):
         original=b'# preserved\nrunner:100000:65536\n'
