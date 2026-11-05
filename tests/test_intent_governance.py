@@ -4,6 +4,7 @@ from __future__ import annotations
 import concurrent.futures
 import copy
 import json
+import queue
 import sqlite3
 import subprocess
 import sys
@@ -26,6 +27,11 @@ CLOCK = datetime(2026, 10, 16, 12, tzinfo=timezone.utc)
 RESOURCE = 'sha256:' + 'a' * 64
 POLICY = 'sha256:' + 'b' * 64
 DECISION = 'sha256:' + 'c' * 64
+
+
+class _SyntheticIntentCase(tuple):
+    def __repr__(self) -> str:
+        return "<SyntheticIntentCase>"
 
 
 def _request():
@@ -52,7 +58,7 @@ def _resign(material, request):
 @pytest.fixture
 def case(tmp_path):
     material = _resign(_setup(tmp_path/'identity'), _request())
-    return material, _authenticate(material), IntentReplayStore.provision(tmp_path/'intent.db')
+    return _SyntheticIntentCase((material, _authenticate(material), IntentReplayStore.provision(tmp_path/'intent.db')))
 
 
 def _consume(material, identity, store, **kw):
@@ -184,11 +190,46 @@ def test_either_replay_identifier_is_consumed(case,preserve):
     _assert_block(_consume(changed,_authenticate(changed),store),'INTENT_REPLAY')
 
 
-def test_concurrent_first_use_exactly_one_winner(case):
+@pytest.mark.parametrize("attempt", range(16))
+def test_concurrent_first_use_exactly_one_winner(case, monkeypatch, attempt):
     material,identity,store=case
+    observed_errors = queue.SimpleQueue()
+    original_reserve = IntentReplayStore.reserve
+
+    def observe_reserve(store_instance, **kwargs):
+        try:
+            return original_reserve(store_instance, **kwargs)
+        except IntentStoreError as error:
+            cause = error.__cause__
+            code = getattr(cause, "sqlite_errorcode", None)
+            name = getattr(cause, "sqlite_errorname", None)
+            safe_name = (
+                name if isinstance(name, str) and len(name) <= 64
+                and name.startswith("SQLITE_")
+                and all(char in "ABCDEFGHIJKLMNOPQRSTUVWXYZ_0123456789" for char in name)
+                else None
+            )
+            observed_errors.put({
+                "sqlite_errorcode": code if type(code) is int else None,
+                "sqlite_errorname": safe_name,
+            })
+            raise
+
+    monkeypatch.setattr(IntentReplayStore, "reserve", observe_reserve)
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         results=list(pool.map(lambda _: _consume(material,identity,IntentReplayStore(store.path)),range(8)))
-    assert sum(r['decision']=='ALLOW' for r in results)==1
+    errors = []
+    while True:
+        try:
+            errors.append(observed_errors.get_nowait())
+        except queue.Empty:
+            break
+    diagnostic = {
+        "attempt": attempt,
+        "decisions": [(r.get("decision"), r.get("reason_code")) for r in results],
+        "store_errors": errors,
+    }
+    assert sum(r['decision']=='ALLOW' for r in results)==1, diagnostic
     assert all(r['decision'] in ('ALLOW','BLOCK') for r in results)
     _assert_block(_consume(material,identity,IntentReplayStore(store.path)),'INTENT_REPLAY')
 
