@@ -3,6 +3,6 @@ Title: USBAY Engineering Discipline — source navigation
 Reference version: USBAY-ENG-1.0.0-PROPOSAL
 Canonical repository path: docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md
 Expected SHA256: 9d08083f7c584dd34ce0e211f8d5a791bcfa510884b550ff9e69405db439071e
-Exact-commit source link: PENDING_PUBLICATION
+Exact-commit source link: https://github.com/USJAY77/usbay-policy-brain-public/blob/0431e8c58739f7378134e2745d2726df3a6ca3cf/docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md
 
 This entry is a short navigation aid, not an authoritative architecture, policy, audit or certification copy. Link to the reviewed repository source and evidence; state review/version availability and unresolved gaps. Do not reproduce the whole canonical discipline or close blockers from page status. Existing NOTION_GOVERNANCE_NAVIGATION_POLICY.md remains unchanged. No page write, permission change or sync job is enabled.
