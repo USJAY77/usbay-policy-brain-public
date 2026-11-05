@@ -67,7 +67,7 @@ def kernel_restrictions(loader):
     return abi
 
 
-def inside(temporary, host_uid, host_gid, offline_mail=False, expected_head=None):
+def inside(temporary, host_uid, host_gid, offline_mail=False, expected_head=None, runtime_artifacts=False, dependency_binding=None):
     global SETUP_STAGE
     SETUP_STAGE = 'NAMESPACE_IDENTITY'
     if any(type(value) is not int or not 1 <= value <= 2147483647 for value in (host_uid, host_gid)):
@@ -114,6 +114,10 @@ def inside(temporary, host_uid, host_gid, offline_mail=False, expected_head=None
     SETUP_STAGE = 'SOURCE_BIND'
     mount('--bind', base / 'source', root / 'source')
     mount('-o', 'remount,bind,ro,nosuid,nodev', root / 'source')
+    if runtime_artifacts:
+        SETUP_STAGE = 'DEPENDENCY_BIND'
+        mount('--bind', base / 'dependencies', root / 'dependencies')
+        mount('-o', 'remount,bind,ro,nosuid,nodev', root / 'dependencies')
     SETUP_STAGE = 'DEVICE_BIND'
     for name in ('null', 'urandom'):
         mount('--bind', '/dev/' + name, root / 'dev' / name)
@@ -192,30 +196,45 @@ else:
 fresh_identity = {'uids':list(os.getresuid()), 'gids':list(os.getresgid()),
                   'groups':os.getgroups(), 'setgroups_denied':setgroups_denied}
 offline_mail_result = None
-if sys.argv[3] == 'offline-mail-v1':
+runtime_artifact_result = None
+if sys.argv[3] in {'offline-mail-v1', 'runtime-artifacts-v1'}:
     sys.path.insert(0, '/source')
     from offline_mail_contract import preconditions_pass, verify_payload
     if not preconditions_pass(controls, fresh_identity, fresh_exec_gate):
         raise RuntimeError('OFFLINE_MAIL_PRECONDITIONS_FAILED')
     binding = verify_payload(pathlib.Path('/source'), sys.argv[4])
+    if sys.argv[3] == 'runtime-artifacts-v1':
+        from runtime_dependencies import activate_dependencies
+        dependency_evidence = activate_dependencies(sys.argv[5])
+        from runtime_artifact_cases import run as run_runtime
+        runtime_artifact_result = run_runtime(binding, dependency_evidence['binding'])
     from offline_mail_cases import run
     offline_mail_result = run(binding)
+    if sys.argv[3] == 'runtime-artifacts-v1':
+        # Recheck the exact dependency tree after all native crypto cases.
+        from runtime_dependencies import verify_tree, read_regular
+        dependency_raw = read_regular(pathlib.Path('/dependencies/.usbay-dependencies.json'), 1024 * 1024)
+        import hashlib
+        if hashlib.sha256(dependency_raw).hexdigest() != sys.argv[5]:
+            raise RuntimeError('RUNTIME_DEPENDENCY_BINDING_MISMATCH')
+        verify_tree(pathlib.Path('/dependencies'), json.loads(dependency_raw))
     if verify_payload(pathlib.Path('/source'), sys.argv[4]) != binding:
         raise RuntimeError('OFFLINE_MAIL_SOURCE_BINDING_MISMATCH')
 print(json.dumps({'controls':controls, 'fresh_identity':fresh_identity, 'fresh_exec_gate':fresh_exec_gate,
-                  'offline_mail':offline_mail_result}, sort_keys=True))
+                  'offline_mail':offline_mail_result, 'runtime_artifacts':runtime_artifact_result}, sort_keys=True))
 """
     if not Path('/usr/bin/dash').is_file():
         raise RuntimeError('NEGATIVE_EXECUTABLE_NOT_PRESENT')
     SETUP_STAGE = 'FRESH_CHILD_CONTROLS'
     child = subprocess.run([PYTHON, '-I', '-B', '-c', execution_source + '\n' + probe, str(base / 'outside-canary'), loader,
-                            'offline-mail-v1' if offline_mail else 'controls-only', expected_head or ''],
+                            'runtime-artifacts-v1' if runtime_artifacts else 'offline-mail-v1' if offline_mail else 'controls-only',
+                            expected_head or '', dependency_binding or ''],
                            capture_output=True, text=True, timeout=15, check=True)
     payload = json.loads(child.stdout)
     print(json.dumps({'controls': payload['controls'], 'landlock_abi': abi,
                       'namespace_identity':identity, 'fresh_identity':payload['fresh_identity'],
                       'runtime_binding':observed_runtime, 'fresh_exec_gate':payload['fresh_exec_gate'],
-                      'offline_mail':payload['offline_mail']}, sort_keys=True))
+                      'offline_mail':payload['offline_mail'], 'runtime_artifacts':payload['runtime_artifacts']}, sort_keys=True))
 
 
 def main():
@@ -226,11 +245,15 @@ def main():
     parser.add_argument('--privileged-namespace-bootstrap', action='store_true')
     parser.add_argument('--expected-head')
     parser.add_argument('--offline-mail', action='store_true')
+    parser.add_argument('--runtime-artifacts', action='store_true')
+    parser.add_argument('--dependency-binding')
     parser.add_argument('--output', type=Path)
     args = parser.parse_args()
+    if args.runtime_artifacts:
+        args.offline_mail = True
     if args.inside:
         try:
-            inside(args.inside, args.inside_host_uid, args.inside_host_gid, args.offline_mail, args.expected_head)
+            inside(args.inside, args.inside_host_uid, args.inside_host_gid, args.offline_mail, args.expected_head, args.runtime_artifacts, args.dependency_binding)
             return 0
         except BaseException as error:
             print(json.dumps({'stage':SETUP_STAGE, 'error': type(error).__name__, 'errno': getattr(error, 'errno', None)}))
@@ -246,6 +269,8 @@ def main():
                         'Not the 475-case suite, Gitless/startup tests, replay/fork suite or production readiness.']}
     report['application_execution_enabled'] = args.offline_mail
     report['application_execution_scope'] = 'fixed_synthetic_offline_mail_only' if args.offline_mail else 'none'
+    if args.runtime_artifacts:
+        report['application_execution_scope'] = 'fixed_synthetic_offline_mail_and_runtime_artifact_verifier_only'
     report['namespace_bootstrap_mode'] = ('explicit_ephemeral_ci_sudo' if args.privileged_namespace_bootstrap else 'unprivileged_user_namespace')
     exit_code = 2
     try:
@@ -273,7 +298,7 @@ def main():
         with tempfile.TemporaryDirectory(prefix='usbay-synthetic-preflight-') as name:
             base = Path(name)
             for relative in ('root/usr', 'root/lib', 'root/lib64', 'root/source',
-                             'root/tmp', 'root/proc', 'root/dev', 'source'):
+                             'root/tmp', 'root/proc', 'root/dev', 'root/dependencies', 'source'):
                 (base / relative).mkdir(parents=True)
             (base / 'runtime-binding.json').write_text(json.dumps(expected_runtime, sort_keys=True))
             (base / 'runtime-binding.json').chmod(0o600)
@@ -281,6 +306,11 @@ def main():
             if args.offline_mail:
                 expected_mail = stage_source(repository, actual, base / 'source')
                 report['offline_mail_source_binding'] = hashlib.sha256(canonical(expected_mail)).hexdigest()
+            dependency_binding = ''
+            if args.runtime_artifacts:
+                from runtime_dependencies import prepare_dependencies
+                dependency_binding = prepare_dependencies(base)
+                report['runtime_dependency_binding'] = dependency_binding
             (base / 'outside-canary').write_bytes(b'synthetic-only')
             for device in ('null', 'urandom'):
                 (base / 'root/dev' / device).touch()
@@ -298,6 +328,10 @@ def main():
                         '--inside-host-uid', str(owner_uid), '--inside-host-gid', str(owner_gid)]
                 if args.offline_mail:
                     argv.extend(['--offline-mail', '--expected-head', actual])
+            if args.runtime_artifacts:
+                argv.append('--runtime-artifacts')
+                if not args.privileged_namespace_bootstrap:
+                    argv.extend(['--dependency-binding', dependency_binding])
             child = subprocess.run(argv, env=env, capture_output=True, text=True, timeout=65)
             report['child_exit'] = child.returncode
             if child.returncode != 0:
@@ -317,8 +351,17 @@ def main():
                 mail_execution_proven = args.offline_mail and result_structure_pass(mail, report['offline_mail_source_binding'])
                 report['offline_mail_validation_passed'] = mail_passed
                 report['offline_mail'] = bounded_result(mail)
-                report['application_tests_run'] = mail_execution_proven
-                report['application_test_execution_evidence'] = ('COMPLETE' if mail_execution_proven else
+                runtime_passed = not args.runtime_artifacts
+                runtime_execution_proven = not args.runtime_artifacts
+                if args.runtime_artifacts:
+                    from runtime_artifact_contract import result_pass as runtime_pass, result_structure_pass as runtime_structure, bounded_result as bounded_runtime
+                    runtime_value = payload.get('runtime_artifacts')
+                    runtime_passed = runtime_pass(runtime_value, report['offline_mail_source_binding'], dependency_binding)
+                    runtime_execution_proven = runtime_structure(runtime_value, report['offline_mail_source_binding'], dependency_binding)
+                    report['runtime_artifacts'] = bounded_runtime(runtime_value)
+                    report['runtime_artifact_validation_passed'] = runtime_passed
+                report['application_tests_run'] = mail_execution_proven or args.runtime_artifacts and runtime_execution_proven
+                report['application_test_execution_evidence'] = ('COMPLETE' if mail_execution_proven and runtime_execution_proven else
                                                                'UNKNOWN' if args.offline_mail else 'NOT_REQUESTED')
                 if (controls_pass(report['controls'])
                         and fresh_exec_gate_pass(report['fresh_exec_gate'])
@@ -326,10 +369,14 @@ def main():
                         and namespace_identity_pass(report['namespace_identity'], owner_uid, owner_gid)
                         and fresh_identity_pass(report['fresh_identity'])
                         and report['mapping_policy_restored'] is True):
-                    if args.offline_mail and not mail_passed:
+                    if not runtime_passed:
+                        report['reason'] = 'RUNTIME_ARTIFACT_CASE_SET_INCOMPLETE_OR_FAILED'
+                    elif args.offline_mail and not mail_passed:
                         report['reason'] = 'OFFLINE_MAIL_CASE_SET_INCOMPLETE_OR_FAILED'
                     else:
                         report['status'] = 'FIXED_OFFLINE_MAIL_CASES_PASSED' if args.offline_mail else 'SYNTHETIC_CONTROL_SET_PASSED'
+                        if args.runtime_artifacts:
+                            report['status'] = 'FIXED_MAIL_AND_RUNTIME_ARTIFACT_CASES_PASSED'
                         exit_code = 0
                 else:
                     report['reason'] = 'CONTROL_SET_INCOMPLETE_OR_FAILED'

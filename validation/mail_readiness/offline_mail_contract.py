@@ -12,6 +12,8 @@ from execution_boundary import fresh_exec_gate_pass
 SCHEMA = 'usbay.offline_mail_validation.v1'
 PRODUCT_PATHS = (
     'governance/__init__.py', 'control_plane/__init__.py',
+    'security/__init__.py', 'security/runtime_artifact_authority.py',
+    'security/runtime_artifact_provenance.py',
     'governance/mail_draft_preview.py', 'governance/mail_draft_repository.py',
     'governance/mail_draft_review.py', 'governance/mail_preview_access_proposal.py',
     'governance/product_dry_run.py', 'governance/connector_framework.py',
@@ -19,7 +21,9 @@ PRODUCT_PATHS = (
 )
 SOURCE_MAP = {name: name for name in PRODUCT_PATHS} | {
     name: 'validation/mail_readiness/' + name
-    for name in ('offline_mail_contract.py', 'offline_mail_cases.py', 'result_contract.py', 'execution_boundary.py')
+    for name in ('offline_mail_contract.py', 'offline_mail_cases.py', 'result_contract.py', 'execution_boundary.py',
+                 'runtime_artifact_contract.py', 'runtime_artifact_cases.py',
+                 'runtime_dependencies.py', 'runtime_crypto.lock')
 }
 CASE_NAMES = (
     'test_preview_is_not_authority', 'test_no_constructor_authority_override',
@@ -121,7 +125,7 @@ def verify_payload(root, expected_head):
     for path in root.rglob('*'):
         if path.is_symlink():
             raise RuntimeError('OFFLINE_MAIL_SOURCE_BINDING_MISMATCH')
-        if path.is_dir() and path.relative_to(root).as_posix() not in {'governance', 'control_plane'}:
+        if path.is_dir() and path.relative_to(root).as_posix() not in {'governance', 'control_plane', 'security'}:
             raise RuntimeError('OFFLINE_MAIL_SOURCE_BINDING_MISMATCH')
         if path.is_file():
             found.add(path.relative_to(root).as_posix())

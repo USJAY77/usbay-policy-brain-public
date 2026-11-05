@@ -21,3 +21,41 @@ The version2 exact-control contract requires all original ten controls plus exec
 106 local pure tests passed. ELF metadata was read locally without installing filters or starting a child. This is not native CI equivalence or a complete security proof. Native results are pending at publication. Raw process output, environment and mail data are not audit evidence.
 
 This trusted fixed-probe bootstrap is not a general arbitrary-code runner. Native in-process code, dynamic loading, full-suite command grammar and shared/persistent-runner threats need separate review. Existing full mail integration, release/provider authority and EGAP-HYDRA-REMOTE-TRANSPORT-AUTH gaps remain open. Synthetic PASS does not mean Governed Mail production readiness.
+
+## Runtime artifact validation proposal (not yet executed)
+
+`--runtime-artifacts` implies the fixed offline mail phase and adds exactly 30
+synthetic cases from `runtime_artifact_contract.CASE_NAMES`. It tests the two
+source-artifact modules; it does not start the gateway, issue an operational
+release, establish a trust anchor or authorize execution.
+
+The proposed hosted workflow adds a distinct dependency acquisition step inside
+the nonprivileged controller. It downloads only binary wheels for
+`cryptography==50.0.2`, `cffi==2.1.1` and `pycparser==3.11`, with all hashes taken
+unchanged from the existing `staging/requirements-python311.lock`. Python 3.12
+compatibility is unproven until native CI. Missing pip, compatible wheels or
+matching hashes causes failure; there is no install/build or version fallback.
+
+The root bootstrap independently recomputes the exact source and dependency
+bindings before namespace launch. Dependencies are mounted read-only, nosuid,
+nodev. Dynamic library loading remains necessary for cryptography; the existing
+process-execution gates and executable allowlist are not widened. This is a
+fixed trusted synthetic workload, not an exhaustive hostile-native-code sandbox.
+
+The fresh child checks all 13 controls, identity, no-exec gate and source binding
+before activating dependencies or importing crypto/product modules. It verifies
+exact hashes, package versions and import origins, and proves the mount rejects
+writes. Both source and dependency trees are rechecked after the fixed cases.
+Test private keys are generated in memory and never serialized. Public synthetic
+fixtures are disposable and do not establish operational producer authority.
+
+Acceptance requires every fixed mail and runtime case to pass, complete bound
+reports, every existing control, correct source/runtime identities and mapping
+policy restoration. Report counts do not replace those checks. Only fixed case
+identifiers, bounded outcomes and hashes are retained; no exception payloads or
+package-manager output are published. Cache concurrency, gateway startup, full
+scanner/provenance composition, producer build wiring and live mail/provider
+behavior remain outside this test scope.
+
+Publication, wheel acquisition and this native test execution require explicit
+batch authorization. Do not infer it from earlier control-only or mail-only runs.

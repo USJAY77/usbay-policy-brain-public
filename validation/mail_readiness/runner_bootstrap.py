@@ -152,7 +152,8 @@ def verified_source(repository, head, uid, gid):
     if actual != head:
         raise RuntimeError('SOURCE_HEAD_MISMATCH')
     for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py', 'execution_boundary.py',
-                 'offline_mail_contract.py', 'offline_mail_cases.py'):
+                 'offline_mail_contract.py', 'offline_mail_cases.py', 'runtime_artifact_contract.py',
+                 'runtime_artifact_cases.py', 'runtime_dependencies.py', 'runtime_crypto.lock'):
         relative = 'validation/mail_readiness/' + name
         path = repository / relative
         st = path.lstat()
@@ -206,7 +207,10 @@ def main():
     parser.add_argument('--gid', required=True, type=int)
     parser.add_argument('--temporary', required=True, type=Path)
     parser.add_argument('--offline-mail', action='store_true')
+    parser.add_argument('--runtime-artifacts', action='store_true')
     args = parser.parse_args()
+    if args.runtime_artifacts:
+        args.offline_mail = True
     try:
         uid, gid = owner_id(args.uid), owner_id(args.gid)
         if os.getresuid() != (0, 0, 0) or os.getresgid() != (0, 0, 0):
@@ -225,6 +229,10 @@ def main():
             sys.path.insert(0, str(Path(__file__).resolve().parent))
             from offline_mail_contract import verify_staged_source
             verify_staged_source(repository, args.expected_head, base / 'source', uid, gid)
+        dependency_binding = ''
+        if args.runtime_artifacts:
+            from runtime_dependencies import verify_prepared_dependencies
+            dependency_binding = verify_prepared_dependencies(base, uid, gid)
         lock = os.open('/run/usbay-synthetic-idmap.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
         try:
             st = os.fstat(lock)
@@ -240,6 +248,8 @@ def main():
                     '--inside', str(base), '--inside-host-uid', str(uid), '--inside-host-gid', str(gid)]
             if args.offline_mail:
                 argv.extend(['--offline-mail', '--expected-head', args.expected_head])
+            if args.runtime_artifacts:
+                argv.extend(['--runtime-artifacts', '--dependency-binding', dependency_binding])
             def launch():
                 # The range helper must deny setgroups before gid_map exists.
                 # Kernel disallows writing deny after gid_map has been published.
