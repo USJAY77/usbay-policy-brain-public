@@ -17,7 +17,9 @@ BOOTSTRAP_REASONS = frozenset({
     'MAPPING_POLICY_RESTORE_FAILED','EXPECTED_HEAD_REQUIRED','SOURCE_OWNER_BINDING_MISMATCH',
     'SOURCE_HEAD_MISMATCH','SOURCE_FILE_UNSAFE','SOURCE_BYTES_MISMATCH','BOOTSTRAP_ROOT_REQUIRED',
     'BOOTSTRAP_CALLER_MISMATCH','TEMPORARY_PATH_INVALID','TEMPORARY_OWNER_MISMATCH',
-    'BOOTSTRAP_LOCK_UNSAFE','SUPPLEMENTARY_GROUPS_NOT_EMPTY','BOOTSTRAP_RESULT_INVALID'})
+    'BOOTSTRAP_LOCK_UNSAFE','SUPPLEMENTARY_GROUPS_NOT_EMPTY','BOOTSTRAP_RESULT_INVALID',
+    'OFFLINE_MAIL_HEAD_INVALID','OFFLINE_MAIL_SOURCE_MODE_INVALID','OFFLINE_MAIL_SOURCE_SIZE_INVALID',
+    'OFFLINE_MAIL_SOURCE_BINDING_MISMATCH'})
 
 
 def safe_reason(error):
@@ -149,7 +151,8 @@ def verified_source(repository, head, uid, gid):
     actual = subprocess.check_output(git + ['rev-parse', 'HEAD'], cwd=repository, env=env, stderr=subprocess.DEVNULL, timeout=5).decode('ascii').strip()
     if actual != head:
         raise RuntimeError('SOURCE_HEAD_MISMATCH')
-    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py', 'execution_boundary.py'):
+    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py', 'execution_boundary.py',
+                 'offline_mail_contract.py', 'offline_mail_cases.py'):
         relative = 'validation/mail_readiness/' + name
         path = repository / relative
         st = path.lstat()
@@ -202,6 +205,7 @@ def main():
     parser.add_argument('--uid', required=True, type=int)
     parser.add_argument('--gid', required=True, type=int)
     parser.add_argument('--temporary', required=True, type=Path)
+    parser.add_argument('--offline-mail', action='store_true')
     args = parser.parse_args()
     try:
         uid, gid = owner_id(args.uid), owner_id(args.gid)
@@ -217,6 +221,10 @@ def main():
         st = base.lstat()
         if not stat.S_ISDIR(st.st_mode) or st.st_uid != uid or st.st_gid != gid or stat.S_IMODE(st.st_mode) != 0o700:
             raise RuntimeError('TEMPORARY_OWNER_MISMATCH')
+        if args.offline_mail:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            from offline_mail_contract import verify_staged_source
+            verify_staged_source(repository, args.expected_head, base / 'source', uid, gid)
         lock = os.open('/run/usbay-synthetic-idmap.lock', os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
         try:
             st = os.fstat(lock)
@@ -230,6 +238,8 @@ def main():
                     '--setuid=0', '--net', '--mount', '--pid', '--fork',
                     '/usr/bin/python3', '-I', '-B', str(repository / 'validation/mail_readiness/isolation_preflight.py'),
                     '--inside', str(base), '--inside-host-uid', str(uid), '--inside-host-gid', str(gid)]
+            if args.offline_mail:
+                argv.extend(['--offline-mail', '--expected-head', args.expected_head])
             def launch():
                 # The range helper must deny setgroups before gid_map exists.
                 # Kernel disallows writing deny after gid_map has been published.

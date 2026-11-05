@@ -1,4 +1,4 @@
-name: Governed Mail Synthetic Isolation Preflight
+name: Governed Mail Isolated Synthetic Validation
 
 on:
   pull_request:
@@ -6,6 +6,14 @@ on:
     paths:
       - '.github/workflows/mail-readiness-isolation.yml'
       - 'validation/mail_readiness/**'
+      - 'governance/mail_draft*.py'
+      - 'governance/mail_preview_access_proposal.py'
+      - 'governance/product_dry_run.py'
+      - 'governance/connector_framework.py'
+      - 'governance/human_approval_gate_contract.py'
+      - 'governance/__init__.py'
+      - 'control_plane/agent_registry.py'
+      - 'control_plane/__init__.py'
 
 permissions:
   contents: read
@@ -25,11 +33,12 @@ jobs:
           persist-credentials: false
       - name: Verify result contract
         run: /usr/bin/python3 -B -m unittest discover -s validation/mail_readiness -p "test_*.py" -v
-      - name: Run synthetic fresh-child controls only
+      - name: Run fixed controls and offline mail cases after native gates
         run: |
           /usr/bin/python3 -I -B validation/mail_readiness/isolation_preflight.py \
             --expected-head "$EXPECTED_HEAD" \
             --privileged-namespace-bootstrap \
+            --offline-mail \
             --output "$RUNNER_TEMP/usbay-isolation/preflight.json"
       - name: Hash bounded report
         if: always()
