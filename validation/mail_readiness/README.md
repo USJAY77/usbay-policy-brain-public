@@ -40,3 +40,14 @@ fixed sudo/unshare and synthetic-only boundary. No unchanged-run retries, kernel
 policy relaxation, new privilege scope or application/mail tests. Stop on success,
 the cycle limit, missing authority or a newly required permission. Preserve every
 failure and verified artifact. Merge, deployment and activation remain excluded.
+
+
+## Bounded repair cycle2
+
+Cycle1 failed before controls with child_exit1 and no prior allowlisted launcher
+category. util-linux2.39.3 source inspection shows range mapping invokes the
+external newuidmap/newgidmap helpers even on this privileged launch path. This
+source observation does not establish the native failure cause. Cycle2 only
+adds fixed helper/range/set-ID categories, supported version and helper presence
+to diagnostics. No mapping, workflow, kernel, sudo or permission change.
+Primary source: https://github.com/util-linux/util-linux/blob/v2.39.3/sys-utils/unshare.c

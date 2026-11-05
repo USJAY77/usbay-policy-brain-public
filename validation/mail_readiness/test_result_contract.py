@@ -143,5 +143,23 @@ class NamespaceMappingTests(unittest.TestCase):
         self.assertFalse(supported_unshare_version('PRIVATE_CANARY'))
 
 
+class LauncherCategoryTests(unittest.TestCase):
+    def test_uid_helper_range_rejection(self):
+        result = failure_summary('', 'newuidmap: uid range [0-1) not allowed PRIVATE_CANARY')
+        self.assertEqual(result['launcher_categories'], ['UID_MAP_HELPER_ERROR', 'ID_RANGE_NOT_ALLOWED'])
+        self.assertNotIn('PRIVATE_CANARY', str(result))
+
+    def test_group_helper_error(self):
+        result = failure_summary('', 'newgidmap: gid range [0-1) not allowed')
+        self.assertEqual(result['launcher_categories'], ['GID_MAP_HELPER_ERROR', 'ID_RANGE_NOT_ALLOWED'])
+
+    def test_setgroups_failure(self):
+        result = failure_summary('', 'unshare: setgroups failed: Operation not permitted')
+        self.assertEqual(result['launcher_categories'], ['SETGROUPS_FAILED'])
+
+    def test_unknown_launcher_text_remains_unclassified(self):
+        self.assertEqual(failure_summary('', 'PRIVATE_CANARY')['launcher_categories'], [])
+
+
 if __name__ == '__main__':
     unittest.main()

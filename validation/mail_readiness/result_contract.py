@@ -78,6 +78,16 @@ def failure_summary(stdout, stderr):
         'error_type': error if type(error) is str and error in FAILURE_TYPES else 'UNKNOWN',
         'errno': code if type(code) is int else None,
         'stderr_categories': [item for item in ERROR_CATEGORIES if item in safe_stderr],
+        'launcher_categories': [name for name, matched in (
+            ('UID_MAP_HELPER_ERROR', 'newuidmap' in safe_stderr),
+            ('GID_MAP_HELPER_ERROR', 'newgidmap' in safe_stderr),
+            ('ID_RANGE_NOT_ALLOWED', 'not allowed' in safe_stderr and ('uid range' in safe_stderr or 'gid range' in safe_stderr)),
+            ('SETGROUPS_FAILED', 'setgroups failed' in safe_stderr),
+            ('SETUID_FAILED', 'setuid failed' in safe_stderr),
+            ('SETGID_FAILED', 'setgid failed' in safe_stderr),
+            ('MAPPING_ARGUMENT_INVALID', 'invalid mapping' in safe_stderr),
+            ('OPTION_UNRECOGNIZED', 'unrecognized option' in safe_stderr),
+        ) if matched],
     }
 
 

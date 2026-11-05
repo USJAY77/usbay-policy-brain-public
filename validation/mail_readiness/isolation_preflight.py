@@ -196,7 +196,9 @@ def main():
             version = subprocess.check_output(['/usr/bin/unshare', '--version'], text=True, stderr=subprocess.DEVNULL, timeout=5)
             if not supported_unshare_version(version):
                 raise RuntimeError('UNSHARE_VERSION_UNSUPPORTED')
+            report['unshare_version'] = version.strip().rsplit(' ', 1)[1]
             report['namespace_mapping'] = {'host_uid':owner_uid, 'host_gid':owner_gid, 'inner_uid':0, 'inner_gid':0, 'count':1}
+            report['mapping_helpers_present'] = {'uid':shutil.which('newuidmap', path='/usr/bin:/bin') is not None, 'gid':shutil.which('newgidmap', path='/usr/bin:/bin') is not None}
         with tempfile.TemporaryDirectory(prefix='usbay-synthetic-preflight-') as name:
             base = Path(name)
             for relative in ('root/usr', 'root/lib', 'root/lib64', 'root/source',
