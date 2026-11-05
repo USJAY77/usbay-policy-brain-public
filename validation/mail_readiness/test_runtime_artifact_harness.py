@@ -285,3 +285,69 @@ class SymlinkFixtureConstructionTests(unittest.TestCase):
                 self.assertTrue(link.is_symlink())
                 self.assertEqual(target.read_bytes(),raw)
                 self.assertFalse(any(n.split('.')[0] in {'security','cryptography','cffi','runtime_artifact_cases'} for n in sys.modules))
+
+
+class ReportingReviewRegressionTests(unittest.TestCase):
+    def test_aggregate_execution_flag_requires_every_requested_phase(self):
+        from types import SimpleNamespace
+        tree=ast.parse(Path(__file__).with_name('isolation_preflight.py').read_bytes())
+        assignments={}
+        for node in ast.walk(tree):
+            if isinstance(node,ast.Assign) and len(node.targets)==1:
+                target=node.targets[0]
+                if (isinstance(target,ast.Subscript) and isinstance(target.value,ast.Name)
+                        and target.value.id=='report' and isinstance(target.slice,ast.Constant)):
+                    if target.slice.value in {'application_tests_run','application_test_execution_evidence'}:
+                        assignments.setdefault(target.slice.value,[]).append(node.value)
+        # Use the final assignments in the actual controller, not a duplicate implementation.
+        expressions={name:compile(ast.Expression(values[-1]),'<controller-report-expression>','eval')
+                     for name,values in assignments.items()}
+        for mail,runtime in [(False,False),(True,False),(False,True),(True,True)]:
+            context={'mail_execution_proven':mail,'runtime_execution_proven':runtime,
+                     'args':SimpleNamespace(runtime_artifacts=True,offline_mail=True)}
+            ran=eval(expressions['application_tests_run'],context)
+            evidence=eval(expressions['application_test_execution_evidence'],context)
+            self.assertIs(ran,mail and runtime)
+            self.assertEqual(evidence,'COMPLETE' if mail and runtime else 'UNKNOWN')
+        context={'mail_execution_proven':True,'runtime_execution_proven':True,
+                 'args':SimpleNamespace(runtime_artifacts=False,offline_mail=True)}
+        self.assertIs(eval(expressions['application_tests_run'],context),True)
+        context.update(mail_execution_proven=False,args=SimpleNamespace(runtime_artifacts=False,offline_mail=False))
+        self.assertIs(eval(expressions['application_tests_run'],context),False)
+        self.assertEqual(eval(expressions['application_test_execution_evidence'],context),'NOT_REQUESTED')
+
+    def test_fixed_dependency_reasons_survive_both_diagnostic_boundaries(self):
+        import runner_bootstrap as b
+        from result_contract import failure_summary
+        tree=ast.parse(Path(__file__).with_name('runtime_dependencies.py').read_bytes())
+        codes={n.value for n in ast.walk(tree) if isinstance(n,ast.Constant)
+               and isinstance(n.value,str) and n.value.startswith('RUNTIME_DEPENDENCY_')}
+        self.assertEqual(len(codes),18)
+        for code in codes:
+            reason=b.safe_reason(RuntimeError(code))
+            self.assertEqual(reason,code)
+            result=failure_summary(json.dumps({'stage':'EPHEMERAL_MAPPING_BOOTSTRAP',
+                                               'error':'RuntimeError','bootstrap_reason':reason}),'')
+            self.assertEqual(result['bootstrap_reason'],code)
+
+    def test_unknown_dependency_prefix_and_raw_exception_never_leak(self):
+        import runner_bootstrap as b
+        from result_contract import failure_summary
+        for raw in ['RUNTIME_DEPENDENCY_PRIVATE_CANARY','RUNTIME_DEPENDENCY_TREE_INVALID PRIVATE_CANARY','PRIVATE_CANARY']:
+            self.assertEqual(b.safe_reason(RuntimeError(raw)),'BOOTSTRAP_ERROR')
+            result=failure_summary(json.dumps({'bootstrap_reason':raw}),'')
+            self.assertEqual(result['bootstrap_reason'],'UNKNOWN')
+            self.assertNotIn('PRIVATE_CANARY',json.dumps(result))
+        self.assertEqual(b.safe_reason(OSError('RUNTIME_DEPENDENCY_TREE_INVALID')),'BOOTSTRAP_ERROR')
+
+    def test_dependency_mount_stage_survives_both_diagnostic_boundaries(self):
+        import runner_bootstrap as b
+        from result_contract import failure_summary
+        raw={'stage':'DEPENDENCY_BIND','error':'PermissionError','errno':13,'raw':'PRIVATE_CANARY'}
+        child=b.launcher_diagnostics(json.dumps(raw).encode(),b'',2)
+        self.assertEqual(child['stage'],'DEPENDENCY_BIND')
+        final=failure_summary(json.dumps(child),'')
+        self.assertEqual(final['stage'],'DEPENDENCY_BIND')
+        self.assertEqual(final['error_type'],'PermissionError')
+        self.assertEqual(final['errno'],13)
+        self.assertNotIn('PRIVATE_CANARY',json.dumps(final))

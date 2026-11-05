@@ -360,7 +360,8 @@ def main():
                     runtime_execution_proven = runtime_structure(runtime_value, report['offline_mail_source_binding'], dependency_binding)
                     report['runtime_artifacts'] = bounded_runtime(runtime_value)
                     report['runtime_artifact_validation_passed'] = runtime_passed
-                report['application_tests_run'] = mail_execution_proven or args.runtime_artifacts and runtime_execution_proven
+                # This aggregate flag requires a complete bound report for every requested phase.
+                report['application_tests_run'] = (mail_execution_proven and runtime_execution_proven)
                 report['application_test_execution_evidence'] = ('COMPLETE' if mail_execution_proven and runtime_execution_proven else
                                                                'UNKNOWN' if args.offline_mail else 'NOT_REQUESTED')
                 if (controls_pass(report['controls'])
