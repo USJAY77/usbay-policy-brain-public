@@ -75,7 +75,11 @@ def failure_summary(stdout, stderr):
     safe_stderr = stderr[:16384] if type(stderr) is str else ''
     launcher_codes = payload.get('launcher_categories', [])
     permitted_codes = {'UID_MAP_HELPER_ERROR','GID_MAP_HELPER_ERROR','ID_RANGE_NOT_ALLOWED',
-                       'SETGROUPS_FAILED','SETUID_FAILED','SETGID_FAILED'}
+                       'SETGROUPS_FAILED','SETUID_FAILED','SETGID_FAILED', 'UNSHARE_FAILED','PERMISSION_DENIED',
+                       'OPERATION_NOT_PERMITTED','WRITE_FAILED','SETGROUPS_PATH','UID_MAP_PATH','GID_MAP_PATH',
+                       'EXEC_FAILED','FILE_NOT_FOUND','MODULE_NOT_FOUND','IMPORT_FAILED','PYTHON_STARTUP_FAILED',
+                       'PYTHON_FILE_OPEN_FAILED','MOUNT_FAILED','MOUNT_PROPAGATION_FAILED','FORK_FAILED',
+                       'ARGUMENT_INVALID','MAPPING_INVALID','OPTION_UNRECOGNIZED'}
     if type(launcher_codes) is not list:
         launcher_codes = []
     bootstrap_reason = payload.get('bootstrap_reason')
@@ -87,6 +91,8 @@ def failure_summary(stdout, stderr):
         'BOOTSTRAP_CALLER_MISMATCH','TEMPORARY_PATH_INVALID','TEMPORARY_OWNER_MISMATCH',
         'BOOTSTRAP_LOCK_UNSAFE','SUPPLEMENTARY_GROUPS_NOT_EMPTY','BOOTSTRAP_RESULT_INVALID','BOOTSTRAP_ERROR'}
     return {
+        'mapping_policy_restored': payload.get('mapping_policy_restored') is True,
+        'launcher_exit': payload.get('launcher_exit') if type(payload.get('launcher_exit')) is int and -255 <= payload['launcher_exit'] <= 255 else None,
         'bootstrap_reason':bootstrap_reason if type(bootstrap_reason) is str and bootstrap_reason in allowed_reasons else 'UNKNOWN',
         'stage': stage if type(stage) is str and stage in FAILURE_STAGES else 'UNKNOWN',
         'error_type': error if type(error) is str and error in FAILURE_TYPES else 'UNKNOWN',

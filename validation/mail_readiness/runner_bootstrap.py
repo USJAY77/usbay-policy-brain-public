@@ -160,6 +160,41 @@ def verified_source(repository, head, uid, gid):
             raise RuntimeError('SOURCE_BYTES_MISMATCH')
 
 
+def launcher_diagnostics(stdout, stderr, exit_code):
+    raw = stderr[:16384] if type(stderr) is bytes else b''
+    categories = [code for code, needle in (
+        ('UID_MAP_HELPER_ERROR', b'newuidmap'), ('GID_MAP_HELPER_ERROR', b'newgidmap'),
+        ('ID_RANGE_NOT_ALLOWED', b'not allowed'), ('SETGROUPS_FAILED', b'setgroups failed'),
+        ('SETUID_FAILED', b'setuid failed'), ('SETGID_FAILED', b'setgid failed'),
+        ('UNSHARE_FAILED', b'unshare failed'), ('PERMISSION_DENIED', b'Permission denied'),
+        ('OPERATION_NOT_PERMITTED', b'Operation not permitted'), ('WRITE_FAILED', b'write failed'),
+        ('SETGROUPS_PATH', b'/proc/self/setgroups'), ('UID_MAP_PATH', b'/proc/self/uid_map'),
+        ('GID_MAP_PATH', b'/proc/self/gid_map'), ('EXEC_FAILED', b'failed to execute'),
+        ('FILE_NOT_FOUND', b'No such file or directory'), ('MODULE_NOT_FOUND', b'ModuleNotFoundError'),
+        ('IMPORT_FAILED', b'ImportError'), ('PYTHON_STARTUP_FAILED', b'Fatal Python error'),
+        ('PYTHON_FILE_OPEN_FAILED', b"can\'t open file"), ('MOUNT_FAILED', b'mount failed'),
+        ('MOUNT_PROPAGATION_FAILED', b'mount propagation failed'), ('FORK_FAILED', b'fork failed'),
+        ('ARGUMENT_INVALID', b'unrecognized arguments'), ('MAPPING_INVALID', b'invalid mapping'),
+        ('OPTION_UNRECOGNIZED', b'unrecognized option')) if needle in raw]
+    child = {}
+    if type(stdout) is bytes and len(stdout) <= 16384:
+        try:
+            value = json.loads(stdout)
+            if type(value) is dict:
+                child = value
+        except (ValueError, UnicodeError):
+            pass
+    stages = {'SOURCE_OWNER_BINDING','NAMESPACE_IDENTITY','MOUNT_NAMESPACE_PRIVATE','RUNTIME_BIND',
+              'SOURCE_BIND','DEVICE_BIND','CHROOT','DROP_CAPABILITIES','KERNEL_RESTRICTIONS','FRESH_CHILD_CONTROLS'}
+    types = {'PermissionError','OSError','RuntimeError','CalledProcessError','TimeoutExpired'}
+    return {'stage':child.get('stage') if type(child.get('stage')) is str and child['stage'] in stages else 'NAMESPACE_LAUNCH',
+            'error':child.get('error') if type(child.get('error')) is str and child['error'] in types else 'RuntimeError',
+            'errno':child.get('errno') if type(child.get('errno')) is int else None,
+            'launcher_categories':categories,
+            'launcher_exit':exit_code if type(exit_code) is int and -255 <= exit_code <= 255 else None,
+            'mapping_policy_restored':True}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--expected-head', required=True)
@@ -202,19 +237,7 @@ def main():
             os.close(lock)
         # Return only bounded classification/identity/control JSON, never raw stderr.
         if result.returncode:
-            safe = {'stage':'NAMESPACE_LAUNCH', 'error':'RuntimeError', 'errno':None,
-                    'launcher_failed':True,
-                    'launcher_categories':[code for code,needle in (
-                        ('UID_MAP_HELPER_ERROR',b'newuidmap'),('GID_MAP_HELPER_ERROR',b'newgidmap'),
-                        ('ID_RANGE_NOT_ALLOWED',b'not allowed'),('SETGROUPS_FAILED',b'setgroups failed'),
-                        ('SETUID_FAILED',b'setuid failed'),('SETGID_FAILED',b'setgid failed'))
-                        if needle in result.stderr[:16384]]}
-            try:
-                child = json.loads(result.stdout)
-                if type(child) is dict:
-                    safe.update({k:child[k] for k in ('stage','error','errno') if k in child})
-            except (ValueError, UnicodeError):
-                pass
+            safe = launcher_diagnostics(result.stdout, result.stderr, result.returncode)
             print(json.dumps(safe))
             return 2
         payload = json.loads(result.stdout)

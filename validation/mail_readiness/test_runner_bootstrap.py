@@ -152,3 +152,29 @@ class IdentityTests(unittest.TestCase):
 
 
 if __name__=='__main__':unittest.main()
+
+
+class LauncherDiagnosticsTests(unittest.TestCase):
+    def test_setgroups_write_failure_has_only_fixed_categories(self):
+        result=b.launcher_diagnostics(b'', b'unshare: write failed /proc/self/setgroups: Permission denied PRIVATE_CANARY',1)
+        self.assertEqual(result['launcher_categories'],['PERMISSION_DENIED','WRITE_FAILED','SETGROUPS_PATH'])
+        self.assertNotIn('PRIVATE_CANARY',str(result))
+        self.assertTrue(result['mapping_policy_restored'])
+
+    def test_unknown_output_is_not_echoed(self):
+        result=b.launcher_diagnostics(b'{"stage":"PRIVATE_CANARY","error":"PRIVATE_CANARY","errno":true}',b'PRIVATE_CANARY',2)
+        self.assertEqual(result['stage'],'NAMESPACE_LAUNCH')
+        self.assertIsNone(result['errno'])
+        self.assertEqual(result['launcher_exit'],2)
+        self.assertNotIn('PRIVATE_CANARY',str(result))
+
+    def test_signal_exit_is_preserved(self):
+        self.assertEqual(b.launcher_diagnostics(b'',b'',-11)['launcher_exit'],-11)
+
+    def test_child_stage_is_preserved(self):
+        result=b.launcher_diagnostics(b'{"stage":"CHROOT","error":"PermissionError","errno":13}',b'',2)
+        self.assertEqual((result['stage'],result['error'],result['errno']),('CHROOT','PermissionError',13))
+
+    def test_oversized_unknown_stdout_cannot_inject_fields(self):
+        result=b.launcher_diagnostics(b'x'*16385,b'',1)
+        self.assertEqual(result['stage'],'NAMESPACE_LAUNCH')

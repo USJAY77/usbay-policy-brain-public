@@ -19,3 +19,5 @@ The hosted runner is disposable and provides sudo; this is not a hardened multi-
 Pure tests cover exact/broad/root mappings, malformed policy, partial update, restoration, concurrent mutation and identity failures. They do not establish native isolation. No local privileged launch is performed. Native evidence must establish all controls on the exact published head; passing is not exhaustive sandbox proof or Governed Mail production readiness.
 
 The original command grammar, full mail-suite integration, release/provider authority and EGAP-HYDRA-REMOTE-TRANSPORT-AUTH remain open. Stop on a new privilege requirement, unsafe state, unsupported ordering or the two-round budget; never repeat an unchanged failed run.
+
+Repair round1 failed before controls with no classified launcher category. Round2 only extends bounded launcher diagnostics and records restoration/exit evidence. Mapping, sudo bootstrap, policy writes and kernel restrictions are unchanged.
