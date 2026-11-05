@@ -28,6 +28,11 @@ POLICY = 'sha256:' + 'b' * 64
 DECISION = 'sha256:' + 'c' * 64
 
 
+class _SyntheticIntentCase(tuple):
+    def __repr__(self) -> str:
+        return "<SyntheticIntentCase>"
+
+
 def _request():
     intent = dict(schema_version=SCHEMA, declaration_source='human_declared',
                   intent_id='intent-001', request_id='request-001', correlation_id='correlation-001',
@@ -52,7 +57,7 @@ def _resign(material, request):
 @pytest.fixture
 def case(tmp_path):
     material = _resign(_setup(tmp_path/'identity'), _request())
-    return material, _authenticate(material), IntentReplayStore.provision(tmp_path/'intent.db')
+    return _SyntheticIntentCase((material, _authenticate(material), IntentReplayStore.provision(tmp_path/'intent.db')))
 
 
 def _consume(material, identity, store, **kw):
@@ -188,7 +193,7 @@ def test_concurrent_first_use_exactly_one_winner(case):
     material,identity,store=case
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as pool:
         results=list(pool.map(lambda _: _consume(material,identity,IntentReplayStore(store.path)),range(8)))
-    assert sum(r['decision']=='ALLOW' for r in results)==1
+    assert sum(r['decision']=='ALLOW' for r in results)==1, [(r.get("decision"), r.get("reason_code")) for r in results]
     assert all(r['decision'] in ('ALLOW','BLOCK') for r in results)
     _assert_block(_consume(material,identity,IntentReplayStore(store.path)),'INTENT_REPLAY')
 
