@@ -1,0 +1,80 @@
+{
+  "scope": "STATIC_REVIEW_CORRECTION_ONLY",
+  "parent_commit": "0431e8c58739f7378134e2745d2726df3a6ca3cf",
+  "findings": [
+    {
+      "reference": "https://github.com/USJAY77/usbay-policy-brain-public/pull/424#discussion_r4479997536",
+      "reported_severity": "P1",
+      "assessment": "VALID_STATIC_CONFIGURATION_RISK",
+      "correction": "Move proposal out of Cursor loader; also stage Codex and Copilot proposals, preserving baseline AGENTS."
+    },
+    {
+      "reference": "https://github.com/USJAY77/usbay-policy-brain-public/pull/424#discussion_r4479997543",
+      "reported_severity": "P2",
+      "assessment": "VALID_MISSING_PROVENANCE",
+      "correction": "Add version, canonical source path, source SHA256 and full-source instruction below 5000 characters."
+    }
+  ],
+  "validation": {
+    "original_parent_blob_count": 11,
+    "original_parent_blobs_match": true,
+    "baseline_AGENTS_equal": true,
+    "new_loader_paths_absent": true,
+    "three_moved_proposal_bytes_equal": true,
+    "core_source_unchanged": true,
+    "core_sha256": "9d08083f7c584dd34ce0e211f8d5a791bcfa510884b550ff9e69405db439071e",
+    "chatgpt_characters": 4898,
+    "chatgpt_under_5000": true,
+    "PB023": "PASS",
+    "PB026": {
+      "evidence_mode": "GENERATED_GOVERNANCE_EVIDENCE",
+      "source_reference": "https://github.com/USJAY77/usbay-policy-brain-public/issues/423",
+      "required_sections": {
+        "RISK": "POPULATED",
+        "MECHANISM": "POPULATED",
+        "GAP": "POPULATED",
+        "AUDIT": "POPULATED",
+        "IMPACT": "POPULATED",
+        "DECISION": "POPULATED",
+        "STATUS": "POPULATED",
+        "VALIDATION": "POPULATED",
+        "ROLLBACK": "POPULATED",
+        "SOURCE": "POPULATED",
+        "CHANGED FILES": "POPULATED",
+        "VALIDATION RESULTS": "POPULATED",
+        "ROLLBACK PLAN": "POPULATED",
+        "COMMIT OR SOURCE REFERENCE": "POPULATED"
+      },
+      "body_hash": "35e3ac5aaaed7164ee4fa9adc18b30c9e16e4e7471727f73fbf25f2f11956748",
+      "source_reference_hash": "5ece41f045fe85bb78547430d083d1b69c69d2635c1d2f71604b62bcccc15d3e",
+      "fallback_template": "ABSENT",
+      "unresolved_placeholders": "ABSENT"
+    },
+    "formatter_python": "3.12.14"
+  },
+  "moved_proposals": [
+    {
+      "old_path": "AGENTS.md",
+      "proposed_path": "docs/engineering/adapters/CODEX_AGENTS.md.proposed",
+      "sha256": "bdb9dec46def6a7d467d0af4e7239d167967f17f9ebae39d7a3bea1057a17bf0"
+    },
+    {
+      "old_path": ".cursor/rules/usbay-discipline.mdc",
+      "proposed_path": "docs/engineering/adapters/CURSOR_RULE.mdc.proposed",
+      "sha256": "b2a06c0b97f1c841ca1620fc5ed6955ead800a259980682f0c171038bfc01c3d"
+    },
+    {
+      "old_path": ".github/copilot-instructions.md",
+      "proposed_path": "docs/engineering/adapters/GITHUB_COPILOT_INSTRUCTIONS.md.proposed",
+      "sha256": "de128c41f6dc343f03772d87b3c78c1a8772aa98cf1b9d7c4bfa232860943e1e"
+    }
+  ],
+  "prior_publication": "PR422 preserved; PR424 parent retained; original nine-file preservation superseded for authorized correction only.",
+  "limits": [
+    "No runtime/provider loading tested",
+    "No independent human approval asserted",
+    "No merge/installation/activation",
+    "No review threads resolved",
+    "Hashes bind content, not trusted identity"
+  ]
+}
