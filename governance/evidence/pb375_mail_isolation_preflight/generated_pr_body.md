@@ -1,4 +1,6 @@
 ## PURPOSE
+Historical preparation record: the original scope, validation reports and authority statements below retain their original meaning. This correction regenerates the complete PR file inventory for base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530 and observed head ea45f19aa4890f53515225066a40bc255e12754e. It grants no authority and claims no new test execution.
+
 Repair the synthetic fresh-child execution boundary using actual ELF/runtime binding, one fixed trusted Python/loader startup and mandatory additive child execve/execveat denial before controls. This is cycle1 of a separately authorized maximum3-round batch.
 
 ## RISK
@@ -47,14 +49,25 @@ Restore only exact known mapping writes in finally; refuse to overwrite unexpect
 https://github.com/USJAY77/usbay-policy-brain-public/commit/53e4c0efea5d5f67c91f70ba6b2b488b067d1530
 
 ## CHANGED FILES
+- .github/workflows/mail-readiness-isolation.yml
+- governance/evidence/pb375_mail_isolation_preflight/generated_pr_body.md
+- governance/evidence/pb375_mail_isolation_preflight/metadata.json
+- governance/mail_draft_preview.py
+- governance/mail_draft_repository.py
+- governance/mail_preview_access_proposal.py
 - validation/mail_readiness/README.md
+- validation/mail_readiness/execution_boundary.py
+- validation/mail_readiness/gidmap_guard.py
 - validation/mail_readiness/isolation_preflight.py
+- validation/mail_readiness/offline_mail_cases.py
+- validation/mail_readiness/offline_mail_contract.py
 - validation/mail_readiness/result_contract.py
 - validation/mail_readiness/runner_bootstrap.py
-- validation/mail_readiness/execution_boundary.py
 - validation/mail_readiness/test_execution_boundary.py
-- governance/evidence/pb375_mail_isolation_preflight/metadata.json
-- governance/evidence/pb375_mail_isolation_preflight/generated_pr_body.md
+- validation/mail_readiness/test_gidmap_guard.py
+- validation/mail_readiness/test_offline_mail_contract.py
+- validation/mail_readiness/test_result_contract.py
+- validation/mail_readiness/test_runner_bootstrap.py
 
 ## VALIDATION RESULTS
 106 unique local pure tests PASS. Local ELF metadata read PASS; no local seccomp installation, child execution or privileged setup. Python AST checks PASS. Existing non-exec kernel function AST unchanged. Native cycle1 of maximum3 pending.
