@@ -79,7 +79,7 @@ def failure_summary(stdout, stderr):
                        'OPERATION_NOT_PERMITTED','WRITE_FAILED','SETGROUPS_PATH','UID_MAP_PATH','GID_MAP_PATH',
                        'EXEC_FAILED','FILE_NOT_FOUND','MODULE_NOT_FOUND','IMPORT_FAILED','PYTHON_STARTUP_FAILED',
                        'PYTHON_FILE_OPEN_FAILED','MOUNT_FAILED','MOUNT_PROPAGATION_FAILED','FORK_FAILED',
-                       'ARGUMENT_INVALID','MAPPING_INVALID','OPTION_UNRECOGNIZED'}
+                       'ARGUMENT_INVALID','MAPPING_INVALID','OPTION_UNRECOGNIZED', 'GID_GUARD_ARGUMENTS_INVALID', 'GID_GUARD_BINDING_INVALID', 'GID_GUARD_BINDING_UNSAFE', 'GID_GUARD_CALLER_INVALID', 'GID_GUARD_DENIAL_NOT_PROVEN', 'GID_GUARD_DIRECTORY_UNSAFE', 'GID_GUARD_FAILED', 'GID_GUARD_FINAL_STATE_INVALID', 'GID_GUARD_ID_INVALID', 'GID_GUARD_MAP_STATE_INVALID', 'GID_GUARD_NAMESPACE_INVALID', 'GID_GUARD_OWNER_INVALID', 'GID_GUARD_RESOURCE_INVALID', 'GID_GUARD_SETGROUPS_INVALID', 'GID_GUARD_SHORT_WRITE', 'GID_GUARD_STATE_INVALID', 'GID_GUARD_TARGET_INVALID'}
     if type(launcher_codes) is not list:
         launcher_codes = []
     bootstrap_reason = payload.get('bootstrap_reason')
@@ -130,7 +130,7 @@ def namespace_mapping_args(privileged, uid, gid):
     if any(type(value) is not int or not 1 <= value <= 2147483647 for value in (uid, gid)):
         raise ValueError('CI_OWNER_ID_INVALID')
     return ['--user', f'--map-users=0:{uid}:1', f'--map-groups=0:{gid}:1',
-            '--setgroups=deny', '--setuid=0']
+            '--setuid=0']
 
 
 def supported_unshare_version(text):

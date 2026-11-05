@@ -113,7 +113,7 @@ class NamespaceMappingTests(unittest.TestCase):
     def test_maps_exactly_original_nonroot_ids(self):
         self.assertEqual(namespace_mapping_args(True, 1001, 1002),
                          ['--user', '--map-users=0:1001:1', '--map-groups=0:1002:1',
-                          '--setgroups=deny', '--setuid=0'])
+                          '--setuid=0'])
 
     def test_unprivileged_mode_is_unchanged(self):
         self.assertEqual(namespace_mapping_args(False, 1001, 1002), ['--user', '--map-root-user'])

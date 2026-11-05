@@ -1,23 +1,16 @@
-# Governed Mail synthetic isolation preflight
+# Exact-parent pre-map group-denial correction — NATIVE VALIDATION PENDING
 
-This Draft proposal runs synthetic controls only. It grants no product execution authority and does not run mail/application tests.
+Native round2 at head4c1ea59f106fd3c111579c32389f994dbe6f9082 failed while unshare wrote deny after gid_map. Kernel proc_setgroups_write rejects deny once gid_map has extents. The previous bootstrap sequence was incorrect.
 
-## Ephemeral runner mapping repair
+This candidate changes the sequence, not the required protection: a root-owned ephemeral helper denies setgroups BEFORE publishing the single-GID map. The helper accepts only its actual parent PID, one exact owner GID and a pinned proc-directory FD; verifies the separate user namespace and exact previously written UID map; rejects existing GID mappings, unknown states and invalid arguments. Source bytes and an exact-head/UID/GID binding are copied into a root-owned mode700 directory under /run. No shell or arbitrary target path is accepted. The real UID helper remains unchanged.
 
-The owner authorized a bounded implementation/publication batch and at most two new-head CI rounds using temporary OS mapping permissions. Merge, deployment and activation remain prohibited.
+The fixed helper writes /proc/<verified-parent>/setgroups and gid_map. This is an explicit change to the privileged bootstrap protocol and must be reviewed before publication/native execution; a generic product authority grant does not authorize it. Only one original nonroot owner mapping is permitted. The original ten controls, pre-mount and fresh-child identity checks, permanent group denial, policy restoration and unchanged kernel restrictions remain mandatory.
 
-The fixed bootstrap verifies the original nonroot sudo caller, repository owner, exact source HEAD and committed bootstrap/controller/contract bytes. Only the runner UID/GID are mapped to namespace ID0, count1. It preserves existing /etc/subuid and /etc/subgid bytes and metadata, rejects ambiguous/unsafe policy, and holds a root-owned nonblocking lock. It restores its exact changes after the child exits, and fails if either policy update or restoration cannot be verified. No sudoers change, package install or kernel relaxation is included.
+79 local pure tests passed, including nine model tests and five target-binding tests of the kernel ordering and failure cases. No local privileged setup, /proc or /etc writes, namespace launch or application tests occurred. Full helper PID/namespace/proc-FD integration remains UNKNOWN. This is not a security-reviewed or native-validated bootstrap.
 
-Supplementary groups are cleared before unshare. The conflicting --setgid option is removed; the child sets real/effective/saved GID0 with setresgid, verifies empty supplementary groups, exact one-ID maps and permanent setgroups denial before mounting. The fresh constrained child independently verifies its real/effective/saved identity, empty groups and denied setgroups syscall.
+The previous two-round repair budget was consumed. The owner separately authorized publication of this exact bounded protocol and one additional synthetic CI round. No unchanged retry or further round is authorized. No merge, deployment, activation or mail/application tests.
 
-The existing user/network/mount/PID namespaces, read-only source/runtime, FD closure, capability removal, no_new_privs and kernel restriction function are retained. The exact ten synthetic controls remain mandatory, as do namespace/fresh-child identity evidence and confirmed mapping-policy restoration. Missing evidence fails closed.
-
-## Limits and stop conditions
-
-The hosted runner is disposable and provides sudo; this is not a hardened multi-tenant bootstrap service. Source identity/byte checks do not make a malicious concurrent owner process trustworthy. Root-level actors are outside the in-job locking threat model. Reuse on a persistent/shared runner is prohibited without separate design and authority.
-
-Pure tests cover exact/broad/root mappings, malformed policy, partial update, restoration, concurrent mutation and identity failures. They do not establish native isolation. No local privileged launch is performed. Native evidence must establish all controls on the exact published head; passing is not exhaustive sandbox proof or Governed Mail production readiness.
-
-The original command grammar, full mail-suite integration, release/provider authority and EGAP-HYDRA-REMOTE-TRANSPORT-AUTH remain open. Stop on a new privilege requirement, unsafe state, unsupported ordering or the two-round budget; never repeat an unchanged failed run.
-
-Repair round1 failed before controls with no classified launcher category. Round2 only extends bounded launcher diagnostics and records restoration/exit evidence. Mapping, sudo bootstrap, policy writes and kernel restrictions are unchanged.
+Primary sources:
+https://github.com/torvalds/linux/blob/v6.8/kernel/user_namespace.c (proc_setgroups_write)
+https://github.com/util-linux/util-linux/blob/v2.39.3/sys-utils/unshare.c
+https://github.com/shadow-maint/shadow/blob/4.13/src/newgidmap.c

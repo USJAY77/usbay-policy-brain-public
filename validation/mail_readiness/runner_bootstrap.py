@@ -149,7 +149,7 @@ def verified_source(repository, head, uid, gid):
     actual = subprocess.check_output(git + ['rev-parse', 'HEAD'], cwd=repository, env=env, stderr=subprocess.DEVNULL, timeout=5).decode('ascii').strip()
     if actual != head:
         raise RuntimeError('SOURCE_HEAD_MISMATCH')
-    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py'):
+    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py'):
         relative = 'validation/mail_readiness/' + name
         path = repository / relative
         st = path.lstat()
@@ -163,7 +163,8 @@ def verified_source(repository, head, uid, gid):
 def launcher_diagnostics(stdout, stderr, exit_code):
     raw = stderr[:16384] if type(stderr) is bytes else b''
     categories = [code for code, needle in (
-        ('UID_MAP_HELPER_ERROR', b'newuidmap'), ('GID_MAP_HELPER_ERROR', b'newgidmap'),
+        ('UID_MAP_HELPER_ERROR', b'newuidmap'),
+        ('GID_GUARD_ARGUMENTS_INVALID', b'GID_GUARD_ARGUMENTS_INVALID'), ('GID_GUARD_BINDING_INVALID', b'GID_GUARD_BINDING_INVALID'), ('GID_GUARD_BINDING_UNSAFE', b'GID_GUARD_BINDING_UNSAFE'), ('GID_GUARD_CALLER_INVALID', b'GID_GUARD_CALLER_INVALID'), ('GID_GUARD_DENIAL_NOT_PROVEN', b'GID_GUARD_DENIAL_NOT_PROVEN'), ('GID_GUARD_DIRECTORY_UNSAFE', b'GID_GUARD_DIRECTORY_UNSAFE'), ('GID_GUARD_FAILED', b'GID_GUARD_FAILED'), ('GID_GUARD_FINAL_STATE_INVALID', b'GID_GUARD_FINAL_STATE_INVALID'), ('GID_GUARD_ID_INVALID', b'GID_GUARD_ID_INVALID'), ('GID_GUARD_MAP_STATE_INVALID', b'GID_GUARD_MAP_STATE_INVALID'), ('GID_GUARD_NAMESPACE_INVALID', b'GID_GUARD_NAMESPACE_INVALID'), ('GID_GUARD_OWNER_INVALID', b'GID_GUARD_OWNER_INVALID'), ('GID_GUARD_RESOURCE_INVALID', b'GID_GUARD_RESOURCE_INVALID'), ('GID_GUARD_SETGROUPS_INVALID', b'GID_GUARD_SETGROUPS_INVALID'), ('GID_GUARD_SHORT_WRITE', b'GID_GUARD_SHORT_WRITE'), ('GID_GUARD_STATE_INVALID', b'GID_GUARD_STATE_INVALID'), ('GID_GUARD_TARGET_INVALID', b'GID_GUARD_TARGET_INVALID'), ('GID_MAP_HELPER_ERROR', b'newgidmap'),
         ('ID_RANGE_NOT_ALLOWED', b'not allowed'), ('SETGROUPS_FAILED', b'setgroups failed'),
         ('SETUID_FAILED', b'setuid failed'), ('SETGID_FAILED', b'setgid failed'),
         ('UNSHARE_FAILED', b'unshare failed'), ('PERMISSION_DENIED', b'Permission denied'),
@@ -226,12 +227,23 @@ def main():
             if os.getgroups():
                 raise RuntimeError('SUPPLEMENTARY_GROUPS_NOT_EMPTY')
             argv = ['/usr/bin/unshare', '--user', f'--map-users=0:{uid}:1', f'--map-groups=0:{gid}:1',
-                    '--setgroups=deny', '--setuid=0', '--net', '--mount', '--pid', '--fork',
+                    '--setuid=0', '--net', '--mount', '--pid', '--fork',
                     '/usr/bin/python3', '-I', '-B', str(repository / 'validation/mail_readiness/isolation_preflight.py'),
                     '--inside', str(base), '--inside-host-uid', str(uid), '--inside-host-gid', str(gid)]
             def launch():
-                return subprocess.run(argv, env={'PATH':'/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE':'1'},
-                                      stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=50)
+                # The range helper must deny setgroups before gid_map exists.
+                # Kernel disallows writing deny after gid_map has been published.
+                with tempfile.TemporaryDirectory(prefix='usbay-gidmap-', dir='/run') as guard_dir:
+                    guard = Path(guard_dir)
+                    os.chmod(guard,0o700)
+                    shim = guard/'newgidmap'
+                    shim.write_bytes((repository/'validation/mail_readiness/gidmap_guard.py').read_bytes())
+                    os.chmod(shim,0o700)
+                    binding = guard/'binding.json'
+                    binding.write_text(json.dumps({'uid':uid,'gid':gid,'head':args.expected_head}))
+                    os.chmod(binding,0o600)
+                    return subprocess.run(argv, env={'PATH':str(guard)+':/usr/bin:/bin', 'PYTHONDONTWRITEBYTECODE':'1'},
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=50)
             result = run_with_policy(uid, gid, launch)
         finally:
             os.close(lock)

@@ -70,7 +70,7 @@ def inside(temporary, host_uid, host_gid):
     SETUP_STAGE = 'NAMESPACE_IDENTITY'
     if any(type(value) is not int or not 1 <= value <= 2147483647 for value in (host_uid, host_gid)):
         raise RuntimeError('CI_OWNER_ID_INVALID')
-    # Supplementary groups were cleared before unshare, which already denied setgroups.
+    # Supplementary groups were cleared before unshare; the fixed mapping guard must deny setgroups before gid_map.
     if os.getgroups():
         raise RuntimeError('SUPPLEMENTARY_GROUPS_NOT_EMPTY')
     os.setresgid(0, 0, 0)
