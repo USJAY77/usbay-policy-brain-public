@@ -351,3 +351,57 @@ class ReportingReviewRegressionTests(unittest.TestCase):
         self.assertEqual(final['error_type'],'PermissionError')
         self.assertEqual(final['errno'],13)
         self.assertNotIn('PRIVATE_CANARY',json.dumps(final))
+
+
+class PublicPackagePreparationTests(unittest.TestCase):
+    def package_tree(self):
+        return ast.parse(Path(__file__).resolve().parents[2].joinpath('security/runtime_artifact_package.py').read_bytes())
+
+    def test_public_cli_accepts_only_public_manifest_and_source_bindings(self):
+        tree=self.package_tree()
+        main=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='main')
+        flags={n.args[0].value for n in ast.walk(main) if isinstance(n,ast.Call)
+               and isinstance(n.func,ast.Attribute) and n.func.attr=='add_argument'}
+        self.assertEqual(flags,{'--source','--destination','--manifest-file',
+                                '--expected-source-commit','--expected-source-tree'})
+        calls={ast.unparse(n.func) for n in ast.walk(main) if isinstance(n,ast.Call)}
+        self.assertIn('producer_trust_from_environment',calls)
+        self.assertIn('package_preissued_runtime_artifact',calls)
+        self.assertFalse(any('private' in n.lower() or 'signing_key' in n.lower() for n in calls))
+
+    def test_public_packager_verifies_before_creating_output_and_publishes_last(self):
+        tree=self.package_tree()
+        method=next(n for n in tree.body if isinstance(n,ast.FunctionDef) and n.name=='package_preissued_runtime_artifact')
+        calls=[n for n in ast.walk(method) if isinstance(n,ast.Call)]
+        verification=[n.lineno for n in calls if ast.unparse(n.func)=='verify_runtime_artifact']
+        creation=next(n.lineno for n in calls if ast.unparse(n.func)=='destination.mkdir')
+        copy=next(n.lineno for n in calls if ast.unparse(n.func)=='_copy_entry')
+        publish=next(n.lineno for n in calls if ast.unparse(n.func)=='os.open'
+                     and n.args and isinstance(n.args[0],ast.Name) and n.args[0].id=='MANIFEST_NAME')
+        output=next(n.lineno for n in calls if ast.unparse(n.func)=='load_runtime_artifact_authority')
+        self.assertLess(min(verification),creation)
+        self.assertLess(creation,copy)
+        self.assertLess(copy,max(verification))
+        self.assertLess(max(verification),publish)
+        self.assertLess(publish,output)
+        self.assertFalse(any(ast.unparse(n.func) in {'_git','build_runtime_artifact_manifest'}
+                             or 'subprocess' in ast.unparse(n.func) for n in calls))
+
+    def test_no_private_key_decode_or_serialization_in_package_module(self):
+        calls={ast.unparse(n.func) for n in ast.walk(self.package_tree()) if isinstance(n,ast.Call)}
+        self.assertFalse(any('private_bytes' in n or '_decode_base64' in n for n in calls))
+        self.assertNotIn('Ed25519PrivateKey.generate',calls)
+
+    def test_public_module_is_exported_without_producer_or_git_helper(self):
+        import offline_mail_contract as mail
+        self.assertIn('security/runtime_artifact_package.py',mail.SOURCE_MAP)
+        self.assertNotIn('security/runtime_artifact_builder.py',mail.SOURCE_MAP)
+        self.assertNotIn('security.runtime_artifact_package',sys.modules)
+        self.assertNotIn('security.runtime_artifact_builder',sys.modules)
+
+    def test_argument_error_does_not_echo_caller_values(self):
+        cls=next(n for n in self.package_tree().body if isinstance(n,ast.ClassDef) and n.name=='_PublicManifestArgumentParser')
+        method=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name=='error')
+        self.assertEqual(len(method.body),1)
+        self.assertIsInstance(method.body[0],ast.Raise)
+        self.assertEqual(ast.literal_eval(method.body[0].exc.args[0]),'runtime_artifact_package_arguments_invalid')

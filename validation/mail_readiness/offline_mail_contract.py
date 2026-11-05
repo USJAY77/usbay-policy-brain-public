@@ -14,6 +14,7 @@ PRODUCT_PATHS = (
     'governance/__init__.py', 'control_plane/__init__.py',
     'security/__init__.py', 'security/runtime_artifact_authority.py',
     'security/runtime_artifact_provenance.py',
+    'security/runtime_artifact_package.py',
     'governance/mail_draft_preview.py', 'governance/mail_draft_repository.py',
     'governance/mail_draft_review.py', 'governance/mail_preview_access_proposal.py',
     'governance/product_dry_run.py', 'governance/connector_framework.py',

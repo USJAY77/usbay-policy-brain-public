@@ -1,30 +1,32 @@
 ## PURPOSE
-Prepare fixed native validation of the runtime source-artifact verifier and freshness consumer. Add the two existing reviewed candidate modules byte-for-byte, a fixed 30-case synthetic verifier driver and hash-bound dependency staging. Preserve the existing 20 offline mail cases and 13 native controls. This working-tree proposal is not published or executed in CI.
+Prepare a public pre-issued-manifest packaging path alongside the existing fixed mail/artifact validation. The new packaging API/CLI verifies an independently signed public manifest and explicit expected source references, copies the declared bytes into a fresh output and verifies that output. It does not execute Git or consume a private key in this path. Ten new native cases are prepared; no new native run is claimed.
 
 ## RISK
-A valid signature establishes correspondence to a configured synthetic test key; it does not establish an operational producer, issuer or execution grant. Downloaded native extensions increase the test payload and require exact hash binding plus containment before import. No result establishes full gateway startup or Governed Mail production readiness.
+Packaging a signed declared source set does not independently reconstruct Git history, establish operational producer/issuer authority, select a trust anchor or authorize a deployment. The unpublished CLI replaces --signing-key-file with public manifest/source inputs; external callers of the old CLI are UNKNOWN and require migration review. Full gateway startup remains outside this phase.
 
 ## POLICY_LINK
-Existing fail-closed and source-identity boundaries; baseline AGENTS.md; PB-375 remains an administrative review identifier, not a policy or product authority grant.
+Existing AGENTS.md and fail-closed source, trust, identity, tenant and evidence boundaries. PB-375 is an administrative review identifier; this proposal does not adopt a policy or create operational authority.
 
 ## REQUIRED_APPROVALS
 - USBAY-AUDIT
 - USBAY-GLOBAL23
 
 ## GOVERNANCE_CHECKS
-- Owner authorized this concrete proposal by replying "lets go" to the explicit request for publication on PR #427 and one isolated hosted CI round including the three hash-locked test packages. This authorizes this test batch only; historical authorizations retain their separate scopes.
-- Authorized batch: publish this exact batch on PR #427 and allow one automatic hosted CI round, including only cryptography==50.0.2, cffi==2.1.1 and pycparser==3.11 from the existing hash-locked profile. No pip install, build backend, dependency resolution or additional packages.
-- The nonprivileged controller downloads only binary wheels with required hashes. The privileged bootstrap independently verifies the source export, wheel hashes and extracted tree before namespace launch.
-- Existing mapping guard, capability drop, kernel restrictions and fixed Python/loader startup remain unchanged. Native dependency import occurs only after all 13 controls, fresh identity, no-exec gate, source binding and read-only dependency checks pass. No executable allowlist widening.
-- Private synthetic signing keys exist only in process memory. No operational secrets, live mailbox, provider, signing service or real release issuance are used.
-- Stop on missing/ambiguous binding, unsupported Python or wheels, failed containment, failed cases or unexpected source/permission changes. Preserve bounded evidence. No unchanged reruns.
-- No merge, deployment, activation, live execution or authority/trust/policy widening. Any future head requires applicable independent reviews.
+- Owner authorized publication of this prepared eight-file batch on PR #427 and at most three evidence-backed new-head CI rounds by replying "lets go" to the explicit scoped request. Stop at first success; no unchanged retry or permission/dependency widening. Earlier scoped authorizations remain historical.
+- Proposed publication changes eight files including accurate review metadata; preserve the entire 27-path cumulative PR inventory.
+- Require independently supplied public verifier trust and exact expected commit/tree references. Reject missing/mismatched bindings, invalid signatures, changed source and an existing destination. No generated/default signer, trust or manifest.
+- Write the public manifest last and verify the copied output. Partial failed output is not automatically reused, deleted or promoted.
+- The public packaging path calls no Git or signing API. The old in-memory producer API remains separate; its Git helper import is deferred until that API is called. No producer module is added to the fixed native export.
+- Preserve all13 controls, existing kernel/identity/source/no-exec checks, capability drop, mapping restoration and existing three hash-locked test dependencies. No dependency or native permission widening.
+- Require all40 fixed artifact/public-package cases,20 mail cases and168 pure harness tests to pass in a future scoped native round. Preserve bounded outcomes and source/dependency bindings.
+- No live mailbox, independent issuer, deployment hook, operational key, merge, deployment, activation or active Replit change. Synthetic test keys exist only in memory.
+- Stop on failure, missing authority/input/binding, unsupported runtime or any requirement for additional permissions. Do not silently fall back to Git/private-key CLI behavior.
 
 ## AUDIT
-Local proposal based on bebf7227f2974610ab7411b95c09a99a0bf279ba (tree 26c97fb9602db2369e64dde15cb8a148ebbc4bde). 158 pure harness unit tests passed under Python 3.12.14. Syntax checks passed for 18 Python source files; embedded probe AST parsed. Existing kernel_restrictions AST and execution_boundary.py, gidmap_guard.py, result_contract.py and offline_mail_cases.py remain unchanged. Two artifact modules match the existing private review candidate byte-for-byte. No cryptographic/product modules were imported by the local test suite. No packages were downloaded or installed, no filters or privileged bootstrap were run, and no new native or CI result is claimed. Historical native results cover previous exact heads only.
+Prepared locally on 41b8368519399c037e3184870fd3224847af82f4 (treefa8896353c8de089e2793315f61ba2cfc9546482). 168 pure harness tests passed. Five new pure tests check CLI inputs, verification/copy/publish ordering, private-key serialization absence, closed source export and bounded argument diagnostics. Existing30 artifact methods remain AST-equal and existing20 mail cases/native safety files are byte-equal. Ten new actual packaging/CLI cases are NOT_RUN. The historical exact-head native result on 41b8368519399c037e3184870fd3224847af82f4 remains163 harness,30 artifact,20 mail and13 controls passed; it is not new proof for this worktree.
 
 ## IMPACT
-Provide a bounded next validation of artifact signature, source binding, path/mutation handling and freshness without changing the active Replit checkout or claiming full startup/readiness. Production authority, producer build wiring, gateway integration, provider behavior, recovery and remote transport remain separate open boundaries.
+Remove a private-key-file/Git requirement from the prepared packaging handoff while keeping issuance, trust provisioning and activation independent. This is a bounded next step toward source-package/startup integration; it does not establish production readiness.
 
 ## Decision
 REVIEW_REQUIRED
@@ -33,23 +35,23 @@ REVIEW_REQUIRED
 AWAITING_APPROVAL
 
 ## MECHANISM
-Fixed source export, immutable result selection, exact existing three-package lock subset, independent wheel/tree verification and post-gate native test import. Outcome-only diagnostics with execution_authorized=false.
+package_preissued_runtime_artifact validates a previously signed public manifest, copies declared bytes through the existing descriptor-based copier, rechecks source and verifies the completed package. The CLI reads only public manifest/trust inputs. No build/run configuration is installed.
 
 
 ## GAP
-PARTIAL: 30 new native artifact cases are prepared but NOT_RUN. Python 3.12 wheel compatibility and availability are UNKNOWN until authorized CI. Entire gateway startup, producer/build-to-runtime artifact wiring, cached authority concurrency, operational trust and production readiness are not demonstrated. In-process native code remains outside any claim of exhaustive sandbox containment.
+PARTIAL: new packaging code and ten cases are prepared but native execution is pending. Operational manifest issuance, independently governed trust, runtime-root ownership/selection and actual build-to-runtime handoff remain UNKNOWN. Full gateway imports, state-directory mapping and scanner/provenance composition are unvalidated.
 
 
 ## VALIDATION
-PROVEN within local pure-harness scope: 158 tests PASS. New runtime cases and previous mail cases were not executed locally. No CI run, download, install, application import or production change in this batch.
+168 local pure harness tests PASS. Syntax/source/patch checks PASS. No product/crypto imports in the local test run; no dependency installation/download or new native execution. Existing native results bind their historical head only.
 
 
 ## ROLLBACK
-Abandon the unpublished candidate if not approved. Future CI must dispose of the runner and preserve bounded failure evidence; existing mapping-policy restoration remains mandatory. No operational rollback is authorized by this proposal.
+Discard the unpublished proposal if rejected. Failed packaging leaves an unaccepted destination; no automatic deletion, overwrite, promotion or execution. A future failed native round must stop and retain bounded evidence.
 
 
 ## SOURCE
-https://github.com/USJAY77/usbay-policy-brain-public/commit/bebf7227f2974610ab7411b95c09a99a0bf279ba
+https://github.com/USJAY77/usbay-policy-brain-public/commit/41b8368519399c037e3184870fd3224847af82f4
 
 
 ## CHANGED FILES
@@ -60,6 +62,7 @@ https://github.com/USJAY77/usbay-policy-brain-public/commit/bebf7227f2974610ab74
 - governance/mail_draft_repository.py
 - governance/mail_preview_access_proposal.py
 - security/runtime_artifact_authority.py
+- security/runtime_artifact_package.py
 - security/runtime_artifact_provenance.py
 - validation/mail_readiness/README.md
 - validation/mail_readiness/execution_boundary.py
@@ -82,12 +85,12 @@ https://github.com/USJAY77/usbay-policy-brain-public/commit/bebf7227f2974610ab74
 
 
 ## VALIDATION RESULTS
-158 local pure harness tests passed. 30 new artifact cases NOT_RUN; 20 existing offline mail cases retained without modification. No new native result or readiness claim.
+New worktree:168 pure harness tests passed;40 artifact cases prepared (30 unchanged plus10 new),20 existing mail cases retained. New native cases NOT_RUN; no gateway startup or operational readiness claimed.
 
 
 ## ROLLBACK PLAN
-Disposable test runner only; no active Replit, provider, deployment or activation changes.
+No active deployment/configuration has changed. Disposable future test runner only; do not infer authority to revert live state.
 
 
 ## COMMIT OR SOURCE REFERENCE
-Parent bebf7227f2974610ab7411b95c09a99a0bf279ba; PR base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. Proposed worktree has no new commit identity. Public CI, third-party wheel staging and publication require new explicit authorization.
+Prepared parent 41b8368519399c037e3184870fd3224847af82f4; PR base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. The worktree has no new commit identity and is not externally published.

@@ -4,6 +4,8 @@ Private test keys live in memory only. Public fixtures never grant product,
 provider, issuer, deployment or execution authority. No live files are used.
 """
 import base64
+from contextlib import redirect_stdout, redirect_stderr
+import io
 import dataclasses
 import hashlib
 from pathlib import Path
@@ -14,6 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from security import runtime_artifact_provenance as p
 from security import runtime_artifact_authority as a
+from security.runtime_artifact_package import package_preissued_runtime_artifact, main as package_main
 from runtime_artifact_contract import CASE_NAMES, SCHEMA
 
 
@@ -197,6 +200,95 @@ class RuntimeArtifactCases(unittest.TestCase):
         authority = self.load()
         (self.root / 'extra.py').write_bytes(b'# synthetic\n')
         self.reject(authority.assert_fresh, 'runtime_artifact_unexpected_governed_file')
+
+
+    def preissued_package(self, output=None, **changes):
+        options = dict(raw_manifest=self.raw(), trust=self.trust,
+                       expected_source_commit='a'*40, expected_source_tree='b'*40)
+        options.update(changes)
+        return package_preissued_runtime_artifact(
+            self.root, output or self.base/'output', **options,
+        )
+
+    def test_preissued_package_without_git(self):
+        output = self.preissued_package()
+        self.assertFalse((output/'.git').exists())
+        self.assertEqual((output/'application.py').read_bytes(), self.file.read_bytes())
+        self.assertEqual((output/a.MANIFEST_NAME).read_bytes(), self.raw())
+        verified = a.load_runtime_artifact_authority(output, trust=self.trust)
+        self.assertEqual(verified.verified.source_commit, 'a'*40)
+        self.assertFalse(hasattr(verified, 'execution_authorized'))
+
+    def test_preissued_package_commit_conflict(self):
+        self.reject(lambda: self.preissued_package(expected_source_commit='d'*40), 'runtime_artifact_source_conflict')
+        self.assertFalse((self.base/'output').exists())
+
+    def test_preissued_package_tree_conflict(self):
+        self.reject(lambda: self.preissued_package(expected_source_tree='d'*40), 'runtime_artifact_source_conflict')
+        self.assertFalse((self.base/'output').exists())
+
+    def test_preissued_package_requires_expected_binding(self):
+        self.reject(lambda: self.preissued_package(expected_source_commit=None), 'runtime_artifact_package_source_binding_required')
+        self.assertFalse((self.base/'output').exists())
+
+    def test_preissued_package_preserves_existing_destination(self):
+        output = self.base/'output'
+        output.mkdir()
+        marker = output/'marker.txt'
+        marker.write_bytes(b'synthetic preserved marker')
+        self.reject(lambda: self.preissued_package(output), 'runtime_artifact_package_destination_exists')
+        self.assertEqual(marker.read_bytes(), b'synthetic preserved marker')
+        self.assertFalse((output/a.MANIFEST_NAME).exists())
+
+    def test_preissued_package_rejects_changed_source(self):
+        self.file.write_bytes(b'x'*self.file.stat().st_size)
+        self.reject(self.preissued_package, 'runtime_artifact_file_digest_mismatch')
+        self.assertFalse((self.base/'output').exists())
+
+    def test_preissued_package_rejects_invalid_signature(self):
+        self.manifest['signature'] = base64.b64encode(bytes(64)).decode()
+        self.reject(self.preissued_package, 'runtime_artifact_signature_invalid')
+        self.assertFalse((self.base/'output').exists())
+
+    def public_package_arguments(self):
+        manifest = self.base/'issued-public-manifest.json'
+        manifest.write_bytes(self.raw())
+        return ['--source',str(self.root),'--destination',str(self.base/'output'),
+                '--manifest-file',str(manifest),'--expected-source-commit','a'*40,
+                '--expected-source-tree','b'*40]
+
+    def public_trust_environment(self):
+        return {'USBAY_ENV':'test',
+                'USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY':base64.b64encode(self.public).decode(),
+                'USBAY_RUNTIME_ARTIFACT_PRODUCER_KEY_ID':self.trust.key_id,
+                'USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE':'test'}
+
+    def test_preissued_package_cli_public_inputs(self):
+        out, error = io.StringIO(), io.StringIO()
+        with patch.dict('os.environ',self.public_trust_environment(),clear=True), redirect_stdout(out), redirect_stderr(error):
+            result = package_main(self.public_package_arguments())
+        self.assertEqual(result,0)
+        self.assertEqual(out.getvalue(),'runtime_artifact_package_verified\n')
+        self.assertEqual(error.getvalue(),'')
+        self.assertEqual((self.base/'output/application.py').read_bytes(),self.file.read_bytes())
+
+    def test_preissued_package_cli_missing_trust(self):
+        out, error = io.StringIO(), io.StringIO()
+        with patch.dict('os.environ',{'USBAY_ENV':'test'},clear=True), redirect_stdout(out), redirect_stderr(error):
+            result = package_main(self.public_package_arguments())
+        self.assertEqual(result,1)
+        self.assertEqual(error.getvalue(),'runtime_artifact_package_failed\n')
+        self.assertEqual(out.getvalue(),'')
+        self.assertFalse((self.base/'output').exists())
+
+    def test_preissued_package_cli_rejects_private_key_argument(self):
+        out, error = io.StringIO(), io.StringIO()
+        with patch.dict('os.environ',self.public_trust_environment(),clear=True), redirect_stdout(out), redirect_stderr(error):
+            result = package_main(self.public_package_arguments()+['--signing-key-file','PRIVATE_CANARY'])
+        self.assertEqual(result,1)
+        self.assertEqual(error.getvalue(),'runtime_artifact_package_failed\n')
+        self.assertNotIn('PRIVATE_CANARY',out.getvalue()+error.getvalue())
+        self.assertFalse((self.base/'output').exists())
 
 
 class BoundedResult(unittest.TestResult):

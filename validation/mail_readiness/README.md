@@ -59,3 +59,40 @@ behavior remain outside this test scope.
 
 Publication, wheel acquisition and this native test execution require explicit
 batch authorization. Do not infer it from earlier control-only or mail-only runs.
+
+## Public-manifest packaging proposal (not yet native-tested)
+
+The next prepared phase adds ten fixed pre-issued-manifest packaging cases to
+`runtime_artifact_contract.CASE_NAMES` (40 artifact cases total). Existing 20
+mail cases and all 13 controls remain required. Dependency pins and native
+execution permissions are unchanged. The fixed export adds only
+`security/runtime_artifact_package.py`; the Git-based producer is not exported.
+
+`package_preissued_runtime_artifact` accepts an already signed public manifest,
+independently supplied public verifier trust, and explicit expected source commit
+and tree references. It verifies before creating output, copies only the declared
+bytes into a new destination, rechecks source bytes, writes the public manifest
+last and verifies the resulting package. It does not reconstruct Git history,
+issue a manifest, select a producer trust anchor or authorize execution.
+A failed copy can leave a partial destination; it is not automatically reused,
+replaced or deleted. Reuse of an existing destination is rejected.
+
+The proposed CLI accepts only `--source`, `--destination`, `--manifest-file`,
+`--expected-source-commit` and `--expected-source-tree`. Verifier configuration
+uses the existing public trust environment fields and explicit runtime mode.
+The former private-key-file CLI is removed in this unpublished candidate; the
+existing in-memory producer API is retained with its Git import deferred until
+that API is called. Any external use of the old CLI must be checked before
+migration; no active Replit configuration was changed.
+
+A future build handoff requires independently governed issuance of the public
+manifest and independent provisioning of verifier trust. The build must receive
+expected source references from a verified source binding, choose a fresh output
+root and ensure the actual runtime starts that exact package root. Packaging does
+not provide release, provider, deployment or activation authority. A signed source
+artifact does not replace the independent governance-release/startup checks.
+
+No build/run hook is installed by this proposal. Full gateway module imports,
+mutable-state directory mapping, scanner/provenance composition and live startup
+need a separately bounded validation. No gateway-startup result follows from
+these 40 artifact cases. Publication and the native round require explicit scope.

@@ -13,6 +13,16 @@ CASE_NAMES = (
     'test_freshness_manifest_mutation', 'test_forged_seal', 'test_future_timestamp',
     'test_malformed_manifest', 'test_production_ignores_git', 'test_result_immutable',
     'test_freshness_extra_file',
+    'test_preissued_package_without_git',
+    'test_preissued_package_commit_conflict',
+    'test_preissued_package_tree_conflict',
+    'test_preissued_package_requires_expected_binding',
+    'test_preissued_package_preserves_existing_destination',
+    'test_preissued_package_rejects_changed_source',
+    'test_preissued_package_rejects_invalid_signature',
+    'test_preissued_package_cli_public_inputs',
+    'test_preissued_package_cli_missing_trust',
+    'test_preissued_package_cli_rejects_private_key_argument',
 )
 
 
