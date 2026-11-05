@@ -29,6 +29,17 @@ _RESERVATION_GATES_LOCK = threading.Lock()
 _RESERVATION_GATES = {}
 
 
+def _reset_reservation_gates_after_fork():
+    """Drop process-local admission state; SQLite still fences other processes."""
+    global _RESERVATION_GATES_LOCK, _RESERVATION_GATES
+    _RESERVATION_GATES_LOCK = threading.Lock()
+    _RESERVATION_GATES = {}
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_reset_reservation_gates_after_fork)
+
+
 @contextmanager
 def _reservation_slot(path):
     """Reject local contention before opening SQLite; never wait or retry SQL."""
@@ -107,3 +118,4 @@ class IntentReplayStore:
                     connection.close()
         except (sqlite3.Error, OSError, ValueError) as exc:
             raise IntentStoreError("INTENT_STORE_UNAVAILABLE") from exc
+
