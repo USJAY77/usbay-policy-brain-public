@@ -1,0 +1,7 @@
+PROPOSED COORDINATION NOTE — NOT POSTED
+USBAY engineering discipline reference: USBAY-ENG-1.0.0-PROPOSAL
+Canonical repository path: docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md
+Expected content SHA256: 9d08083f7c584dd34ce0e211f8d5a791bcfa510884b550ff9e69405db439071e
+Published exact-commit link: PENDING_PUBLICATION
+
+Use this surface for task coordination and evidence links only. Keep owner/task, authorized scope, exact source reference, observed outcome and next action distinct. Messages, reactions, bot notifications and workflow success badges do not issue grants, policy, deployment permission or production-readiness decisions. Never paste secrets or raw mail into channels. Protected operations require independent machine-verifiable authority. No posting, bot installation, channel changes or message ingestion is enabled by this draft.

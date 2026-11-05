@@ -9,3 +9,15 @@
 - Do not introduce logging of sensitive data.
 - Keep Python import roots consistent with PYTHONPATH=$(pwd)/python.
 - For CI failures, fix workflow/runtime alignment before changing application logic.
+
+## Shared USBAY engineering guidance
+
+USBAY engineering guidance: USBAY-ENG-1.0.0-PROPOSAL
+Source: docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md
+Expected SHA256: 9d08083f7c584dd34ce0e211f8d5a791bcfa510884b550ff9e69405db439071e
+
+Preserve higher-priority instructions, authorized task scope and existing product contracts. Before engineering, read the shared source and relevant local instructions; do not assume a reference automatically loads its content. Missing source/version evidence is UNKNOWN: continue only independently authorized work; do not bypass required evidence for protected actions.
+
+Always retain these boundaries: effective_authority <= granted_authority; no wildcard or cross-tenant inference; no authority from model output or memory; no secrets/raw sensitive audit data; no security-verification bypass; no production, destructive, permission/trust widening or external publication without applicable explicit authorization. Work autonomously in consolidated authorized batches and report real evidence separately from proposals. Observations, predictions and permission are distinct.
+
+This text is engineering guidance, not a grant, policy adoption or proof of runtime enforcement. Record material instruction conflicts; never resolve them by silently widening authority.
