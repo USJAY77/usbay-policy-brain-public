@@ -13,10 +13,11 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from result_contract import controls_pass
+from result_contract import controls_pass, failure_summary
 
 PYTHON = str(Path(sys.executable).resolve())
 GIT = '/usr/bin/git'
+SETUP_STAGE = 'NAMESPACE_LAUNCH'
 CONTROLLER_SOURCE_SHA256 = '16890c0ad83f6d124e6a9d63f7350aa7d615f1bfa2d4bfc0965508725bf0746c'
 
 def kernel_restrictions():
@@ -65,6 +66,7 @@ def kernel_restrictions():
 
 
 def inside(temporary):
+    global SETUP_STAGE
     base = Path(temporary).resolve(strict=True)
     root = base / 'root'
     if not PYTHON.startswith('/usr/') or os.uname().machine != 'x86_64':
@@ -72,17 +74,22 @@ def inside(temporary):
     def mount(*args):
         subprocess.run(['/usr/bin/mount', *map(str, args)], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=10)
+    SETUP_STAGE = 'MOUNT_NAMESPACE_PRIVATE'
     mount('--make-rprivate', '/')
+    SETUP_STAGE = 'RUNTIME_BIND'
     for host in ('/usr', '/lib', '/lib64'):
         if not Path(host).exists():
             continue
         target = root / host.lstrip('/')
         mount('--bind', host, target)
         mount('-o', 'remount,bind,ro,nosuid,nodev', target)
+    SETUP_STAGE = 'SOURCE_BIND'
     mount('--bind', base / 'source', root / 'source')
     mount('-o', 'remount,bind,ro,nosuid,nodev', root / 'source')
+    SETUP_STAGE = 'DEVICE_BIND'
     for name in ('null', 'urandom'):
         mount('--bind', '/dev/' + name, root / 'dev' / name)
+    SETUP_STAGE = 'CHROOT'
     os.chdir(root)
     os.chroot('.')
     os.chdir('/source')
@@ -90,6 +97,7 @@ def inside(temporary):
     os.close(0)
     if os.open('/dev/null', os.O_RDONLY) != 0:
         raise RuntimeError('STDIN_SANITIZATION_FAILED')
+    SETUP_STAGE = 'DROP_CAPABILITIES'
     libc = ctypes.CDLL(None, use_errno=True)
     for cap in range(41):
         if libc.prctl(24, cap, 0, 0, 0):
@@ -100,6 +108,7 @@ def inside(temporary):
         _fields_ = [('effective', ctypes.c_uint), ('permitted', ctypes.c_uint), ('inheritable', ctypes.c_uint)]
     if libc.capset(ctypes.byref(Header(0x20080522, 0)), ctypes.byref((Data * 2)())):
         raise RuntimeError('DROP_CAPABILITIES_FAILED')
+    SETUP_STAGE = 'KERNEL_RESTRICTIONS'
     abi = kernel_restrictions()
     os.environ.clear()
     os.environ.update(PATH='/usr/bin', HOME='/tmp', TMPDIR='/tmp',
@@ -135,6 +144,7 @@ print(json.dumps(controls, sort_keys=True))
 """
     if not Path('/usr/bin/dash').is_file():
         raise RuntimeError('NEGATIVE_EXECUTABLE_NOT_PRESENT')
+    SETUP_STAGE = 'FRESH_CHILD_CONTROLS'
     child = subprocess.run([PYTHON, '-I', '-B', '-c', probe, str(base / 'outside-canary')],
                            capture_output=True, text=True, timeout=15, check=True)
     controls = json.loads(child.stdout)
@@ -152,7 +162,7 @@ def main():
             inside(args.inside)
             return 0
         except BaseException as error:
-            print(json.dumps({'error': type(error).__name__, 'errno': getattr(error, 'errno', None)}))
+            print(json.dumps({'stage':SETUP_STAGE, 'error': type(error).__name__, 'errno': getattr(error, 'errno', None)}))
             return 2
     if args.output is None:
         parser.error('--output is required')
@@ -192,6 +202,7 @@ def main():
             report['child_exit'] = child.returncode
             if child.returncode != 0:
                 report['reason'] = 'ISOLATION_SETUP_OR_CHILD_FAILED'
+                report['failure'] = failure_summary(child.stdout, child.stderr)
             else:
                 payload = json.loads(child.stdout)
                 report['controls'] = payload.get('controls')

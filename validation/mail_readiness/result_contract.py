@@ -47,3 +47,35 @@ def suite_pass(expected, groups, controller_exit):
             return False
         seen.update(ids)
     return seen == wanted
+
+
+FAILURE_STAGES = frozenset({'NAMESPACE_LAUNCH', 'MOUNT_NAMESPACE_PRIVATE',
+    'RUNTIME_BIND', 'SOURCE_BIND', 'DEVICE_BIND', 'CHROOT', 'DROP_CAPABILITIES',
+    'KERNEL_RESTRICTIONS', 'FRESH_CHILD_CONTROLS'})
+FAILURE_TYPES = frozenset({'PermissionError', 'OSError', 'RuntimeError',
+                          'CalledProcessError', 'TimeoutExpired'})
+ERROR_CATEGORIES = ('Operation not permitted', 'Permission denied',
+                    'No such file or directory', 'Read-only file system',
+                    'unshare failed', 'write failed')
+
+
+def failure_summary(stdout, stderr):
+    import json
+    payload = {}
+    if type(stdout) is str and len(stdout) <= 16384:
+        try:
+            decoded = json.loads(stdout)
+            if type(decoded) is dict:
+                payload = decoded
+        except (ValueError, TypeError):
+            pass
+    stage = payload.get('stage')
+    error = payload.get('error')
+    code = payload.get('errno')
+    safe_stderr = stderr[:16384] if type(stderr) is str else ''
+    return {
+        'stage': stage if type(stage) is str and stage in FAILURE_STAGES else 'UNKNOWN',
+        'error_type': error if type(error) is str and error in FAILURE_TYPES else 'UNKNOWN',
+        'errno': code if type(code) is int else None,
+        'stderr_categories': [item for item in ERROR_CATEGORIES if item in safe_stderr],
+    }

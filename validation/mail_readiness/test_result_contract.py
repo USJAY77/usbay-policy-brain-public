@@ -1,7 +1,7 @@
 import copy
 import unittest
 
-from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass
+from result_contract import REQUIRED_CONTROLS, controls_pass, suite_pass, failure_summary
 
 
 class ResultContractTests(unittest.TestCase):
@@ -68,6 +68,28 @@ class ResultContractTests(unittest.TestCase):
 
     def test_unknown_inventory_fails(self):
         self.assertFalse(suite_pass([], [], 0))
+
+
+class FailureSummaryTests(unittest.TestCase):
+    def test_known_stage_and_errno_are_preserved(self):
+        result = failure_summary('{"stage":"KERNEL_RESTRICTIONS","error":"OSError","errno":38}', '')
+        self.assertEqual(result['stage'], 'KERNEL_RESTRICTIONS')
+        self.assertEqual(result['errno'], 38)
+
+    def test_raw_canary_and_unknown_fields_are_not_emitted(self):
+        result = failure_summary('{"stage":"PRIVATE_CANARY","error":"PRIVATE_CANARY","errno":true,"raw":"PRIVATE_CANARY"}', 'PRIVATE_CANARY Permission denied')
+        self.assertNotIn('PRIVATE_CANARY', str(result))
+        self.assertIsNone(result['errno'])
+        self.assertEqual(result['stderr_categories'], ['Permission denied'])
+
+    def test_namespace_launch_error_categories_are_bounded(self):
+        result = failure_summary('', 'unshare failed: Operation not permitted; PRIVATE_CANARY')
+        self.assertEqual(result['stage'], 'UNKNOWN')
+        self.assertEqual(result['stderr_categories'], ['Operation not permitted', 'unshare failed'])
+
+    def test_malformed_and_oversized_output_remains_unknown(self):
+        self.assertEqual(failure_summary('not-json', None)['stage'], 'UNKNOWN')
+        self.assertEqual(failure_summary('x' * 16385, None)['stage'], 'UNKNOWN')
 
 
 if __name__ == '__main__':
