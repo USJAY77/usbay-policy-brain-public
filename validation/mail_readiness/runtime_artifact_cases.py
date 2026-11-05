@@ -135,14 +135,16 @@ class RuntimeArtifactCases(unittest.TestCase):
 
     def test_file_symlink(self):
         target = self.base / 'other.py'
-        self.file.rename(target)
+        target.write_bytes(self.file.read_bytes())
+        self.file.unlink()
         self.file.symlink_to(target)
         self.reject(self.verify, 'runtime_artifact_file_unavailable')
 
     def test_parent_symlink(self):
         directory = self.base / 'other'
         directory.mkdir()
-        self.file.rename(directory / 'application.py')
+        (directory / 'application.py').write_bytes(self.file.read_bytes())
+        self.file.unlink()
         (self.root / 'linked').symlink_to(directory, target_is_directory=True)
         self.manifest['managed_files'][0]['path'] = 'linked/application.py'
         self.manifest['managed_set_hash'] = hashlib.sha256(p.canonical_bytes(self.manifest['managed_files'])).hexdigest()

@@ -253,3 +253,35 @@ class IntegrationBoundaryTests(unittest.TestCase):
         keywords={k.arg:ast.unparse(k.value) for k in calls[0].keywords}
         self.assertEqual(keywords['stdout'],'subprocess.DEVNULL')
         self.assertEqual(keywords['stderr'],'subprocess.DEVNULL')
+
+
+class SymlinkFixtureConstructionTests(unittest.TestCase):
+    def test_symlink_fixtures_require_no_cross_directory_rename(self):
+        # Execute only inert path-construction prefixes: no product or crypto imports,
+        # no signature creation, verification, native filter or privileged operation.
+        from types import SimpleNamespace
+        tree=ast.parse(Path(__file__).with_name('runtime_artifact_cases.py').read_bytes())
+        cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='RuntimeArtifactCases')
+        for name in ['test_file_symlink','test_parent_symlink']:
+            method=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name==name)
+            calls=[n for n in ast.walk(method) if isinstance(n,ast.Call) and isinstance(n.func,ast.Attribute)]
+            self.assertFalse(any(n.func.attr in {'rename','replace','link_to','hardlink_to'} for n in calls))
+            prefix=[]
+            for node in method.body:
+                if (isinstance(node,ast.Expr) and isinstance(node.value,ast.Call)
+                        and isinstance(node.value.func,ast.Attribute) and node.value.func.attr=='reject'):
+                    break
+                if isinstance(node,ast.Assign) and any(isinstance(n,ast.Attribute) and n.attr=='manifest'
+                                                       for n in ast.walk(node.targets[0])):
+                    break
+                prefix.append(node)
+            with tempfile.TemporaryDirectory(prefix='inert-symlink-fixture-') as temporary:
+                base=Path(temporary);root=base/'package';root.mkdir()
+                file=root/'application.py';raw=b'# inert fixture bytes\n';file.write_bytes(raw)
+                fixture=SimpleNamespace(base=base,root=root,file=file)
+                exec(compile(ast.Module(body=prefix,type_ignores=[]),'<inert-fixture-prefix>','exec'),{'self':fixture})
+                link=file if name=='test_file_symlink' else root/'linked'
+                target=file if name=='test_file_symlink' else root/'linked/application.py'
+                self.assertTrue(link.is_symlink())
+                self.assertEqual(target.read_bytes(),raw)
+                self.assertFalse(any(n.split('.')[0] in {'security','cryptography','cffi','runtime_artifact_cases'} for n in sys.modules))
