@@ -149,7 +149,7 @@ def verified_source(repository, head, uid, gid):
     actual = subprocess.check_output(git + ['rev-parse', 'HEAD'], cwd=repository, env=env, stderr=subprocess.DEVNULL, timeout=5).decode('ascii').strip()
     if actual != head:
         raise RuntimeError('SOURCE_HEAD_MISMATCH')
-    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py'):
+    for name in ('runner_bootstrap.py', 'isolation_preflight.py', 'result_contract.py', 'gidmap_guard.py', 'execution_boundary.py'):
         relative = 'validation/mail_readiness/' + name
         path = repository / relative
         st = path.lstat()
@@ -185,7 +185,7 @@ def launcher_diagnostics(stdout, stderr, exit_code):
                 child = value
         except (ValueError, UnicodeError):
             pass
-    stages = {'SOURCE_OWNER_BINDING','NAMESPACE_IDENTITY','MOUNT_NAMESPACE_PRIVATE','RUNTIME_BIND',
+    stages = {'RUNTIME_BINDING','SOURCE_OWNER_BINDING','NAMESPACE_IDENTITY','MOUNT_NAMESPACE_PRIVATE','RUNTIME_BIND',
               'SOURCE_BIND','DEVICE_BIND','CHROOT','DROP_CAPABILITIES','KERNEL_RESTRICTIONS','FRESH_CHILD_CONTROLS'}
     types = {'PermissionError','OSError','RuntimeError','CalledProcessError','TimeoutExpired'}
     return {'stage':child.get('stage') if type(child.get('stage')) is str and child['stage'] in stages else 'NAMESPACE_LAUNCH',

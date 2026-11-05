@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from execution_boundary import executable_binding, runtime_binding_pass, fresh_exec_gate_pass, runtime_alias_target
 from result_contract import controls_pass, failure_summary, namespace_launch_prefix, namespace_mapping_args, supported_unshare_version, namespace_identity_pass, fresh_identity_pass
 
 PYTHON = str(Path(sys.executable).resolve())
@@ -20,7 +21,7 @@ GIT = '/usr/bin/git'
 SETUP_STAGE = 'NAMESPACE_LAUNCH'
 CONTROLLER_SOURCE_SHA256 = '16890c0ad83f6d124e6a9d63f7350aa7d615f1bfa2d4bfc0965508725bf0746c'
 
-def kernel_restrictions():
+def kernel_restrictions(loader):
     libc = ctypes.CDLL(None, use_errno=True)
     libc.syscall.restype = ctypes.c_long
 
@@ -35,7 +36,7 @@ def kernel_restrictions():
     attr = ctypes.create_string_buffer(struct.pack('=Q', 1))
     fd = call(444, ctypes.byref(attr), 8, 0)
     try:
-        for executable in (PYTHON, GIT):
+        for executable in (PYTHON, loader):
             parent = os.open(executable, os.O_PATH | os.O_CLOEXEC)
             try:
                 rule = ctypes.create_string_buffer(struct.pack('=Qi', 1, parent))
@@ -86,6 +87,9 @@ def inside(temporary, host_uid, host_gid):
     base = Path(temporary).resolve(strict=True)
     if base.stat().st_uid != os.geteuid() or base.stat().st_gid != os.getegid() or os.geteuid() != 0:
         raise RuntimeError('SOURCE_OWNER_BINDING_MISMATCH')
+    SETUP_STAGE = 'RUNTIME_BINDING'
+    expected_runtime = json.loads((base / 'runtime-binding.json').read_bytes())
+    execution_source = Path(__file__).with_name('execution_boundary.py').read_text()
     root = base / 'root'
     if not PYTHON.startswith('/usr/') or os.uname().machine != 'x86_64':
         raise RuntimeError('UNSUPPORTED_RUNTIME_LAYOUT')
@@ -99,6 +103,11 @@ def inside(temporary, host_uid, host_gid):
         if not Path(host).exists():
             continue
         target = root / host.lstrip('/')
+        if Path(host).is_symlink():
+            alias = runtime_alias_target(host,os.readlink(host))
+            target.rmdir()
+            target.symlink_to(alias)
+            continue
         mount('--bind', host, target)
         mount('-o', 'remount,bind,ro,nosuid,nodev', target)
     SETUP_STAGE = 'SOURCE_BIND'
@@ -115,6 +124,11 @@ def inside(temporary, host_uid, host_gid):
     os.close(0)
     if os.open('/dev/null', os.O_RDONLY) != 0:
         raise RuntimeError('STDIN_SANITIZATION_FAILED')
+    SETUP_STAGE = 'RUNTIME_BINDING'
+    observed_runtime = executable_binding(PYTHON, host_owner=False)
+    if not runtime_binding_pass(expected_runtime, observed_runtime):
+        raise RuntimeError('RUNTIME_BINDING_MISMATCH')
+    loader = observed_runtime['loader']['path']
     SETUP_STAGE = 'DROP_CAPABILITIES'
     libc = ctypes.CDLL(None, use_errno=True)
     for cap in range(41):
@@ -127,12 +141,13 @@ def inside(temporary, host_uid, host_gid):
     if libc.capset(ctypes.byref(Header(0x20080522, 0)), ctypes.byref((Data * 2)())):
         raise RuntimeError('DROP_CAPABILITIES_FAILED')
     SETUP_STAGE = 'KERNEL_RESTRICTIONS'
-    abi = kernel_restrictions()
+    abi = kernel_restrictions(loader)
     os.environ.clear()
     os.environ.update(PATH='/usr/bin', HOME='/tmp', TMPDIR='/tmp',
                       PYTHONDONTWRITEBYTECODE='1', PYTHONNOUSERSITE='1')
     probe = r"""
 import ctypes, errno, json, os, pathlib, socket, subprocess, sys
+fresh_exec_gate = install_no_exec()
 controls = {}
 def denied(name, operation, allowed_errors):
     try:
@@ -153,6 +168,15 @@ denied('host_file_read_denied', lambda: open(sys.argv[1], 'rb'), access_denied |
 denied('host_process_metadata_denied', lambda: open('/proc/1/environ', 'rb'), access_denied | {errno.ENOENT})
 denied('network_denied', lambda: socket.socket(), {errno.EPERM, errno.EACCES})
 denied('shell_exec_denied', lambda: subprocess.run(['/usr/bin/dash', '-c', 'exit 0'], check=True), {errno.EPERM, errno.EACCES})
+denied('loader_shell_exec_denied', lambda: subprocess.run([sys.argv[2], '/usr/bin/dash', '-c', 'exit 0'], check=True), {errno.EPERM})
+libc = ctypes.CDLL(None,use_errno=True)
+libc.syscall.restype = ctypes.c_long
+argv = (ctypes.c_char_p * 4)(b'/usr/bin/dash', b'-c', b'exit 0', None)
+envp = (ctypes.c_char_p * 1)(None)
+ctypes.set_errno(0)
+controls['execve_denied'] = libc.syscall(59, ctypes.c_char_p(b'/usr/bin/dash'), argv, envp) == -1 and ctypes.get_errno() == errno.EPERM
+ctypes.set_errno(0)
+controls['execveat_denied'] = libc.syscall(322, ctypes.c_long(-100), ctypes.c_char_p(b'/usr/bin/dash'), argv, envp, 0) == -1 and ctypes.get_errno() == errno.EPERM
 denied('chroot_denied', lambda: os.chroot('/'), {errno.EPERM, errno.EACCES})
 libc = ctypes.CDLL(None, use_errno=True)
 controls['namespace_escape_denied'] = libc.unshare(0x20000) == -1
@@ -166,16 +190,17 @@ else:
     setgroups_denied = False
 fresh_identity = {'uids':list(os.getresuid()), 'gids':list(os.getresgid()),
                   'groups':os.getgroups(), 'setgroups_denied':setgroups_denied}
-print(json.dumps({'controls':controls, 'fresh_identity':fresh_identity}, sort_keys=True))
+print(json.dumps({'controls':controls, 'fresh_identity':fresh_identity, 'fresh_exec_gate':fresh_exec_gate}, sort_keys=True))
 """
     if not Path('/usr/bin/dash').is_file():
         raise RuntimeError('NEGATIVE_EXECUTABLE_NOT_PRESENT')
     SETUP_STAGE = 'FRESH_CHILD_CONTROLS'
-    child = subprocess.run([PYTHON, '-I', '-B', '-c', probe, str(base / 'outside-canary')],
+    child = subprocess.run([PYTHON, '-I', '-B', '-c', execution_source + '\n' + probe, str(base / 'outside-canary'), loader],
                            capture_output=True, text=True, timeout=15, check=True)
     payload = json.loads(child.stdout)
     print(json.dumps({'controls': payload['controls'], 'landlock_abi': abi,
-                      'namespace_identity':identity, 'fresh_identity':payload['fresh_identity']}, sort_keys=True))
+                      'namespace_identity':identity, 'fresh_identity':payload['fresh_identity'],
+                      'runtime_binding':observed_runtime, 'fresh_exec_gate':payload['fresh_exec_gate']}, sort_keys=True))
 
 
 def main():
@@ -196,7 +221,7 @@ def main():
             return 2
     if args.output is None:
         parser.error('--output is required')
-    report = {'schema':'usbay.synthetic_isolation_preflight.v1', 'status':'FAILED',
+    report = {'schema':'usbay.synthetic_isolation_preflight.v2', 'status':'FAILED',
               'application_tests_run':False, 'application_execution_enabled':False,
               'production_ready':False, 'source_verified':False,
               'controller_source_sha256':CONTROLLER_SOURCE_SHA256,
@@ -214,6 +239,8 @@ def main():
         if actual != args.expected_head:
             raise RuntimeError('SOURCE_HEAD_MISMATCH')
         report.update(source_verified=True, head=actual)
+        expected_runtime = executable_binding(PYTHON, host_owner=True)
+        report['runtime_binding'] = expected_runtime
         if os.uname().machine != 'x86_64':
             raise RuntimeError('UNSUPPORTED_ARCHITECTURE')
         owner_uid, owner_gid = os.geteuid(), os.getegid()
@@ -230,6 +257,8 @@ def main():
             for relative in ('root/usr', 'root/lib', 'root/lib64', 'root/source',
                              'root/tmp', 'root/proc', 'root/dev', 'source'):
                 (base / relative).mkdir(parents=True)
+            (base / 'runtime-binding.json').write_text(json.dumps(expected_runtime, sort_keys=True))
+            (base / 'runtime-binding.json').chmod(0o600)
             (base / 'source/synthetic.py').write_text('# Synthetic source canary.\n')
             (base / 'outside-canary').write_bytes(b'synthetic-only')
             for device in ('null', 'urandom'):
@@ -253,10 +282,14 @@ def main():
                 payload = json.loads(child.stdout)
                 report['controls'] = payload.get('controls')
                 report['landlock_abi'] = payload.get('landlock_abi')
+                report['fresh_exec_gate'] = payload.get('fresh_exec_gate')
+                report['runtime_binding_verified'] = runtime_binding_pass(expected_runtime, payload.get('runtime_binding'))
                 report['namespace_identity'] = payload.get('namespace_identity')
                 report['fresh_identity'] = payload.get('fresh_identity')
                 report['mapping_policy_restored'] = payload.get('mapping_policy_restored', False)
                 if (controls_pass(report['controls'])
+                        and fresh_exec_gate_pass(report['fresh_exec_gate'])
+                        and report['runtime_binding_verified'] is True
                         and namespace_identity_pass(report['namespace_identity'], owner_uid, owner_gid)
                         and fresh_identity_pass(report['fresh_identity'])
                         and report['mapping_policy_restored'] is True):

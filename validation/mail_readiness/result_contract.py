@@ -3,6 +3,7 @@ REQUIRED_CONTROLS = frozenset({
     'source_read_allowed', 'source_write_denied', 'runtime_write_denied', 'host_file_read_denied',
     'host_process_metadata_denied', 'network_denied', 'shell_exec_denied',
     'chroot_denied', 'namespace_escape_denied', 'scratch_write_allowed',
+    'execve_denied', 'execveat_denied', 'loader_shell_exec_denied',
 })
 
 
@@ -49,7 +50,7 @@ def suite_pass(expected, groups, controller_exit):
     return seen == wanted
 
 
-FAILURE_STAGES = frozenset({'EPHEMERAL_MAPPING_BOOTSTRAP', 'NAMESPACE_IDENTITY', 'SOURCE_OWNER_BINDING', 'NAMESPACE_LAUNCH', 'MOUNT_NAMESPACE_PRIVATE',
+FAILURE_STAGES = frozenset({'EPHEMERAL_MAPPING_BOOTSTRAP', 'RUNTIME_BINDING', 'NAMESPACE_IDENTITY', 'SOURCE_OWNER_BINDING', 'NAMESPACE_LAUNCH', 'MOUNT_NAMESPACE_PRIVATE',
     'RUNTIME_BIND', 'SOURCE_BIND', 'DEVICE_BIND', 'CHROOT', 'DROP_CAPABILITIES',
     'KERNEL_RESTRICTIONS', 'FRESH_CHILD_CONTROLS'})
 FAILURE_TYPES = frozenset({'PermissionError', 'OSError', 'RuntimeError',
