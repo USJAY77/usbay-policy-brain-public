@@ -44,6 +44,11 @@ It includes the existing exact V2 context bindings; source and package public
 keys; explicit source verifier mode/scope; public TSA roots; evaluation time;
 and bounded source/token/CRL freshness, skew and accuracy limits.
 
+Both source-verification passes use the same explicit evaluation time and
+clock-skew bound (0–60 seconds). Other source-verifier callers retain the
+wall-clock default with zero future tolerance; nonzero skew requires an explicit
+evaluation time. Observation parameters establish no operational clock or authority.
+
 The exact `reference` schema is `usbay.preissued_export_reference.v1`: repository,
 positive-decimal run/artifact IDs, tenant, source commit/tree, expected V2 manifest
 SHA256 and expected source-manifest SHA256. These are selection/pinning inputs,

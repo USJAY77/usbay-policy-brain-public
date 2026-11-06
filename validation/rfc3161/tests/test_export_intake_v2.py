@@ -1,5 +1,6 @@
 """Local intake integration with genuine signed, explicitly synthetic fixtures."""
 from dataclasses import asdict, FrozenInstanceError
+from datetime import datetime, timezone
 import base64
 import concurrent.futures
 import json
@@ -94,6 +95,68 @@ class ExportIntakeTests(unittest.TestCase):
         self.assertIn('ADOPTED_SOURCE_PRODUCER_TRUST', result.remaining_requirements)
         self.assertIn('AUDIT_LEDGER_RELEASE_WORM_SEMANTIC_VERIFICATION', result.package.remaining_requirements)
         with self.assertRaises(FrozenInstanceError): result.source_commit = '0'*40
+
+    def verify_source(self, **policy):
+        public = self.source_key.public_key().public_bytes_raw()
+        return source_contract.verify_runtime_artifact(
+            (self.source/intake.SOURCE_MANIFEST).read_bytes(), self.source,
+            source_contract.ProducerTrust(public, source_contract.public_key_id(public), 'test', 'test'),
+            **policy)
+
+    def test_source_beyond_profile_skew_rejected(self):
+        self.profile['clock_skew_seconds'] = 1
+        self.source_manifest['created_at'] = '2026-11-06T12:00:07Z'
+        self.sign_source(); self.reject('INTAKE_SOURCE_FRESHNESS_INVALID')
+
+    def test_source_explicit_time_does_not_read_wall_clock(self):
+        with patch.object(source_contract, 'datetime', wraps=datetime) as clock:
+            clock.now.side_effect = AssertionError('Unexpected ambient clock')
+            self.check()
+            clock.now.assert_not_called()
+
+    def test_source_default_still_rejects_future(self):
+        self.source_manifest['created_at'] = '2026-11-06T12:00:01Z'
+        self.sign_source()
+        with patch.object(source_contract, 'datetime', wraps=datetime) as clock:
+            clock.now.return_value = datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc)
+            with self.assertRaisesRegex(source_contract.RuntimeArtifactError, '^runtime_artifact_timestamp_invalid$'):
+                self.verify_source()
+
+    def test_source_default_accepts_present(self):
+        with patch.object(source_contract, 'datetime', wraps=datetime) as clock:
+            clock.now.return_value = datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc)
+            self.verify_source()
+
+    def test_source_explicit_zero_skew_rejects_future(self):
+        with self.assertRaisesRegex(source_contract.RuntimeArtifactError, '^runtime_artifact_timestamp_invalid$'):
+            self.verify_source(evaluation_time='2026-11-06T11:59:59Z')
+
+    def test_source_explicit_skew_boundary(self):
+        self.verify_source(evaluation_time='2026-11-06T11:59:00Z', clock_skew_seconds=60)
+        with self.assertRaisesRegex(source_contract.RuntimeArtifactError, '^runtime_artifact_timestamp_invalid$'):
+            self.verify_source(evaluation_time='2026-11-06T11:58:59Z', clock_skew_seconds=60)
+
+    def test_source_invalid_time_policy_fails_closed(self):
+        cases = [{'clock_skew_seconds': 1},
+                 *({'evaluation_time': '2026-11-06T12:00:05Z', 'clock_skew_seconds': value}
+                   for value in (True, -1, 61, 1.0, '1', None)),
+                 *({'evaluation_time': value} for value in (
+                     True, '', '2026-11-06T12:00:05+00:00', '2026-1-06T12:00:05Z',
+                     '2026-11-06T12:00:05.1Z', '9999-12-31T23:59:60Z')),
+                 {'evaluation_time': '9999-12-31T23:59:59Z', 'clock_skew_seconds': 1}]
+        for policy in cases:
+            with self.subTest(policy=policy):
+                with self.assertRaisesRegex(source_contract.RuntimeArtifactError, '^runtime_artifact_time_policy_invalid$'):
+                    self.verify_source(**policy)
+
+    def test_source_within_profile_skew_uses_evaluation_time_on_both_checks(self):
+        self.profile['clock_skew_seconds'] = 1
+        self.source_manifest['created_at'] = '2026-11-06T12:00:06Z'
+        self.sign_source()
+        with patch.object(source_contract, 'datetime', wraps=datetime) as clock:
+            clock.now.return_value = datetime(2026, 11, 6, 12, 0, 0, tzinfo=timezone.utc)
+            result = self.check()
+        self.assertEqual(result.source_file_count, 1)
 
     def test_positive_observation_does_not_enable_operational_export(self):
         self.check()

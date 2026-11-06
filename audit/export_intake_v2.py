@@ -232,7 +232,8 @@ def inspect_preissued_export_v2(inputs, *, verifier_inputs):
                  'INTAKE_SOURCE_REFERENCE_MISMATCH')
         try:
             source = verify_runtime_artifact(raw_source, root/'source', source_verifier,
-                expected_source_commit=bindings['source_commit'], expected_source_tree=bindings['source_tree'])
+                expected_source_commit=bindings['source_commit'], expected_source_tree=bindings['source_tree'],
+                evaluation_time=profile['evaluation_time'], clock_skew_seconds=profile['clock_skew_seconds'])
         except Exception:
             raise ExportIntakeError('INTAKE_SOURCE_VERIFICATION_FAILED') from None
         try:
@@ -246,7 +247,8 @@ def inspect_preissued_export_v2(inputs, *, verifier_inputs):
             raise ExportIntakeError('INTAKE_PACKAGE_VERIFICATION_FAILED') from None
         # Revalidate the complete local inputs after genuine native verification.
         again = verify_runtime_artifact(raw_source, root/'source', source_verifier,
-            expected_source_commit=bindings['source_commit'], expected_source_tree=bindings['source_tree'])
+            expected_source_commit=bindings['source_commit'], expected_source_tree=bindings['source_tree'],
+            evaluation_time=profile['evaluation_time'], clock_skew_seconds=profile['clock_skew_seconds'])
         _require(again == source, 'INTAKE_INPUT_CHANGED')
         _require(read_regular(root/'source', SOURCE_MANIFEST, MAX_SOURCE_FILE) == raw_source
                  and read_regular(root, 'input_reference.json', 4096) == raw_ref, 'INTAKE_INPUT_CHANGED')

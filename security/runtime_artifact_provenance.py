@@ -12,7 +12,7 @@ import os
 import re
 import stat
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Mapping
 
@@ -310,7 +310,26 @@ def verify_runtime_artifact(
     *,
     expected_source_commit: str | None = None,
     expected_source_tree: str | None = None,
+    evaluation_time: str | None = None,
+    clock_skew_seconds: int = 0,
 ) -> VerifiedRuntimeArtifact:
+    # Observation time is not an operational clock source or authority.
+    # Default callers retain wall-clock validation with zero future tolerance.
+    if (type(clock_skew_seconds) is not int or not 0 <= clock_skew_seconds <= 60
+            or (evaluation_time is None and clock_skew_seconds != 0)):
+        raise RuntimeArtifactError("runtime_artifact_time_policy_invalid")
+    try:
+        if evaluation_time is None:
+            at = datetime.now(timezone.utc)
+        else:
+            if type(evaluation_time) is not str:
+                raise ValueError
+            at = datetime.strptime(evaluation_time, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+            if at.strftime("%Y-%m-%dT%H:%M:%SZ") != evaluation_time:
+                raise ValueError
+        latest = at + timedelta(seconds=clock_skew_seconds)
+    except (TypeError, ValueError, OverflowError):
+        raise RuntimeArtifactError("runtime_artifact_time_policy_invalid") from None
     manifest = _parse_manifest(raw)
     key_id = manifest["producer_key_id"]
     if not isinstance(key_id, str) or not _KEY_ID.fullmatch(key_id):
@@ -350,7 +369,7 @@ def verify_runtime_artifact(
     try:
         timestamp = manifest["created_at"]
         parsed = datetime.strptime(timestamp, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != timestamp or parsed > datetime.now(timezone.utc):
+        if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != timestamp or parsed > latest:
             raise ValueError
     except (TypeError, ValueError):
         raise RuntimeArtifactError("runtime_artifact_timestamp_invalid") from None
