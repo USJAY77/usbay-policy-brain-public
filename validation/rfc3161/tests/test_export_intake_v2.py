@@ -195,6 +195,14 @@ class ExportIntakeTests(unittest.TestCase):
     def test_unbounded_freshness_profile(self):
         self.profile['max_source_age_seconds'] = 86401; self.reject('INTAKE_PROFILE_INVALID')
 
+    def test_native_time_profile_bounds(self):
+        self.profile['clock_skew_seconds'] = self.profile['maximum_accuracy_seconds'] = 60
+        self.check()
+        for name in ('clock_skew_seconds', 'maximum_accuracy_seconds'):
+            self.profile[name] = 61
+            self.reject('INTAKE_PROFILE_INVALID')
+            self.profile[name] = 60
+
     def test_unknown_top_level_input(self):
         (self.inputs/'extra.json').write_bytes(b'{}'); self.reject('INTAKE_INVENTORY_INVALID')
 

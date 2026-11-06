@@ -117,7 +117,7 @@ def _profile(value):
     for name in ('max_source_age_seconds', 'max_age_seconds', 'max_crl_age_seconds'):
         _require(type(checked[name]) is int and 1 <= checked[name] <= 86400, 'INTAKE_PROFILE_INVALID')
     for name, minimum in (('clock_skew_seconds', 0), ('maximum_accuracy_seconds', 1)):
-        _require(type(checked[name]) is int and minimum <= checked[name] <= 3600, 'INTAKE_PROFILE_INVALID')
+        _require(type(checked[name]) is int and minimum <= checked[name] <= 60, 'INTAKE_PROFILE_INVALID')
     return checked, bindings, trust, _utc(checked['evaluation_time'])
 
 
