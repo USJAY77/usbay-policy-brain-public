@@ -85,6 +85,62 @@ class StagingSnapshotTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "synthetic_source_requires_clean_candidate"):
                 _module.snapshot_staging_source(self.root, self.base / "package")
 
+    def test_committed_export_ignores_but_preserves_dirty_worktree(self):
+        source = self.root / "application.py"
+        source.write_bytes(b"VALUE = 2\n")
+        destination = self.base / "package"
+        metadata = _module.export_committed_staging_source(self.root, destination)
+        self.assertEqual((destination / "application.py").read_bytes(), b"VALUE = 1\n")
+        self.assertEqual(source.read_bytes(), b"VALUE = 2\n")
+        self.assertEqual(metadata["source_commit"], self.git("rev-parse", "HEAD").decode().strip())
+        self.assertFalse((destination / ".git").exists())
+
+    def test_committed_export_rejects_symlink_objects(self):
+        (self.root / "alias.py").symlink_to("application.py")
+        self.commit()
+        with self.assertRaisesRegex(RuntimeError, "synthetic_source_entry_invalid"):
+            _module.export_committed_staging_source(self.root, self.base / "package")
+
+    def test_committed_export_rejects_attribute_omission(self):
+        (self.root / ".gitattributes").write_text("application.py export-ignore\n")
+        self.commit()
+        with self.assertRaisesRegex(RuntimeError, "synthetic_source_inventory_mismatch"):
+            _module.export_committed_staging_source(self.root, self.base / "package")
+
+    def test_committed_export_rejects_attribute_substitution(self):
+        (self.root / "application.py").write_bytes(b"VALUE = '$Format:%H$'\n")
+        (self.root / ".gitattributes").write_text("application.py export-subst\n")
+        self.commit()
+        with self.assertRaisesRegex(RuntimeError, "synthetic_source_changed"):
+            _module.export_committed_staging_source(self.root, self.base / "package")
+
+    def test_committed_export_rejects_changed_head(self):
+        original = subprocess.run
+
+        def move_head(arguments, **kwargs):
+            result = original(arguments, **kwargs)
+            if "archive" in arguments:
+                (self.root / "application.py").write_bytes(b"VALUE = 3\n")
+                self.commit()
+            return result
+
+        with patch.object(subprocess, "run", move_head):
+            with self.assertRaisesRegex(RuntimeError, "synthetic_source_changed"):
+                _module.export_committed_staging_source(self.root, self.base / "package")
+
+    def test_committed_export_preserves_executable_mode(self):
+        source = self.root / "application.py"
+        source.chmod(0o755)
+        self.commit()
+        destination = self.base / "package"
+        metadata = _module.export_committed_staging_source(self.root, destination)
+        self.assertEqual(metadata["managed_files"][0]["mode"], "100755")
+        self.assertEqual((destination / "application.py").stat().st_mode & 0o777, 0o755)
+
+    def test_committed_export_rejects_unsafe_destination(self):
+        with self.assertRaisesRegex(RuntimeError, "synthetic_source_destination_invalid"):
+            _module.export_committed_staging_source(self.root, self.root / "nested")
+
 
 if __name__ == "__main__":
     unittest.main()

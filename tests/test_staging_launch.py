@@ -31,9 +31,9 @@ def test_explicit_profile_preserves_production_checks_and_staging_scope():
 @pytest.fixture(scope='module')
 def source_bound_staging_package(tmp_path_factory):
     from pathlib import Path
-    from tests.helpers.staging_source_package import snapshot_staging_source
+    from tests.helpers.staging_source_package import export_committed_staging_source
     package = tmp_path_factory.mktemp('staging-source') / 'package'
-    metadata = snapshot_staging_source(Path(__file__).resolve().parents[1], package)
+    metadata = export_committed_staging_source(Path(__file__).resolve().parents[1], package)
     return package, metadata
 
 

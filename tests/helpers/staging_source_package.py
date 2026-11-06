@@ -2,11 +2,13 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
 import stat
 import subprocess
+import tarfile
 
 
 def snapshot_staging_source(root: Path, destination: Path) -> dict:
@@ -56,6 +58,71 @@ def snapshot_staging_source(root: Path, destination: Path) -> dict:
         entries.append({"path": path.as_posix(), "mode": mode, "size": len(content),
                         "sha256": hashlib.sha256(content).hexdigest()})
     if before != identity():
+        raise RuntimeError("synthetic_source_changed")
+    return {"source_commit": before[0], "source_tree_reference": before[1],
+            "managed_files": sorted(entries, key=lambda item: item["path"])}
+
+
+def export_committed_staging_source(root: Path, destination: Path) -> dict:
+    """Select immutable Git objects explicitly; never repair/read dirty source.
+
+    This is a separate fixture input contract, not fallback from the clean
+    working-tree snapshot. Every exported byte is checked against its Git blob.
+    """
+    root = root.resolve(strict=True)
+    destination = destination.absolute()
+    if destination.exists() or destination.is_relative_to(root):
+        raise RuntimeError("synthetic_source_destination_invalid")
+    environment = {"PATH": os.defpath, "GIT_CONFIG_NOSYSTEM": "1",
+                   "GIT_CONFIG_GLOBAL": os.devnull, "GIT_NO_REPLACE_OBJECTS": "1",
+                   "GIT_NO_LAZY_FETCH": "1", "GIT_TERMINAL_PROMPT": "0",
+                   "GIT_OPTIONAL_LOCKS": "0"}
+
+    def git(*arguments):
+        return subprocess.run(["git", "-C", str(root), *arguments], env=environment,
+                              check=True, capture_output=True, timeout=30).stdout
+
+    before = git("rev-parse", "HEAD", "HEAD^{tree}").decode("ascii").splitlines()
+    inventory = {}
+    for raw in git("ls-tree", "-r", "-z", before[0]).split(b"\0"):
+        if not raw:
+            continue
+        metadata, name = raw.split(b"\t", 1)
+        mode, kind, blob_id = metadata.decode("ascii").split()
+        path = Path(name.decode("utf-8", "strict"))
+        if (kind != "blob" or mode not in {"100644", "100755"}
+                or path.is_absolute() or any(part in {".", "..", ".git"} for part in path.parts)):
+            raise RuntimeError("synthetic_source_entry_invalid")
+        inventory[path.as_posix()] = (mode, blob_id)
+    archive = git("archive", "--format=tar", before[0])
+    destination.mkdir(mode=0o700)
+    entries = []
+    seen = set()
+    with tarfile.open(fileobj=io.BytesIO(archive), mode="r:") as stream:
+        for member in stream:
+            path = Path(member.name)
+            if path.is_absolute() or any(part in {".", "..", ".git"} for part in path.parts):
+                raise RuntimeError("synthetic_source_entry_invalid")
+            if member.isdir():
+                continue
+            name = path.as_posix()
+            if not member.isfile() or name not in inventory or name in seen:
+                raise RuntimeError("synthetic_source_entry_invalid")
+            seen.add(name)
+            content = stream.extractfile(member).read()
+            mode, blob_id = inventory[name]
+            blob = b"blob " + str(len(content)).encode("ascii") + b"\0" + content
+            if hashlib.sha1(blob).hexdigest() != blob_id:
+                raise RuntimeError("synthetic_source_changed")
+            target = destination / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(content)
+            target.chmod(0o755 if mode == "100755" else 0o644)
+            entries.append({"path": name, "mode": mode, "size": len(content),
+                            "sha256": hashlib.sha256(content).hexdigest()})
+    if seen != set(inventory):
+        raise RuntimeError("synthetic_source_inventory_mismatch")
+    if before != git("rev-parse", "HEAD", "HEAD^{tree}").decode("ascii").splitlines():
         raise RuntimeError("synthetic_source_changed")
     return {"source_commit": before[0], "source_tree_reference": before[1],
             "managed_files": sorted(entries, key=lambda item: item["path"])}
