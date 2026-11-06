@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import traceback
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
 from pathlib import Path
@@ -10,13 +11,16 @@ import pytest
 import gateway.app as gateway_app
 from audit.immutable_ledger import append_evidence_event, export_evidence_bundle
 from audit.worm_archive import WORMArchive
+from audit.export_input_contract import ExportInputError, require_operational_timestamp_verifier
 from security.deployment_attestation import (
     DeploymentAttestationError,
+    RuntimeProvenanceAuthority,
     build_release_manifest,
     canonical_json,
     commit_continuity_valid,
     environment_mode,
     github_actions_ci,
+    load_release_manifest,
     normalized_provenance_context,
     policy_bundle_hash,
     release_hash,
@@ -29,6 +33,7 @@ from security.deployment_attestation import (
     write_runtime_provenance_bootstrap_diagnostics,
     write_release_manifest,
 )
+from security.runtime_artifact_provenance import MAX_MANIFEST_BYTES, RuntimeArtifactError
 from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, replay_registry_hash
 from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
@@ -606,11 +611,242 @@ def test_wrong_activating_node_rejected(tmp_path: Path) -> None:
         validate_release_manifest(path, expected_git_commit="c" * 40, expected_policy_bundle_hash="b" * 64, node_policy_path=node_policy)
 
 
+_AUTHORITY_FLAGS = (
+    "execution_authorized",
+    "provider_authorized",
+    "deployment_authorized",
+    "activation_authorized",
+    "policy_authoring_authorized",
+    "recovery_authorized",
+    "remote_transport_authorized",
+    "redelegation_authorized",
+)
+_CANARY = "PRIVATE_CANARY_9f3a"
+
+
+def _assert_denial(path: Path, code: str, before: bytes | None) -> None:
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(path)
+    error = raised.value
+    assert str(error) == code
+    assert _CANARY not in str(error)
+    assert _CANARY not in "".join(traceback.format_exception(error))
+    for flag in _AUTHORITY_FLAGS:
+        assert getattr(error, flag, False) is not True
+    if before is None:
+        assert not path.exists()
+    else:
+        assert path.read_bytes() == before
+
+
 def test_missing_release_manifest_rejected(tmp_path: Path) -> None:
     node_policy, _node_id = _node_policy(tmp_path)
+    missing = tmp_path / "missing.json"
 
-    with pytest.raises(DeploymentAttestationError, match="release_manifest_missing"):
-        validate_release_manifest(tmp_path / "missing.json", expected_git_commit="c" * 40, expected_policy_bundle_hash="b" * 64, node_policy_path=node_policy)
+    with pytest.raises(DeploymentAttestationError, match="^release_manifest_missing$"):
+        validate_release_manifest(missing, expected_git_commit="c" * 40, expected_policy_bundle_hash="b" * 64, node_policy_path=node_policy)
+    assert not missing.exists()
+
+
+def test_bounded_release_read_preserves_source_tenant_policy_predecessor(tmp_path: Path) -> None:
+    node_policy, node_id = _node_policy(tmp_path)
+    manifest = _manifest(node_id=node_id)
+    path = _write_manifest(tmp_path / "governance_release.json", manifest)
+    before = path.read_bytes()
+
+    result = validate_release_manifest(
+        path,
+        expected_git_commit="c" * 40,
+        expected_policy_bundle_hash="b" * 64,
+        expected_tenant_id="t1",
+        node_policy_path=node_policy,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+
+    assert path.read_bytes() == before
+    assert result["git_commit"] == "c" * 40
+    assert result["tenant_id"] == "t1"
+    assert result["policy_bundle_hash"] == "b" * 64
+    assert result["previous_release_hash"] == "GENESIS"
+    for flag in _AUTHORITY_FLAGS:
+        assert result.get(flag) is not True
+    assert RuntimeProvenanceAuthority.__dataclass_fields__.keys().isdisjoint(_AUTHORITY_FLAGS)
+
+
+def test_malformed_release_input_is_not_reported_missing(tmp_path: Path) -> None:
+    path = tmp_path / "governance_release.json"
+    raw = f'{{"note":"{_CANARY}"'.encode("utf-8")
+    path.write_bytes(raw)
+    _assert_denial(path, "release_manifest_malformed", raw)
+
+
+def test_non_object_release_input_stays_invalid(tmp_path: Path) -> None:
+    path = tmp_path / "governance_release.json"
+    raw = b"[]"
+    path.write_bytes(raw)
+    _assert_denial(path, "release_manifest_invalid", raw)
+
+
+def test_unreadable_release_input_is_not_reported_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "governance_release.json"
+    raw = f'{{"secret":"{_CANARY}"}}\n'.encode("utf-8")
+    path.write_bytes(raw)
+
+    def deny(_target: Path) -> bytes:
+        raise RuntimeArtifactError("runtime_artifact_manifest_unavailable")
+
+    monkeypatch.setattr("security.deployment_attestation._read_manifest", deny)
+    _assert_denial(path, "release_manifest_unreadable", raw)
+
+
+def test_release_path_with_embedded_nul_is_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / f"{_CANARY}\0release.json"
+    before = sorted(tmp_path.iterdir())
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(path)
+    error = raised.value
+    assert str(error) == "release_manifest_unreadable"
+    assert error.__cause__ is None and error.__suppress_context__ is True
+    assert _CANARY not in "".join(traceback.format_exception(error))
+    assert sorted(tmp_path.iterdir()) == before
+    for flag in _AUTHORITY_FLAGS:
+        assert getattr(error, flag, False) is not True
+
+
+def test_release_reader_valueerror_does_not_parse_or_probe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "release.json"
+    raw = b'{"valid":true}'
+    path.write_bytes(raw)
+
+    def deny(_target: Path) -> bytes:
+        raise ValueError(_CANARY)
+
+    def forbid(*args, **kwargs):
+        raise AssertionError("parse or filesystem probe after reader failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("security.deployment_attestation._read_manifest", deny)
+        patch.setattr("security.deployment_attestation.json.loads", forbid)
+        patch.setattr(Path, "lstat", forbid)
+        _assert_denial(path, "release_manifest_unreadable", raw)
+
+
+def test_release_path_normalization_oserror_is_bounded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    canary = "PRIVATE_CANARY_NORM_b7e2"
+    leaked_path = f"/private/{canary}/governance_release.json"
+    before = sorted(entry.name for entry in tmp_path.iterdir())
+
+    def fail_normalization(self):
+        raise OSError(f"normalization failed {canary} {leaked_path}")
+
+    def forbid_lstat(self):
+        raise AssertionError("filesystem inspection after normalization failure")
+
+    monkeypatch.setattr(Path, "absolute", fail_normalization)
+    monkeypatch.setattr(Path, "lstat", forbid_lstat)
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(tmp_path / "not-the-default-name.json")
+    error = raised.value
+    rendered = "".join(traceback.format_exception(error))
+    assert str(error) == "release_manifest_unreadable"
+    assert error.__cause__ is None and error.__suppress_context__ is True
+    for secret in (canary, leaked_path, "OSError", "normalization failed"):
+        assert secret not in str(error)
+        assert secret not in rendered
+    assert sorted(entry.name for entry in tmp_path.iterdir()) == before
+
+
+def test_substituted_release_symlink_is_not_reported_missing(tmp_path: Path) -> None:
+    target = tmp_path / "target.json"
+    raw = f'{{"secret":"{_CANARY}"}}\n'.encode("utf-8")
+    target.write_bytes(raw)
+    link = tmp_path / "governance_release.json"
+    link.symlink_to(target)
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(link)
+    assert str(raised.value) == "release_manifest_substituted"
+    assert _CANARY not in str(raised.value)
+    assert target.read_bytes() == raw
+    assert link.is_symlink()
+
+
+def test_substituted_release_directory_is_not_reported_missing(tmp_path: Path) -> None:
+    path = tmp_path / "governance_release.json"
+    path.mkdir()
+    with pytest.raises(DeploymentAttestationError, match="^release_manifest_substituted$"):
+        load_release_manifest(path)
+    assert path.is_dir()
+
+
+def test_substituted_release_parent_symlink_is_not_followed(tmp_path: Path) -> None:
+    real = tmp_path / "real"
+    real.mkdir()
+    target = real / "governance_release.json"
+    raw = f'{{"secret":"{_CANARY}"}}\n'.encode("utf-8")
+    target.write_bytes(raw)
+    alias = tmp_path / "alias"
+    alias.symlink_to(real, target_is_directory=True)
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(alias / "governance_release.json")
+    assert str(raised.value) == "release_manifest_substituted"
+    assert _CANARY not in "".join(traceback.format_exception(raised.value))
+    assert target.read_bytes() == raw
+
+
+def test_oversized_release_input_is_not_repaired(tmp_path: Path) -> None:
+    path = tmp_path / "governance_release.json"
+    path.write_bytes(b" " * (MAX_MANIFEST_BYTES + 1))
+    with pytest.raises(DeploymentAttestationError, match="^release_manifest_malformed$"):
+        load_release_manifest(path)
+    assert path.stat().st_size == MAX_MANIFEST_BYTES + 1
+
+
+def test_observation_status_does_not_authorize_release(tmp_path: Path) -> None:
+    node_policy, node_id = _node_policy(tmp_path)
+    manifest = _manifest(node_id=node_id)
+    manifest["status"] = "OBSERVED_ONLY_NOT_OPERATIONALLY_AUTHORIZED"
+    for flag in _AUTHORITY_FLAGS:
+        manifest[flag] = True
+    path = _write_manifest(tmp_path / "governance_release.json", manifest)
+    before = path.read_bytes()
+
+    with pytest.raises(DeploymentAttestationError, match="^release_signature_invalid$"):
+        validate_release_manifest(
+            path,
+            expected_git_commit="c" * 40,
+            expected_policy_bundle_hash="b" * 64,
+            expected_tenant_id="t1",
+            node_policy_path=node_policy,
+            now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+        )
+    assert path.read_bytes() == before
+    resigned = _manifest(node_id=node_id)
+    for flag in _AUTHORITY_FLAGS:
+        resigned[flag] = True
+    resigned["release_signature"] = sign_release_manifest(resigned)
+    resigned_path = _write_manifest(tmp_path / "resigned.json", resigned)
+    summary = validate_release_manifest(
+        resigned_path,
+        expected_git_commit="c" * 40,
+        expected_policy_bundle_hash="b" * 64,
+        expected_tenant_id="t1",
+        node_policy_path=node_policy,
+        now=datetime(2026, 5, 12, tzinfo=timezone.utc),
+    )
+    assert set(summary).isdisjoint(_AUTHORITY_FLAGS)
+    for flag in _AUTHORITY_FLAGS:
+        assert summary.get(flag) is not True
+    with pytest.raises(ExportInputError, match="^EXPORT_TSA_CRYPTOGRAPHIC_VERIFIER_UNAVAILABLE$"):
+        require_operational_timestamp_verifier()
+
+
+def test_export_workflow_does_not_provision_release_input() -> None:
+    workflow = Path(__file__).resolve().parents[1] / ".github/workflows/governance-export-attestation.yml"
+    text = workflow.read_text(encoding="utf-8")
+    assert "USBAY_GOVERNANCE_RELEASE_PATH" not in text
+    assert "write-release" not in text
+    assert "ensure_runtime_release_manifest" not in text
+    assert "actions/attest-build-provenance" in text
 
 
 def test_startup_provenance_validation_rejected_on_ambiguity(tmp_path: Path, monkeypatch) -> None:
