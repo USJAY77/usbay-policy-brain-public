@@ -28,39 +28,31 @@ def test_explicit_profile_preserves_production_checks_and_staging_scope():
     args=module.launch_arguments(_config())
     assert args==['-m','uvicorn','gateway.app:app','--host','0.0.0.0','--port','8000','--workers','1','--lifespan','on']
 
-@pytest.mark.parametrize('mutation', ['valid', 'missing', 'tampered', 'stale'])
-def test_unmodified_lifespan_with_synthetic_production_mode_release(monkeypatch, tmp_path, mutation):
-    import asyncio
-    import json
-    import secrets
-    from datetime import datetime, timedelta, timezone
-    from security.deployment_attestation import build_release_manifest, sign_release_manifest
-    from gateway.app import app
-    import gateway.app as gateway
+@pytest.fixture(scope='module')
+def source_bound_staging_package(tmp_path_factory):
+    from pathlib import Path
+    from tests.helpers.staging_source_package import snapshot_staging_source
+    package = tmp_path_factory.mktemp('staging-source') / 'package'
+    metadata = snapshot_staging_source(Path(__file__).resolve().parents[1], package)
+    return package, metadata
 
-    for name,value in _config().items():monkeypatch.setenv(name,value)
-    # Fresh synthetic signing material; never emitted or used outside this test.
-    monkeypatch.setenv('USBAY_DEPLOYMENT_SIGNING_MATERIAL',secrets.token_hex(32))
-    release=tmp_path/'synthetic-release.json'
-    monkeypatch.setenv('USBAY_GOVERNANCE_RELEASE_PATH',str(release))
-    manifest=build_release_manifest(tenant_id='t1')
-    if mutation=='tampered':manifest['release_signature']='invalid'
-    if mutation=='stale':
-        from governance_runtime_monitor import load_runtime_governance_policy
-        max_age=load_runtime_governance_policy().release_manifest_max_age_seconds
-        manifest['deployment_timestamp']=(datetime.now(timezone.utc)-timedelta(seconds=max_age+10)).isoformat().replace('+00:00','Z')
-        manifest['release_signature']=sign_release_manifest(manifest)
-    if mutation!='missing':release.write_text(json.dumps(manifest))
-    monkeypatch.setattr(gateway,'_policy_registry_cache',None)
-    monkeypatch.setattr(gateway,'_policy_registry_cache_key',None)
-    async def enter():
-        async with app.router.lifespan_context(app):
-            assert gateway.runtime_provenance_authority().release_path==str(release)
-    if mutation=='valid':asyncio.run(enter())
-    else:
-        with pytest.raises(Exception) as caught:asyncio.run(enter())
-        expected={'missing':'release_manifest','tampered':'release_signature','stale':'release_manifest_freshness'}[mutation]
-        assert expected in str(caught.value).lower()
+
+@pytest.mark.parametrize('mutation', ['valid', 'missing', 'tampered', 'stale'])
+def test_unmodified_lifespan_with_synthetic_production_mode_release(source_bound_staging_package, tmp_path, mutation):
+    from tests.helpers.staging_source_package import run_staging_case
+    package, metadata = source_bound_staging_package
+    result = run_staging_case(package, metadata, tmp_path/'state', mutation)
+    assert result.get('outcome') != 'ERROR', result
+    assert result['source_commit'] == metadata['source_commit']
+    assert result['source_tree'] == metadata['source_tree_reference']
+    assert result['module_origins_verified'] is True
+    assert result['same_source_authority'] is True
+    assert result['verification_functions_replaced'] is False
+    assert result['no_exec_gate']['installed'] is True
+    expected = {'valid': None, 'missing': 'release_manifest_missing',
+                'tampered': 'release_signature_invalid', 'stale': 'release_manifest_freshness'}[mutation]
+    assert result['reason'] == expected
+    assert result['outcome'] == ('PASS' if mutation == 'valid' else 'DENY')
 
 def test_signed_staging_adoption_is_not_supported_by_current_approval_contract(monkeypatch,tmp_path):
     from tests.test_governance_validation import _write_policy_authority_fixture

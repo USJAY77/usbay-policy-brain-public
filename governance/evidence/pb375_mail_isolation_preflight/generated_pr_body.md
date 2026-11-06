@@ -1,72 +1,60 @@
 ## PURPOSE
-Prepare native integration of the signed source artifact with the deployment release reader and the startup release-validation function. Add20 fixed release-consumer cases to the existing40 artifact/package cases, retaining20 mail cases and all13 native controls. Reuse the existing three-package crypto profile; do not import or start gateway.app.
+Repair the integration between existing synthetic release fixtures, the Gitless runtime scanner and production-mode staging startup. The published cc932cf2 component tests passed, but its broader PR regression lane reported 201 failures and 29 errors. This proposal addresses that integration; it is not validated deployment readiness.
 
 ## RISK
-A valid source artifact does not authorize release issuance, production trust, a tenant action or deployment. Release-path fallback must not generate missing evidence. Ambiguous JSON and development signing defaults must not establish production validation. Public synthetic fixtures exercise reader behavior only; they do not demonstrate adopted policy signatures, real node enrollment or operational issuer authority.
+Source verification and release evidence must refer to the actual package loaded by the runtime. Fixture defaults must never downgrade production or manufacture operational authority. Stale or substituted paths, files and source objects must fail closed. Synthetic issuer fixtures prove no operational trust or enrollment.
 
 ## POLICY_LINK
-Existing AGENTS.md and fail-closed source, trust, tenant, currentness and evidence boundaries. PB-375 remains an administrative validation identifier. No adopted policy, signing algorithm, key storage/provider or operational trust anchor is created by this proposal.
+Preserve applicable AGENTS.md, fail-closed source/release verification, tenant boundaries, replay and policy checks. No trust/policy/permission widening, operational key provisioning or new authority.
 
 ## REQUIRED_APPROVALS
 - USBAY-AUDIT
 - USBAY-GLOBAL23
 
 ## GOVERNANCE_CHECKS
-- Owner authorized publication of this eleven-file release-consumer batch on PR #427 and at most three evidence-backed new-head CI rounds by replying "lets go" in this conversation. Stop at first success; earlier batch authorizations remain historical.
-- Authorized budget: at most three evidence-backed new-head CI rounds within this exact batch; stop at first success. No unchanged retries, dependency additions, native permission widening or unrelated changes.
-- Require one current shared/fresh source verifier in the release consumer; reject substituted source objects, stale files and release/source/expected-commit mismatches without Git fallback.
-- Packaged runtime requires explicit release-path selection. A missing or malformed public release must not be generated or repaired; force does not authorize runtime release generation.
-- Tighten existing production signing-input validation: missing independent material and the development default fail closed. Existing key sources/storage and HMAC signature algorithm remain unchanged. No actual signing material is read during preparation or provisioned by this batch.
-- Use a bounded regular-file/no-follow release reader. Reject duplicate object fields, nonfinite numbers and float overflow. Existing missing/malformed-read error classification remains bounded; no raw input or path is logged.
-- Export only the statically identified ten-module consumer closure in addition to the existing fixed sources. Update workflow path coverage for every new exported product path. No Redis/FastAPI/network/service or Git permission is added.
-- Native fixtures use in-memory source keys, explicit test-mode HMAC evidence and public synthetic policy snapshots. Patch fixture paths/cache configuration only; do not mock verifier or signing functions.
-- Require172 pure harness tests,60 exact artifact/package/release cases,20 mail cases and13 controls in a future native round; verify source/runtime/dependency/identity bindings and mapping restoration.
-- No merge, deployment, activation, active Replit update, live state, operational key, provider action or new policy/issuer/recovery/remote-transport authority.
-
-## AUDIT
-Prepared on c71c89d5b50d714fcdda088c8859c18a736fc002 (tree482cac2e9c9d93a94463473a9a80fe3d597d13b1), preserving the concurrent Cursor packager-path filter correction. Current-base GitHub status reports all15 checks successful; this is not new consumer validation. Local172 pure harness tests pass. One initial structural assertion failure was retained and corrected to inspect the actual signing helper. New20 native release cases are NOT_RUN. The ten-module static import closure requires cryptography only; the existing dependency lock/profile and kernel/inside/bootstrap/no-exec code are unchanged. Historical native40 artifact/package,20 mail,168 harness and13 control results remain bound to their earlier heads.
-
-## IMPACT
-Validate the next real startup component without expanding native permissions or installing the full gateway dependency graph. This is release-reader/source-artifact integration preparation, not full gateway/server startup or Governed Mail production readiness.
-
-## Decision
-REVIEW_REQUIRED
-
-## Status
-AWAITING_APPROVAL
+The owner authorized publication of this fifteen-file batch on PR427 and up to three directed CI rounds by replying "lets go" to the concrete batch request. Earlier eleven-file authorization remains historical. Authorized budget: at most three evidence-backed new-head CI rounds within these files, stopping when all applicable acceptance checks pass; no unchanged retries or skipped failed checks. No merge, deployment, activation, live Replit change, dependency addition or native permission widening.
 
 ## MECHANISM
-Shared source-artifact consumption in deployment attestation; explicit read-only release selection; packaged-mode Git-lineage denial; stricter production signing-input validation; bounded no-follow JSON parsing with duplicate/nonfinite rejection. The native driver calls actual release resolution and assert_startup_release_integrity using isolated public fixtures.
+- Explicit opt-in development context for shared synthetic Git-backed release fixtures. Production, invalid mode and explicit artifact contexts are rejected before environment mutation. Hydra/monitor fixtures declare test preparation explicitly; no global conftest fallback or signing-key injection.
+- Scanner and deployment provenance share one freshness-checked source authority in artifact mode. Runtime enforcement consumes its source commit. Source/trust errors propagate without falling back to Git.
+- Preserve existing forbidden-file rules while pinning parent directories and file descriptors; compare file identity before/after reads and traversal. Existing read/traversal fault injections now target actual descriptor I/O and assert that the fault was reached.
+- Retain the four staging cases (valid, missing, tampered, stale). Prepare a fresh package from a clean exact Git HEAD/tree and verify each copied blob. A separate fixed child loads actual package modules, installs the existing additive no-exec filter, verifies module bytes/origins, and calls the unmodified ASGI lifespan. Source/signing fixtures are synthetic and remain inside that process. No verification function is mocked and no private key is serialized.
 
+## AUDIT
+Base cc932cf2e8d3a8297b95db6c08fa12fe209de81d, PR main base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. Separate local repair/release-fixture-integration worktree preserves the previous candidate and failure evidence. Source/signature/release verifiers, cryptographic algorithms and both existing CI workflows remain byte-equal to the published base. Local source-preparation tests use disposable Git fixtures only, not project commits.
 
 ## GAP
-PARTIAL: actual release-consumer behavior and20 new cases remain unexecuted. Full gateway/scanner imports, mutable-state mapping, producer output to actual runtime-root handoff, operational issuer/root trust and live tenant/provider authority remain unproven. Synthetic policy fixtures are not adopted policy-signature or node-attestation proof. Release-file symlinks and ambiguous JSON formerly accepted by the permissive reader may now be rejected; review compatibility before adoption.
-
+PARTIAL. The 201 failures and 29 errors have NOT been rerun. All four package-bound lifespan cases and descriptor-scanner application cases are NOT_RUN. Full kernel isolation, mutable-state mapping, actual deployment module origins, build-to-runtime handoff and operational issuer trust are not established by the synthetic child. Its no-exec filter alone is not a complete sandbox. EGAP-HYDRA-REMOTE-TRANSPORT-AUTH remains open.
 
 ## VALIDATION
-172 local pure harness tests PASS; syntax/import-closure/patch checks PASS. The existing40 case method ASTs and native enforcement functions remain unchanged. No product/crypto import or application execution in local preparation. Twenty new native cases NOT_RUN.
-
+182 pure local harness/preparation tests PASS; ten new methods cover development-context boundaries and exact source snapshots, including dirty source, symlinks, nested/existing destinations and concurrent mutation. Python AST and git diff --check PASS. No product module was imported and no application/lifespan was executed locally. Historical native run 42136551762 passed 60 artifact/package/release cases, 20 mail cases and 13 controls at cc932cf2; that result does not validate these new startup changes. Historical broader regression run 42136551733 FAILED and remains preserved.
 
 ## ROLLBACK
-Abandon the unpublished proposal if rejected. Failed native validation stops and preserves bounded evidence. No automatic key/trust replacement, release generation, runtime repair, rollback or deployment action is permitted.
-
-
-## SOURCE
-https://github.com/USJAY77/usbay-policy-brain-public/commit/c71c89d5b50d714fcdda088c8859c18a736fc002
-
+Discard the unpublished candidate if rejected. Failed validation preserves bounded evidence and stops at the authorized budget. Do not repair production failures by weakening checks, removing positive tests, granting synthetic trust operational status or changing the active application.
 
 ## CHANGED FILES
 - .github/workflows/mail-readiness-isolation.yml
+- gateway/app.py
 - governance/evidence/pb375_mail_isolation_preflight/generated_pr_body.md
 - governance/evidence/pb375_mail_isolation_preflight/metadata.json
 - governance/mail_draft_preview.py
 - governance/mail_draft_repository.py
 - governance/mail_preview_access_proposal.py
 - governance/release_integrity.py
+- runtime/enforcement_gateway.py
 - security/deployment_attestation.py
 - security/runtime_artifact_authority.py
 - security/runtime_artifact_package.py
 - security/runtime_artifact_provenance.py
+- tests/helpers/provenance_manifest.py
+- tests/helpers/release_environment.py
+- tests/helpers/staging_artifact_child.py
+- tests/helpers/staging_source_package.py
+- tests/test_hydra_consensus.py
+- tests/test_public_release_safety.py
+- tests/test_runtime_artifact_scanner_candidate.py
+- tests/test_runtime_governance_monitor.py
+- tests/test_staging_launch.py
 - validation/mail_readiness/README.md
 - validation/mail_readiness/execution_boundary.py
 - validation/mail_readiness/gidmap_guard.py
@@ -85,15 +73,43 @@ https://github.com/USJAY77/usbay-policy-brain-public/commit/c71c89d5b50d714fcdda
 - validation/mail_readiness/test_result_contract.py
 - validation/mail_readiness/test_runner_bootstrap.py
 - validation/mail_readiness/test_runtime_artifact_harness.py
+- validation/mail_readiness/test_staging_snapshot.py
+- validation/mail_readiness/test_synthetic_release_context.py
 
+## THIS BATCH
+- gateway/app.py
+- governance/evidence/pb375_mail_isolation_preflight/generated_pr_body.md
+- governance/evidence/pb375_mail_isolation_preflight/metadata.json
+- runtime/enforcement_gateway.py
+- tests/helpers/provenance_manifest.py
+- tests/helpers/release_environment.py
+- tests/helpers/staging_artifact_child.py
+- tests/helpers/staging_source_package.py
+- tests/test_hydra_consensus.py
+- tests/test_public_release_safety.py
+- tests/test_runtime_artifact_scanner_candidate.py
+- tests/test_runtime_governance_monitor.py
+- tests/test_staging_launch.py
+- validation/mail_readiness/test_staging_snapshot.py
+- validation/mail_readiness/test_synthetic_release_context.py
 
 ## VALIDATION RESULTS
-172 pure local harness tests passed. Prepared native selection:40 retained artifact/package cases plus20 new release cases;20 mail cases retained. No new native pass, server startup or readiness claim.
-
+Local pure tests: 182 passed. Native gateway/staging/regression validation: NOT_RUN. Overall: PARTIAL. No production readiness claim.
 
 ## ROLLBACK PLAN
-Disposable preparation/test environment only; production state and active Replit configuration are unchanged.
-
+No active state changed. Preserve the previous published commit and all failed-run evidence; do not merge or activate this proposal.
 
 ## COMMIT OR SOURCE REFERENCE
-Prepared parent c71c89d5b50d714fcdda088c8859c18a736fc002; PR base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. No new commit identity or publication is claimed. Previous verification/failure artifacts are retained.
+Prepared against cc932cf2e8d3a8297b95db6c08fa12fe209de81d. No new project commit, publication or approval is claimed.
+
+## IMPACT
+A reviewable local integration candidate only. Existing failure evidence remains open pending actual native regression/staging execution. No active application or operational authority is changed.
+
+## DECISION
+REVIEW_REQUIRED
+
+## STATUS
+OWNER_AUTHORIZED_PUBLICATION_AND_BOUNDED_CI; current-head reviewer approvals remain independently required before any future merge.
+
+## SOURCE
+Exact prepared parent: cc932cf2e8d3a8297b95db6c08fa12fe209de81d.

@@ -11,6 +11,7 @@ from security.deployment_attestation import (
     sign_release_manifest,
 )
 from tests.helpers.provenance_generation import write_manifest_generation_audit
+from tests.helpers.release_environment import configure_test_release_environment
 from tests.helpers.provenance_tenant import DEFAULT_TEST_TENANT_ID
 
 # Purpose: generate canonical temporary governance release manifests for tests.
@@ -29,6 +30,7 @@ def valid_test_release_manifest(tenant_id: str = DEFAULT_TEST_TENANT_ID) -> dict
 
 
 def ensure_test_release_manifest(monkeypatch, tmp_path: Path, tenant_id: str = DEFAULT_TEST_TENANT_ID) -> Path:
+    configure_test_release_environment(monkeypatch)
     release_path = tmp_path / f"generated_governance_release_{tenant_id}.json"
     ensure_runtime_release_manifest(release_path, tenant_id=tenant_id, force=True)
     write_manifest_generation_audit(tmp_path, release_path, tenant_id)

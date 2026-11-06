@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+import os
 import shutil
 import sys
 import py_compile
@@ -590,34 +591,48 @@ def test_runtime_scan_file_read_failure_fails_closed(tmp_path: Path, monkeypatch
     artifact = tmp_path / "application" / "module.py"
     artifact.parent.mkdir()
     artifact.write_text("VALUE = True\n", encoding="utf-8")
-    actual_read_text = Path.read_text
+    actual_read = os.read
+    expected = artifact.stat()
+    observed = []
 
-    def failing_read_text(path, *args, **kwargs):
-        if path == artifact:
+    def failing_read(descriptor, count):
+        info = os.fstat(descriptor)
+        if (info.st_dev, info.st_ino) == (expected.st_dev, expected.st_ino):
+            observed.append(True)
             raise OSError("read blocked")
-        return actual_read_text(path, *args, **kwargs)
+        return actual_read(descriptor, count)
 
-    monkeypatch.setattr(Path, "read_text", failing_read_text)
+    monkeypatch.setattr(gateway_app.os, "read", failing_read)
 
     assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
         {"path": "application/module.py", "rule": "runtime_file_read_failed"}
     ]
+    assert observed == [True]
 
 
 def test_runtime_scan_traversal_failure_fails_closed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _init_git_repo(tmp_path)
 
-    def failing_walk(root, **kwargs):
-        error = OSError("traversal blocked")
-        error.filename = str(Path(root) / "blocked")
-        kwargs["onerror"](error)
-        return iter(())
+    blocked = tmp_path / "blocked"
+    blocked.mkdir()
+    expected = blocked.stat()
+    actual_scandir = os.scandir
+    observed = []
 
-    monkeypatch.setattr(gateway_app.os, "walk", failing_walk)
+    def failing_scandir(path):
+        if isinstance(path, int):
+            info = os.fstat(path)
+            if (info.st_dev, info.st_ino) == (expected.st_dev, expected.st_ino):
+                observed.append(True)
+                raise OSError("traversal blocked")
+        return actual_scandir(path)
+
+    monkeypatch.setattr(gateway_app.os, "scandir", failing_scandir)
 
     assert gateway_app.forbidden_runtime_file_findings(tmp_path) == [
         {"path": "blocked", "rule": "runtime_traversal_failed"}
     ]
+    assert observed == [True]
 
 
 def test_public_release_check_fails_on_env_file(tmp_path: Path) -> None:
