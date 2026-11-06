@@ -48,7 +48,7 @@ def _write_approval_tree(tmp_path: Path, *, approvals: dict | None = None, manif
 def test_valid_two_approval_chain_passes() -> None:
     evidence = verify_policy_approvals()
 
-    assert evidence["decision"] == "PASS"
+    assert evidence["decision"] == "PASS", {key: evidence.get(key) for key in ("reason", "http_status")}
     assert evidence["reason"] == "GITHUB_ACTIONS_POLICY_REVIEW_ADOPTION_VALID"
     assert evidence["required_approvers"] == 2
 
@@ -129,7 +129,7 @@ def test_placeholder_signatures_are_non_production_scaffolding(tmp_path: Path) -
 
 def test_repository_approvals_are_real_ci_policy_adoption() -> None:
     evidence = verify_policy_approvals()
-    assert evidence["decision"] == "PASS"
+    assert evidence["decision"] == "PASS", {key: evidence.get(key) for key in ("reason", "http_status")}
     assert evidence["placeholder_signatures"] is False
     assert evidence["production_signatures"] is False
     assert evidence["policy_adopted"] is True
