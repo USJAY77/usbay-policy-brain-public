@@ -54,7 +54,7 @@ source/native build, adopted signer/TSA context, request origin/replay, currentn
 recovery and export execution authority remain explicit downstream requirements.
 No caller callback or manufactured positive governance result is accepted.
 
-33 new tests validate actual signed V2/native composition, tampering, resigned
+33 original tests validate actual signed V2/native composition, tampering, resigned
 core/nonce/revoked-signer cases, false validity claims, signer/index substitution,
 wrong context, V1 downgrade, filesystem aliases, mutation after genuine native
 verification, identical-byte root replacement and concurrency. The package signer
@@ -66,11 +66,21 @@ validity. Positive observations must not be described as passing the existing
 exporter. Source/registry/kernel/runtime integration is still unvalidated.
 
 Run `sh validation/rfc3161/run.sh` to compile native test helpers and execute the
-four exact component test modules. Existing application modules are not started.
+explicit component test modules. Existing application modules are not started.
 No dependencies, policy changes, publication or operational actions are performed.
 
 Patch composition: this full additive candidate targets clean main 688ef2c1.
-It includes audit/export_input_contract.py byte-identical to the earlier separate
-seven-file input proposal. Do not blindly apply both additive patches; reconcile
-that identical shared path and preserve unrelated changes. Neither patch has
-been applied to the active GitHub/Replit exporter by this preparation.
+It originally included audit/export_input_contract.py from the separate seven-file
+input proposal. The PR428 review repair now retires its legacy package observer:
+inspect_preissued_package raises EXPORT_SOURCE_TREE_BINDING_UNAVAILABLE because
+that reader has no verifiable signed-tree contract. Supplying matching metadata
+or a claimed signature cannot establish one. Shared bounded readers remain intact
+for V2; there is no V1 fallback or implicit migration. Reconcile that changed shared
+path before combining proposals. The active GitHub/Replit exporter is unchanged.
+
+V2 additionally requires the exact bytes of package_signature.json to equal
+canonical(signature). Reordering, indentation, surrounding whitespace, a trailing
+newline or alternate JSON escaping are rejected as V2_SIGNATURE_ENCODING_INVALID,
+even when they decode to the same correctly signed object. Signature verification
+is still mandatory. Five encoding regressions, one wrong expected-tree case and
+three legacy denial cases were added; canonical signed V2 positive cases remain.

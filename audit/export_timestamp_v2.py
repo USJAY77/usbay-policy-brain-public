@@ -161,6 +161,7 @@ def inspect_native_export_v2(package: Path | str, *, expected_bindings: dict,
         _require(type(signature) is dict and set(signature)==set(signature_basis)|{'signature'},'V2_SIGNATURE_INVALID')
         _require(all(signature[k]==v for k,v in signature_basis.items()),'V2_SIGNATURE_BINDING_MISMATCH')
         _require(type(signature['signature']) is str and bool(re.fullmatch(r'[0-9a-f]{128}',signature['signature'])),'V2_SIGNATURE_INVALID')
+        _require(files['package_signature.json']==canonical(signature),'V2_SIGNATURE_ENCODING_INVALID')
         try:
             Ed25519PublicKey.from_public_bytes(signer_public_key).verify(bytes.fromhex(signature['signature']),canonical(signature_basis))
         except Exception:

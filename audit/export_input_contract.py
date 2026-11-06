@@ -114,39 +114,17 @@ def strict_json(raw):
 
 
 def inspect_preissued_package(package, *, tenant_id, source_commit, source_tree, package_hash):
+    """Reject the legacy format: this reader cannot verify a signed source tree.
+
+    Matching caller-supplied fields, hashes or metadata booleans cannot repair
+    that contract. Keep shared bounded readers available to the separate V2
+    observer; never auto-upgrade V1 or infer an operational verification result.
+    """
     _require(tenant_id, r'[A-Za-z0-9][A-Za-z0-9_.-]{0,63}', 'EXPORT_TENANT_REQUIRED')
     _require(source_commit, r'[0-9a-f]{40}', 'EXPORT_SOURCE_BINDING_REQUIRED')
     _require(source_tree, r'[0-9a-f]{40}', 'EXPORT_SOURCE_BINDING_REQUIRED')
     _require(package_hash, r'[0-9a-f]{64}', 'EXPORT_PACKAGE_HASH_REQUIRED')
-    package = Path(package).absolute()
-    if not package.is_dir() or package.resolve(strict=True) != package or set(os.listdir(package)) != PACKAGE_FILES:
-        raise ExportInputError('EXPORT_PREISSUED_PACKAGE_REQUIRED')
-    hashes, objects, total = {}, {}, 0
-    for name in sorted(PACKAGE_FILES):
-        raw = read_regular(package, name)
-        total += len(raw)
-        if total > MAX_PACKAGE_BYTES:
-            raise ExportInputError('EXPORT_INPUT_SIZE_INVALID')
-        hashes[name] = hashlib.sha256(raw).hexdigest()
-        if name.endswith('.json'):
-            objects[name] = strict_json(raw)
-        elif name == 'audit.jsonl':
-            for line in raw.splitlines():
-                if line.strip():
-                    strict_json(line)
-    release, manifest, tenant = (objects[name] for name in (
-        'governance_release.json', 'verification_manifest.json', 'tenant_context.json'))
-    if any(type(value) is not dict for value in (release, manifest, tenant)):
-        raise ExportInputError('EXPORT_INPUT_BINDING_INVALID')
-    if any(value.get('tenant_id') != tenant_id for value in (release, manifest, tenant)):
-        raise ExportInputError('EXPORT_TENANT_MISMATCH')
-    if release.get('git_commit') != source_commit or manifest.get('git_commit') != source_commit:
-        raise ExportInputError('EXPORT_SOURCE_MISMATCH')
-    if manifest.get('package_hash') != package_hash:
-        raise ExportInputError('EXPORT_PACKAGE_HASH_MISMATCH')
-    # These are untrusted observations until the actual signature/source/ledger
-    # verifiers succeed. No positive execution decision is returned here.
-    return hashes
+    raise ExportInputError('EXPORT_SOURCE_TREE_BINDING_UNAVAILABLE')
 
 
 def stage_public_source_manifest(inputs, checkout):

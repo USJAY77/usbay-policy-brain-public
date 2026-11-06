@@ -12,8 +12,9 @@ unchanged. The dedicated proposed PR job builds the required native helpers and
 executes every component case. No existing security test is skipped or weakened.
 
 The 117 earlier component cases plus 18 immutable-source projection cases make
-135 unique tests before the fixture-packaging repair. Fourteen additional
-public-vector decoding cases bring the repaired component to 149 unique tests. Source projection tests create disposable synthetic Git repos;
+135 unique tests before the fixture-packaging repair. Fourteen public-vector
+decoding cases brought that component to 149 tests. Nine source-binding/signature
+review regressions bring the current component to 158 cases. Source projection tests create disposable synthetic Git repos;
 they never commit to the actual USBAY repository or publish anything.
 
 ## Immutable source projection

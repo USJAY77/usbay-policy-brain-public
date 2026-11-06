@@ -27,6 +27,7 @@
     "validation/rfc3161/run.sh",
     "validation/rfc3161/tests/make_memory_tsa_vectors.c",
     "validation/rfc3161/tests/public_x509_fixtures.py",
+    "validation/rfc3161/tests/test_export_input_contract.py",
     "validation/rfc3161/tests/test_export_timestamp_v2.py",
     "validation/rfc3161/tests/test_public_x509_fixtures.py",
     "validation/rfc3161/tests/test_rfc3161_crypto_native.py",

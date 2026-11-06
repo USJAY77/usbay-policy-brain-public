@@ -139,6 +139,30 @@ class NativeExportV2Tests(unittest.TestCase):
         p=self.package/'package_signature.json';data=json.loads(p.read_bytes());data['signature']='0'*128
         p.write_bytes(v2.canonical(data));self.reject('V2_SIGNATURE_INVALID')
 
+    def assert_signature_encoding_denied(self, transform):
+        path=self.package/'package_signature.json'
+        original=path.read_bytes();rewritten=transform(original)
+        self.assertNotEqual(original,rewritten)
+        self.assertEqual(json.loads(original),json.loads(rewritten))
+        path.write_bytes(rewritten)
+        self.reject('V2_SIGNATURE_ENCODING_INVALID')
+
+    def test_reordered_signature_container_is_denied(self):
+        self.assert_signature_encoding_denied(lambda raw: json.dumps(
+            dict(reversed(list(json.loads(raw).items()))),separators=(',',':')).encode())
+
+    def test_indented_signature_container_is_denied(self):
+        self.assert_signature_encoding_denied(lambda raw: json.dumps(json.loads(raw),indent=2).encode())
+
+    def test_padded_signature_container_is_denied(self):
+        self.assert_signature_encoding_denied(lambda raw: b' '+raw+b' ')
+
+    def test_newline_signature_container_is_denied(self):
+        self.assert_signature_encoding_denied(lambda raw: raw+b'\n')
+
+    def test_escaped_signature_container_field_is_denied(self):
+        self.assert_signature_encoding_denied(lambda raw: raw.replace(b'"format"',b'"\\u0066ormat"',1))
+
     def test_unrelated_package_signer(self):
         other=Ed25519PrivateKey.generate().public_key().public_bytes_raw()
         self.reject('V2_SIGNATURE_BINDING_MISMATCH',signer_public_key=other)
@@ -166,6 +190,9 @@ class NativeExportV2Tests(unittest.TestCase):
 
     def test_wrong_source_expected_binding(self):
         bindings=dict(self.bindings,source_commit='0'*40);self.reject('V2_BINDING_MISMATCH',expected_bindings=bindings)
+
+    def test_wrong_source_tree_expected_binding(self):
+        bindings=dict(self.bindings,source_tree='0'*40);self.reject('V2_BINDING_MISMATCH',expected_bindings=bindings)
 
     def test_wrong_policy_expected_binding(self):
         bindings=dict(self.bindings,tsa_policy_hash='sha256:'+'0'*64);self.reject('V2_BINDING_MISMATCH',expected_bindings=bindings)
