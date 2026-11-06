@@ -499,6 +499,18 @@ def test_runtime_scan_git_failure_fails_closed(tmp_path: Path, monkeypatch: pyte
         gateway_app.forbidden_runtime_file_findings(tmp_path)
 
 
+def test_runtime_scan_accepts_git_worktrees(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _init_git_repo(tmp_path)
+    worktree = tmp_path.parent / f"{tmp_path.name}-worktree"
+    monkeypatch.delenv("USBAY_RUNTIME_SOURCE_MANIFEST", raising=False)
+    subprocess.run(["git", "worktree", "add", "--detach", str(worktree), "HEAD"], cwd=tmp_path, check=True)
+    try:
+        assert (worktree / ".git").is_file()
+        assert gateway_app.forbidden_runtime_file_findings(worktree) == []
+    finally:
+        subprocess.run(["git", "worktree", "remove", "--force", str(worktree)], cwd=tmp_path, check=True)
+
+
 def test_runtime_scan_rejects_malformed_git_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     _init_git_repo(tmp_path)
 

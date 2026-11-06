@@ -40,7 +40,7 @@ def artifact_runtime_required(root: Path | None = None) -> bool:
     return (
         runtime_environment_mode(default="test") == "production"
         or bool(os.getenv("USBAY_RUNTIME_SOURCE_MANIFEST"))
-        or not (Path(root) / ".git").is_dir()
+        or not ((Path(root) / ".git").is_dir() or (Path(root) / ".git").is_file())
     )
 
 
