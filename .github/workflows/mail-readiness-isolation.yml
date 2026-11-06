@@ -1,0 +1,65 @@
+name: Governed Mail Isolated Synthetic Validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.github/workflows/mail-readiness-isolation.yml'
+      - 'validation/mail_readiness/**'
+      - 'governance/mail_draft*.py'
+      - 'governance/mail_preview_access_proposal.py'
+      - 'governance/product_dry_run.py'
+      - 'governance/connector_framework.py'
+      - 'governance/human_approval_gate_contract.py'
+      - 'governance/__init__.py'
+      - 'control_plane/agent_registry.py'
+      - 'control_plane/__init__.py'
+      - 'security/__init__.py'
+      - 'security/runtime_artifact_authority.py'
+      - 'security/runtime_artifact_provenance.py'
+      - 'security/runtime_artifact_package.py'
+      - 'security/deployment_attestation.py'
+      - 'security/node_identity.py'
+      - 'security/tenant_context.py'
+      - 'governance/release_integrity.py'
+      - 'governance/dependencies.py'
+      - 'governance/interfaces.py'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-isolation-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      EXPECTED_HEAD: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Checkout exact candidate without persisted credentials
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - name: Verify result contract
+        run: /usr/bin/python3 -B -m unittest discover -s validation/mail_readiness -p "test_*.py" -v
+      - name: Run fixed controls, mail and runtime artifact cases after native gates
+        run: |
+          /usr/bin/python3 -I -B validation/mail_readiness/isolation_preflight.py \
+            --expected-head "$EXPECTED_HEAD" \
+            --privileged-namespace-bootstrap \
+            --runtime-artifacts \
+            --output "$RUNNER_TEMP/usbay-isolation/preflight.json"
+      - name: Hash bounded report
+        if: always()
+        run: |
+          cd "$RUNNER_TEMP/usbay-isolation"
+          sha256sum preflight.json > SHA256SUMS
+      - name: Retain report and checksum for thirty days
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: usbay-isolation-${{ github.event.pull_request.head.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/usbay-isolation/
+          if-no-files-found: error
+          retention-days: 30

@@ -21,6 +21,12 @@ from security.deployment_attestation import (
     sign_release_manifest,
 )
 from tests.provenance_helpers import valid_test_release_manifest
+from tests.helpers.release_environment import configure_test_release_environment
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_release_context(monkeypatch):
+    configure_test_release_environment(monkeypatch)
 
 
 NOW = datetime.now(timezone.utc).replace(microsecond=0)

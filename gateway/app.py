@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, closing
 
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -36,6 +36,10 @@ from security.deployment_attestation import (
     assert_startup_release_integrity,
     resolve_runtime_provenance_authority,
 )
+from security.runtime_artifact_authority import (
+    artifact_runtime_required, get_runtime_artifact_authority,
+)
+from security.runtime_artifact_provenance import RuntimeArtifactError
 from security.persistent_nonce_store import (
     NONCE_RESULT_EXPIRED,
     NONCE_RESULT_REPLAY,
@@ -1663,7 +1667,9 @@ def _policy_version(payload):
     return str(policy_version)
 
 
-def runtime_provenance_authority():
+def runtime_provenance_authority(artifact_authority=None):
+    if artifact_authority is not None:
+        return resolve_runtime_provenance_authority(artifact_authority=artifact_authority)
     return resolve_runtime_provenance_authority()
 
 
@@ -1782,17 +1788,18 @@ def _is_public_verification_key_path(relative_path):
     return False
 
 
-def _is_public_key_artifact(path):
+def _is_public_key_artifact(path, *, data=None):
     try:
-        head = path.read_text(encoding="utf-8", errors="ignore")[:4096]
+        head = (path.read_text(encoding="utf-8", errors="ignore")
+                if data is None else _runtime_scan_text(data))[:4096]
     except Exception:
         return False
     return "PUBLIC KEY" in head and "PRIVATE KEY" not in head
 
 
-def _is_public_key_material_artifact(path):
+def _is_public_key_material_artifact(path, *, data=None):
     try:
-        data = path.read_bytes()
+        data = path.read_bytes() if data is None else data
     except Exception:
         return False
     if not data:
@@ -1866,6 +1873,8 @@ def _runtime_git_environment():
 
 
 def _run_runtime_git(root, *arguments):
+    if artifact_runtime_required(root):
+        raise PolicyRegistryError("runtime_git_forbidden")
     try:
         result = subprocess.run(
             ("git", "-C", str(root), *arguments),
@@ -1954,53 +1963,186 @@ def _is_managed_runtime_symlink(
     return False
 
 
-def forbidden_runtime_file_findings(repo_root=None):
+_RUNTIME_SCAN_DESCRIPTOR_IO_SUPPORTED = (
+    all(hasattr(os, name) for name in ("O_DIRECTORY", "O_CLOEXEC", "O_NOFOLLOW", "O_NONBLOCK"))
+    and os.open in os.supports_dir_fd
+    and os.stat in os.supports_dir_fd
+    and os.stat in os.supports_follow_symlinks
+    and os.scandir in os.supports_fd
+)
+
+
+def _runtime_scan_snapshot(info):
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _runtime_scan_require_same(actual, expected):
+    if _runtime_scan_snapshot(actual) != _runtime_scan_snapshot(expected):
+        raise PolicyRegistryError("runtime_scan_source_changed")
+
+
+def _runtime_scan_text(data):
+    # Match Path.read_text(..., errors="ignore"), including universal newlines.
+    return data.decode("utf-8", errors="ignore").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _read_runtime_scan_file(directory_fd, name, expected):
+    """Read once from the verified parent, never reopen a validated pathname."""
+    descriptor = os.open(
+        name, os.O_RDONLY | os.O_CLOEXEC | os.O_NOFOLLOW | os.O_NONBLOCK,
+        dir_fd=directory_fd,
+    )
+    try:
+        before = os.fstat(descriptor)
+        _runtime_scan_require_same(before, expected)
+        if not stat.S_ISREG(before.st_mode):
+            raise PolicyRegistryError("runtime_scan_source_changed")
+        chunks = []
+        count = 0
+        while True:
+            chunk = os.read(descriptor, 1024 * 1024)
+            if not chunk:
+                break
+            count += len(chunk)
+            if count > before.st_size:
+                raise PolicyRegistryError("runtime_scan_source_changed")
+            chunks.append(chunk)
+        _runtime_scan_require_same(os.fstat(descriptor), before)
+        _runtime_scan_require_same(
+            os.stat(name, dir_fd=directory_fd, follow_symlinks=False), before,
+        )
+        if count != before.st_size:
+            raise PolicyRegistryError("runtime_scan_source_changed")
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
+def _runtime_scan_entries(root, expected_root):
+    """Walk pinned directories; recheck bindings and mutations when unwinding.
+
+    Every directory (also excluded ones) is enumerated. Root ancestors stay open
+    until completion. No directory result or content is reused across scans.
+    """
+    if not _RUNTIME_SCAN_DESCRIPTOR_IO_SUPPORTED:
+        raise PolicyRegistryError("runtime_scan_descriptor_io_unavailable")
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_CLOEXEC | os.O_NOFOLLOW
+    handles = []
+    bindings = []
+
+    def descend(directory_fd, relative, expected):
+        _runtime_scan_require_same(os.fstat(directory_fd), expected)
+        try:
+            with os.scandir(directory_fd) as entries:
+                names = sorted(entry.name for entry in entries)
+        except OSError:
+            yield relative, None, None, "runtime_traversal_failed"
+            return
+        for name in names:
+            child_relative = relative / name
+            try:
+                info = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            except OSError:
+                yield child_relative, None, None, "runtime_path_inspection_failed"
+                continue
+            # Preserve os.walk's sole pruning rule: a root .git directory.
+            if relative == Path(".") and name == ".git":
+                try:
+                    if stat.S_ISDIR(os.stat(name, dir_fd=directory_fd).st_mode):
+                        continue
+                except OSError:
+                    pass
+            yield child_relative, info, directory_fd, None
+            _runtime_scan_require_same(
+                os.stat(name, dir_fd=directory_fd, follow_symlinks=False), info,
+            )
+            if stat.S_ISDIR(info.st_mode):
+                try:
+                    child_fd = os.open(name, flags, dir_fd=directory_fd)
+                except OSError:
+                    yield child_relative, None, None, "runtime_traversal_failed"
+                    continue
+                try:
+                    yield from descend(child_fd, child_relative, info)
+                finally:
+                    os.close(child_fd)
+                _runtime_scan_require_same(
+                    os.stat(name, dir_fd=directory_fd, follow_symlinks=False), info,
+                )
+        _runtime_scan_require_same(os.fstat(directory_fd), expected)
+
+    try:
+        descriptor = os.open("/", flags)
+        handles.append(descriptor)
+        for part in root.parts[1:]:
+            parent_fd = descriptor
+            before = os.stat(part, dir_fd=parent_fd, follow_symlinks=False)
+            descriptor = os.open(part, flags, dir_fd=parent_fd)
+            handles.append(descriptor)
+            opened = os.fstat(descriptor)
+            _runtime_scan_require_same(opened, before)
+            bindings.append((parent_fd, part, opened))
+        yield from descend(descriptor, Path("."), expected_root)
+        for parent_fd, name, expected in bindings:
+            current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
+            _runtime_scan_require_same(current, expected)
+    except OSError:
+        raise PolicyRegistryError("runtime_scan_source_changed") from None
+    finally:
+        close_failed = False
+        for descriptor in reversed(handles):
+            try:
+                os.close(descriptor)
+            except OSError:
+                close_failed = True
+        if close_failed:
+            raise PolicyRegistryError("runtime_scan_descriptor_close_failed")
+
+
+def forbidden_runtime_file_findings(repo_root=None, *, artifact_authority=None):
     root = Path(repo_root or REPO_ROOT)
     try:
         canonical_root = root.resolve(strict=True)
     except OSError as exc:
         raise PolicyRegistryError("runtime_scan_root_unavailable") from exc
-    if not canonical_root.is_dir():
+    root_info = canonical_root.stat()
+    if not stat.S_ISDIR(root_info.st_mode):
         raise PolicyRegistryError("runtime_scan_root_not_directory")
-    _validate_runtime_git_identity(canonical_root)
-    governed_paths = _governed_runtime_paths(canonical_root)
+    # Explicit temporary Git repositories remain available to development tests;
+    # production or a gitless package can never fall back after failed trust.
+    packaged = artifact_authority is not None or artifact_runtime_required(canonical_root)
+    if packaged:
+        try:
+            artifact_authority = artifact_authority or get_runtime_artifact_authority(canonical_root)
+            if artifact_authority.root != canonical_root:
+                raise RuntimeArtifactError("runtime_artifact_root_mismatch")
+            if artifact_authority is not get_runtime_artifact_authority(canonical_root):
+                raise RuntimeArtifactError("runtime_artifact_authority_mismatch")
+            artifact_authority.assert_fresh()
+            governed_paths = {item.path for item in artifact_authority.verified.managed_files}
+        except RuntimeArtifactError as exc:
+            raise PolicyRegistryError(str(exc)) from None
+    else:
+        _validate_runtime_git_identity(canonical_root)
+        governed_paths = _governed_runtime_paths(canonical_root)
     findings = []
 
     def add_finding(relative_path, rule_id):
         findings.append({"path": str(relative_path), "rule": str(rule_id)})
 
-    traversal_failures = []
-
-    def record_traversal_failure(error):
-        traversal_failures.append(getattr(error, "filename", None))
-
-    for dir_path, dir_names, file_names in os.walk(
-        canonical_root,
-        topdown=True,
-        onerror=record_traversal_failure,
-        followlinks=False,
-    ):
-        if Path(dir_path) == canonical_root:
-            dir_names[:] = [name for name in dir_names if name != ".git"]
-        dir_names.sort()
-        file_names.sort()
-        for entry_name in [*dir_names, *file_names]:
-            path = Path(dir_path) / entry_name
-            try:
-                relative = path.relative_to(canonical_root)
-            except ValueError:
-                add_finding(path, "runtime_path_outside_root")
-                continue
+    with closing(_runtime_scan_entries(canonical_root, root_info)) as entries:
+        for relative, info, directory_fd, error in entries:
             rel = relative.as_posix()
-            try:
-                path_mode = path.lstat().st_mode
-            except OSError:
-                add_finding(rel, "runtime_path_inspection_failed")
+            path = canonical_root / relative
+            if error is not None:
+                add_finding(rel, error)
                 continue
+            path_mode = info.st_mode
             if stat.S_ISLNK(path_mode):
                 try:
                     resolved = path.resolve(strict=True)
-                except OSError:
+                except (OSError, RuntimeError):
                     add_finding(rel, "runtime_symlink_path")
                     continue
                 if not _is_managed_runtime_symlink(
@@ -2012,16 +2154,6 @@ def forbidden_runtime_file_findings(repo_root=None):
                     add_finding(rel, "runtime_symlink_path")
                 continue
             if not stat.S_ISREG(path_mode):
-                continue
-            try:
-                resolved = path.resolve(strict=True)
-            except OSError:
-                add_finding(rel, "runtime_path_inspection_failed")
-                continue
-            try:
-                resolved.relative_to(canonical_root)
-            except ValueError:
-                add_finding(rel, "runtime_path_outside_root")
                 continue
             if any(part in _RUNTIME_SCAN_EXCLUDED_DIRS for part in relative.parts):
                 continue
@@ -2037,49 +2169,50 @@ def forbidden_runtime_file_findings(repo_root=None):
             if rel.startswith("tmp/") and "private" in name:
                 add_finding(rel, "tmp_private_file")
                 continue
-            if path.suffix.lower() == ".pem":
-                if not _is_approved_public_pem_path(rel):
-                    add_finding(rel, "unapproved_pem_file")
-                    continue
-                if not _is_public_key_artifact(path):
-                    add_finding(rel, "public_verification_pem_not_public_key")
-                    continue
-            if path.suffix.lower() == ".key":
-                if _is_public_verification_key_path(rel):
-                    if not _is_public_key_material_artifact(path):
-                        add_finding(rel, "public_verification_key_not_public_material")
-                        continue
-                else:
-                    add_finding(rel, "private_key_file")
-                    continue
-            try:
-                text = path.read_text(encoding="utf-8", errors="ignore")
-            except (OSError, UnicodeError):
-                add_finding(rel, "runtime_file_read_failed")
+            pem = path.suffix.lower() == ".pem"
+            key = path.suffix.lower() == ".key"
+            if pem and not _is_approved_public_pem_path(rel):
+                add_finding(rel, "unapproved_pem_file")
                 continue
-            private_markers = tuple(
-                "".join(parts)
-                for parts in (
-                    ("BEGIN ", "PRIVATE KEY"),
-                    ("BEGIN ", "RSA ", "PRIVATE KEY"),
-                    ("BEGIN ", "OPENSSH ", "PRIVATE KEY"),
-                    ("BEGIN ", "EC ", "PRIVATE KEY"),
-                    ("BEGIN ", "ENCRYPTED ", "PRIVATE KEY"),
-                )
+            if key and not _is_public_verification_key_path(rel):
+                add_finding(rel, "private_key_file")
+                continue
+            try:
+                data = _read_runtime_scan_file(directory_fd, path.name, info)
+            except (OSError, UnicodeError):
+                rule = ("public_verification_pem_not_public_key" if pem else
+                        "public_verification_key_not_public_material" if key else
+                        "runtime_file_read_failed")
+                add_finding(rel, rule)
+                continue
+            if pem and not _is_public_key_artifact(path, data=data):
+                add_finding(rel, "public_verification_pem_not_public_key")
+                continue
+            if key and not _is_public_key_material_artifact(path, data=data):
+                add_finding(rel, "public_verification_key_not_public_material")
+                continue
+            text = _runtime_scan_text(data)
+            private_markers = (
+                "BEGIN " + "PRIVATE KEY",
+                "BEGIN RSA " + "PRIVATE KEY",
+                "BEGIN OPENSSH " + "PRIVATE KEY",
+                "BEGIN EC " + "PRIVATE KEY",
+                "BEGIN ENCRYPTED " + "PRIVATE KEY",
             )
             if any(marker in text for marker in private_markers):
                 add_finding(rel, "private_key_material_marker")
 
-    for failed_path in traversal_failures:
+    if packaged:
         try:
-            relative_failure = Path(failed_path).relative_to(canonical_root).as_posix()
-        except (TypeError, ValueError):
-            relative_failure = "."
-        add_finding(relative_failure, "runtime_traversal_failed")
-
-    if _governed_runtime_paths(canonical_root) != governed_paths:
+            artifact_authority.assert_fresh()
+        except RuntimeArtifactError as exc:
+            raise PolicyRegistryError(str(exc)) from None
+    elif _governed_runtime_paths(canonical_root) != governed_paths:
         raise PolicyRegistryError("runtime_scan_git_state_changed")
 
+    if root.resolve(strict=True) != canonical_root:
+        raise PolicyRegistryError("runtime_scan_source_changed")
+    _runtime_scan_require_same(canonical_root.stat(), root_info)
     return sorted(findings, key=lambda item: (item["path"], item["rule"]))
 
 
@@ -2103,8 +2236,8 @@ def _forbidden_runtime_file_error(findings):
     return PolicyRegistryError("forbidden_runtime_file_present:" + canonical(diagnostics))
 
 
-def validate_no_forbidden_runtime_files(repo_root=None):
-    findings = forbidden_runtime_file_findings(repo_root)
+def validate_no_forbidden_runtime_files(repo_root=None, *, artifact_authority=None):
+    findings = forbidden_runtime_file_findings(repo_root, artifact_authority=artifact_authority)
     if findings:
         raise _forbidden_runtime_file_error(findings)
     return True
@@ -2153,8 +2286,13 @@ def policy_runtime_state(provenance_context=None):
 
 
 def validate_policy_registry_startup():
-    validate_no_forbidden_runtime_files()
-    authority = runtime_provenance_authority()
+    artifact = get_runtime_artifact_authority(REPO_ROOT) if artifact_runtime_required(REPO_ROOT) else None
+    if artifact is None:
+        validate_no_forbidden_runtime_files()
+        authority = runtime_provenance_authority()
+    else:
+        validate_no_forbidden_runtime_files(artifact_authority=artifact)
+        authority = runtime_provenance_authority(artifact_authority=artifact)
     normalized_context = authority.context_dict()
     load_tenant_policy()
     validate_replay_policy_startup()
@@ -2165,6 +2303,8 @@ def validate_policy_registry_startup():
     if ledger_path.exists():
         assert_ledger_valid(ledger_path)
     load_policy_registry(provenance_context=normalized_context)
+    if artifact is not None:
+        artifact.assert_fresh()
 
 
 def execution_command_allowed(command):

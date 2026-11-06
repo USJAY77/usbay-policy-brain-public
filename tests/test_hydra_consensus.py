@@ -15,6 +15,13 @@ from security.hydra_consensus import (
     replay_registry_hash,
 )
 from security.deployment_attestation import resolve_runtime_provenance_authority
+from tests.provenance_helpers import ensure_test_release_manifest
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_release_context(monkeypatch, tmp_path):
+    # Produce explicit temporary evidence before the read-only consumer runs.
+    ensure_test_release_manifest(monkeypatch, tmp_path)
 
 
 def node_decision(
