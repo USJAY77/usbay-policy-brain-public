@@ -9,8 +9,11 @@ on:
       - audit/__init__.py
       - audit/export_input_contract.py
       - audit/export_timestamp_v2.py
+      - audit/export_intake_v2.py
       - audit/rfc3161_crypto.py
       - audit/rfc3161_info.c
+      - security/__init__.py
+      - security/runtime_artifact_provenance.py
       - fixtures/**
       - validation/rfc3161/**
       - .github/workflows/native-timestamp-component.yml
