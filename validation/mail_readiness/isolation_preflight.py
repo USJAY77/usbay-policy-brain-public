@@ -265,12 +265,12 @@ def main():
               'production_ready':False, 'source_verified':False,
               'controller_source_sha256':CONTROLLER_SOURCE_SHA256,
               'python':sys.version.split()[0], 'controls':{},
-              'limits':['Bounded synthetic controls and optional fixed offline cases; not an exhaustive sandbox proof.',
-                        'Not the 475-case suite, Gitless/startup tests, replay/fork suite or production readiness.']}
+              'limits':['Bounded controls and fixed mail, artifact, package and release-reader cases; not an exhaustive sandbox proof.',
+                        'No gateway/server startup, full scanner, live-provider or production-readiness proof.']}
     report['application_execution_enabled'] = args.offline_mail
     report['application_execution_scope'] = 'fixed_synthetic_offline_mail_only' if args.offline_mail else 'none'
     if args.runtime_artifacts:
-        report['application_execution_scope'] = 'fixed_synthetic_offline_mail_and_runtime_artifact_verifier_only'
+        report['application_execution_scope'] = 'fixed_synthetic_mail_artifact_package_and_release_reader_only'
     report['namespace_bootstrap_mode'] = ('explicit_ephemeral_ci_sudo' if args.privileged_namespace_bootstrap else 'unprivileged_user_namespace')
     exit_code = 2
     try:

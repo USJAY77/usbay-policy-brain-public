@@ -96,3 +96,36 @@ No build/run hook is installed by this proposal. Full gateway module imports,
 mutable-state directory mapping, scanner/provenance composition and live startup
 need a separately bounded validation. No gateway-startup result follows from
 these 40 artifact cases. Publication and the native round require explicit scope.
+
+## Release-consumer integration proposal (native execution pending)
+
+The next fixed phase adds 20 release-consumer cases (60 artifact/package/release
+cases total), retaining 20 mail cases and all 13 controls. The static consumer
+import closure is ten local modules and cryptography; no new dependency version,
+Git permission, network permission or executable target is introduced.
+
+The candidate connects deployment attestation to the existing shared, fresh
+source-artifact verifier and requires explicit release-path selection in packaged
+mode. Runtime read paths must not generate or repair a release. Production must
+reject missing independent signing material and the development signing default.
+Legacy Git parent/tag helpers reject packaged mode when build metadata is absent;
+they must not guess lineage or execute Git as a fallback.
+
+The public release reader now reuses the bounded regular-file/no-follow reader,
+rejects duplicate fields at every JSON object level, and rejects NaN, Infinity and
+numeric overflow. Previously accepted release-file symlinks or ambiguous JSON may
+therefore be rejected. Missing/malformed reads keep the existing bounded error
+contract. No runtime file is rewritten to recover from invalid evidence.
+
+Native fixtures use generated-in-memory source-signing keys, public synthetic
+policy snapshots and test-only HMAC release evidence. Configuration paths and
+source-cache state are isolated per case; verifier/signature functions are not
+mocked. Positive cases invoke the actual release startup-validation function.
+These fixtures do not prove adopted policy signatures, enrolled real identities,
+operational issuance, provider authority or production readiness.
+
+The phase does not import gateway.app, start FastAPI, call providers, touch live
+state or test the full scanner. Full gateway import/state mapping and the actual
+build-package-to-runtime-root handoff remain separate requirements. Publication
+and native execution require explicit batch authorization; preparation runs only
+pure harness tests and source/patch checks locally.

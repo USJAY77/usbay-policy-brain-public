@@ -6,6 +6,9 @@ provider, issuer, deployment or execution authority. No live files are used.
 import base64
 from contextlib import redirect_stdout, redirect_stderr
 import io
+import json
+import os
+from datetime import datetime, timezone
 import dataclasses
 import hashlib
 from pathlib import Path
@@ -16,6 +19,9 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 from security import runtime_artifact_provenance as p
 from security import runtime_artifact_authority as a
+from security import deployment_attestation as d
+from security import tenant_context as t
+from governance import release_integrity as g
 from security.runtime_artifact_package import package_preissued_runtime_artifact, main as package_main
 from runtime_artifact_contract import CASE_NAMES, SCHEMA
 
@@ -289,6 +295,204 @@ class RuntimeArtifactCases(unittest.TestCase):
         self.assertEqual(error.getvalue(),'runtime_artifact_package_failed\n')
         self.assertNotIn('PRIVATE_CANARY',out.getvalue()+error.getvalue())
         self.assertFalse((self.base/'output').exists())
+
+
+    def release_fixture(self):
+        # Synthetic public policy fixtures; no enrolled operational identity or grant.
+        node = {'required_attestation_mode':'mock_local','allowed_node_roles':['gateway'],
+                'attestation_ttl_seconds':30,'require_hardware_backing':False,'production_rejects_mock':True,
+                'enrolled_nodes':{'fixture':{'role':'gateway','public_identity':
+                    {'vendor':'USBAY','node_label':'fixture','public_key_id':'synthetic-public'}}}}
+        tenant = {'allowed_tenant_ids':['tenant-a'],'tenant_evidence_isolation':True,
+                  'tenant_export_permissions':{'tenant-a':True},
+                  'tenant_retention_policy':{'tenant-a':{'retention_days':1}}}
+        fixtures = {'governance/policy_registry.json':{'synthetic':True},
+                    'governance/policy_registry.sig':{'synthetic_signature_fixture':True},
+                    'governance/policy_release_manifest.json':{'synthetic':True},
+                    'governance/node_attestation_policy.json':node,
+                    'governance/tenant_policy.json':tenant}
+        for name, value in fixtures.items():
+            path = self.root/name
+            path.parent.mkdir(parents=True,exist_ok=True)
+            path.write_bytes(p.canonical_bytes(value))
+            path.chmod(0o644)
+        entries = [{'path':path.relative_to(self.root).as_posix(),'mode':'100644',
+                    'sha256':hashlib.sha256(path.read_bytes()).hexdigest(),'size':path.stat().st_size}
+                   for path in sorted(self.root.rglob('*')) if path.is_file()]
+        self.manifest['managed_files'] = entries
+        self.manifest['managed_set_hash'] = hashlib.sha256(p.canonical_bytes(entries)).hexdigest()
+        self.sign()
+        (self.root/a.MANIFEST_NAME).write_bytes(self.raw())
+        previous = Path.cwd()
+        os.chdir(self.root)
+        self.addCleanup(os.chdir,previous)
+        for context in [patch.dict('os.environ',self.public_trust_environment(),clear=True),
+                        patch.object(a,'REPO_ROOT',self.root),patch.object(a,'_runtime_authority',None),
+                        patch.object(t,'DEFAULT_TENANT_POLICY_ROOT',self.root),
+                        patch.object(d,'GENERATED_GOVERNANCE_RELEASE_DIR',self.base/'unissued')]:
+            context.start()
+            self.addCleanup(context.stop)
+        self.release_path = self.base/'synthetic-release.json'
+        os.environ['USBAY_GOVERNANCE_RELEASE_PATH'] = str(self.release_path)
+        self.development_material = d._signing_material()
+        self.release = {'release_id':'synthetic-read-boundary','git_commit':'a'*40,
+                        'policy_bundle_hash':d.policy_bundle_hash(),
+                        'deployment_timestamp':datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        'activating_node_id':d._canonical_activating_node_id(),
+                        'tenant_id':'tenant-a','previous_release_hash':'GENESIS'}
+        self.save_release_fixture()
+
+    def save_release_fixture(self):
+        self.release['release_signature'] = d.sign_release_manifest(self.release)
+        self.release_path.write_bytes(p.canonical_bytes(self.release))
+
+    def release_reject(self, operation, code):
+        with self.assertRaises(d.DeploymentAttestationError) as raised:
+            operation()
+        self.assertEqual(str(raised.exception),code)
+
+    def artifact_in_fixture(self):
+        return a.get_runtime_artifact_authority(self.root)
+
+    def select_synthetic_production_source(self):
+        self.manifest['producer_scope'] = 'production'
+        self.sign()
+        (self.root/a.MANIFEST_NAME).write_bytes(self.raw())
+        os.environ.update(USBAY_ENV='production',USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE='production')
+
+    def test_release_source_commit_without_git(self):
+        self.release_fixture()
+        self.assertEqual(d.current_git_commit(),'a'*40)
+        self.assertFalse((self.root/'.git').exists())
+
+    def test_release_startup_reader_shares_verified_source(self):
+        self.release_fixture()
+        before = self.release_path.read_bytes()
+        artifact = self.artifact_in_fixture()
+        result = d.resolve_runtime_provenance_authority(artifact_authority=artifact)
+        self.assertIs(result.artifact_authority,artifact)
+        self.assertEqual(result.provenance_context.accepted_commit_set,('a'*40,))
+        self.assertEqual(result.tenant_id,'tenant-a')
+        self.assertIsNone(d.assert_startup_release_integrity())
+        self.assertEqual(self.release_path.read_bytes(),before)
+        self.assertFalse(hasattr(result,'execution_authorized'))
+
+    def test_release_requires_explicit_path_in_artifact_mode(self):
+        self.release_fixture()
+        os.environ.pop('USBAY_GOVERNANCE_RELEASE_PATH')
+        self.release_reject(d.resolve_release_manifest_path,'release_manifest_path_required')
+        self.assertFalse((self.base/'unissued').exists())
+
+    def test_release_missing_file_is_not_generated(self):
+        self.release_fixture()
+        missing = self.base/'missing-release.json'
+        os.environ['USBAY_GOVERNANCE_RELEASE_PATH'] = str(missing)
+        self.release_reject(d.load_release_manifest,'release_manifest_missing')
+        self.assertFalse(missing.exists())
+        self.assertFalse((self.base/'unissued').exists())
+
+    def test_release_malformed_file_is_not_repaired(self):
+        self.release_fixture()
+        self.release_path.write_bytes(b'{')
+        self.release_reject(d.load_release_manifest,'release_manifest_missing')
+        self.assertEqual(self.release_path.read_bytes(),b'{')
+
+    def test_release_commit_substitution_rejected(self):
+        self.release_fixture()
+        self.release['git_commit'] = 'd'*40
+        self.save_release_fixture()
+        self.release_reject(d.resolve_runtime_provenance_authority,'git_commit_mismatch')
+
+    def test_release_invalid_signature_rejected(self):
+        self.release_fixture()
+        self.release['release_signature'] = 'hmac-sha256:'+'0'*64
+        self.release_path.write_bytes(p.canonical_bytes(self.release))
+        self.release_reject(d.resolve_runtime_provenance_authority,'release_signature_invalid')
+
+    def test_release_tenant_binding_mismatch_rejected(self):
+        self.release_fixture()
+        self.release_reject(lambda:d.validate_release_manifest(expected_tenant_id='tenant-b'),
+                            'tenant_deployment_provenance_mismatch')
+
+    def test_release_policy_bundle_substitution_rejected(self):
+        self.release_fixture()
+        self.release['policy_bundle_hash'] = 'f'*64
+        self.save_release_fixture()
+        self.release_reject(d.resolve_runtime_provenance_authority,'policy_bundle_hash_mismatch')
+
+    def test_release_production_requires_independent_signing_material(self):
+        self.release_fixture()
+        self.select_synthetic_production_source()
+        self.release_reject(d.resolve_runtime_provenance_authority,'deployment_signing_material_required')
+
+    def test_release_production_rejects_development_signing_material(self):
+        self.release_fixture()
+        self.select_synthetic_production_source()
+        os.environ['USBAY_DEPLOYMENT_SIGNING_MATERIAL'] = self.development_material
+        self.release_reject(d.resolve_runtime_provenance_authority,'development_signing_material_denied')
+
+    def test_release_generation_denied_even_when_forced(self):
+        self.release_fixture()
+        output = self.base/'must-not-generate.json'
+        self.release_reject(lambda:d.ensure_runtime_release_manifest(output,force=True),'runtime_release_generation_denied')
+        self.assertFalse(output.exists())
+
+    def test_release_rejects_stale_source_before_consumption(self):
+        self.release_fixture()
+        artifact = self.artifact_in_fixture()
+        self.file.write_bytes(b'x'*self.file.stat().st_size)
+        self.release_reject(lambda:d.resolve_runtime_provenance_authority(artifact_authority=artifact),
+                            'runtime_artifact_state_changed')
+
+    def test_release_rejects_substituted_source_authority(self):
+        self.release_fixture()
+        artifact = self.artifact_in_fixture()
+        changed = dataclasses.replace(artifact,verification_reference='sha256:'+'0'*64)
+        self.release_reject(lambda:d.resolve_runtime_provenance_authority(artifact_authority=changed),
+                            'runtime_artifact_authority_mismatch')
+
+    def test_release_legacy_git_lineage_requires_build_metadata(self):
+        self.release_fixture()
+        for operation in [lambda:g.git_parent_commits(self.root,'a'*40),
+                          lambda:g.baseline_tag_commit(self.root,'synthetic-tag')]:
+            with self.assertRaises(g.GovernanceReleaseIntegrityError) as raised:
+                operation()
+            self.assertEqual(str(raised.exception),'release_integrity_build_metadata_required')
+
+    def test_release_duplicate_json_fields_rejected(self):
+        self.release_fixture()
+        raw = self.release_path.read_bytes()[:-1]+b',"tenant_id":"tenant-a"}'
+        for value in [raw,b'{"nested":{"x":1,"x":2}}']:
+            self.release_path.write_bytes(value)
+            self.release_reject(d.load_release_manifest,'release_manifest_duplicate_field')
+            self.assertEqual(self.release_path.read_bytes(),value)
+
+    def test_release_nonfinite_json_fields_rejected(self):
+        self.release_fixture()
+        for number in [b'NaN',b'Infinity',b'1e999']:
+            raw = b'{"synthetic_number":'+number+b'}'
+            self.release_path.write_bytes(raw)
+            self.release_reject(d.load_release_manifest,'release_manifest_invalid')
+            self.assertEqual(self.release_path.read_bytes(),raw)
+
+    def test_release_external_expected_commit_mismatch_rejected(self):
+        self.release_fixture()
+        self.release_reject(lambda:d.validate_release_manifest(expected_git_commit='d'*40),'git_commit_mismatch')
+
+
+    def test_release_symlink_file_rejected(self):
+        self.release_fixture()
+        before = self.release_path.read_bytes()
+        link = self.base/'linked-release.json'
+        link.symlink_to(self.release_path)
+        self.release_reject(lambda:d.load_release_manifest(link),'release_manifest_missing')
+        self.assertEqual(self.release_path.read_bytes(),before)
+
+    def test_release_oversized_file_rejected_without_repair(self):
+        self.release_fixture()
+        self.release_path.write_bytes(b' '*(p.MAX_MANIFEST_BYTES+1))
+        self.release_reject(d.load_release_manifest,'release_manifest_missing')
+        self.assertEqual(self.release_path.stat().st_size,p.MAX_MANIFEST_BYTES+1)
 
 
 class BoundedResult(unittest.TestResult):

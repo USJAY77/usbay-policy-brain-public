@@ -405,3 +405,73 @@ class PublicPackagePreparationTests(unittest.TestCase):
         self.assertEqual(len(method.body),1)
         self.assertIsInstance(method.body[0],ast.Raise)
         self.assertEqual(ast.literal_eval(method.body[0].exc.args[0]),'runtime_artifact_package_arguments_invalid')
+
+
+class ReleaseBoundaryPreparationTests(unittest.TestCase):
+    def test_every_exported_product_file_triggers_native_workflow(self):
+        import fnmatch
+        import re
+        import offline_mail_contract as mail
+        root=Path(__file__).resolve().parents[2]
+        raw=root.joinpath('.github/workflows/mail-readiness-isolation.yml').read_text()
+        patterns=re.findall(r"^      - '([^']+)'$",raw,re.MULTILINE)
+        self.assertTrue(patterns)
+        for path in mail.PRODUCT_PATHS:
+            self.assertTrue(any(fnmatch.fnmatchcase(path,pattern) for pattern in patterns),path)
+
+    def test_static_release_import_closure_is_in_fixed_source_export(self):
+        import offline_mail_contract as mail
+        root=Path(__file__).resolve().parents[2]
+        queued=['security/deployment_attestation.py','governance/release_integrity.py'];seen=set()
+        def module_file(name):
+            path=root.joinpath(*name.split('.'))
+            if path.with_suffix('.py').is_file():return path.with_suffix('.py')
+            if path.joinpath('__init__.py').is_file():return path/'__init__.py'
+            return None
+        while queued:
+            name=queued.pop()
+            if name in seen:continue
+            seen.add(name)
+            self.assertIn(name,mail.SOURCE_MAP)
+            for node in ast.walk(ast.parse(root.joinpath(name).read_bytes())):
+                modules=[]
+                if isinstance(node,ast.Import):modules=[a.name for a in node.names]
+                elif isinstance(node,ast.ImportFrom) and not node.level:
+                    modules=[node.module]+[node.module+'.'+a.name for a in node.names if a.name!='*']
+                for module in modules:
+                    target=module_file(module)
+                    if target:
+                        queued.append(target.relative_to(root).as_posix())
+                        for parent in target.relative_to(root).parents:
+                            if parent.as_posix()!='.' and root.joinpath(parent,'__init__.py').is_file():
+                                queued.append((parent/'__init__.py').as_posix())
+        self.assertEqual(len(seen),10)
+        self.assertFalse(any(n.split('.')[0] in {'security','cryptography'} for n in sys.modules))
+
+    def test_release_reader_uses_bounded_file_read_and_strict_json_hooks(self):
+        root=Path(__file__).resolve().parents[2]
+        tree=ast.parse(root.joinpath('security/deployment_attestation.py').read_bytes())
+        functions={n.name:n for n in tree.body if isinstance(n,ast.FunctionDef)}
+        reader=functions['_load_manifest']
+        calls=[n for n in ast.walk(reader) if isinstance(n,ast.Call)]
+        self.assertTrue(any(ast.unparse(n.func)=='_read_manifest' for n in calls))
+        decoder=next(n for n in calls if ast.unparse(n.func)=='json.loads')
+        hooks={k.arg:ast.unparse(k.value) for k in decoder.keywords}
+        self.assertEqual(hooks,{'object_pairs_hook':'_release_object','parse_constant':'_release_constant','parse_float':'_release_float'})
+        self.assertFalse(any(isinstance(n.func,ast.Attribute) and n.func.attr.startswith(('write','mkdir')) for n in calls))
+        self.assertTrue(any(isinstance(n,ast.Call) and ast.unparse(n.func)=='math.isfinite'
+                            for n in ast.walk(functions['_release_float'])))
+
+    def test_release_fixtures_patch_configuration_only(self):
+        tree=ast.parse(Path(__file__).with_name('runtime_artifact_cases.py').read_bytes())
+        cls=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='RuntimeArtifactCases')
+        fixture=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name=='release_fixture')
+        fields={n.args[1].value for n in ast.walk(fixture) if isinstance(n,ast.Call)
+                and ast.unparse(n.func)=='patch.object'}
+        self.assertEqual(fields,{'REPO_ROOT','_runtime_authority','DEFAULT_TENANT_POLICY_ROOT','GENERATED_GOVERNANCE_RELEASE_DIR'})
+        calls={ast.unparse(n.func) for n in ast.walk(fixture) if isinstance(n,ast.Call)}
+        self.assertIn('self.save_release_fixture',calls)
+        signer=next(n for n in cls.body if isinstance(n,ast.FunctionDef) and n.name=='save_release_fixture')
+        signer_calls={ast.unparse(n.func) for n in ast.walk(signer) if isinstance(n,ast.Call)}
+        self.assertIn('d.sign_release_manifest',signer_calls)
+        self.assertNotIn('Ed25519PrivateKey.private_bytes',calls|signer_calls)

@@ -18,6 +18,12 @@ on:
       - 'security/runtime_artifact_authority.py'
       - 'security/runtime_artifact_provenance.py'
       - 'security/runtime_artifact_package.py'
+      - 'security/deployment_attestation.py'
+      - 'security/node_identity.py'
+      - 'security/tenant_context.py'
+      - 'governance/release_integrity.py'
+      - 'governance/dependencies.py'
+      - 'governance/interfaces.py'
 
 permissions:
   contents: read

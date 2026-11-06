@@ -1,32 +1,33 @@
 ## PURPOSE
-Prepare a public pre-issued-manifest packaging path alongside the existing fixed mail/artifact validation. The new packaging API/CLI verifies an independently signed public manifest and explicit expected source references, copies the declared bytes into a fresh output and verifies that output. It does not execute Git or consume a private key in this path. Ten new native cases are prepared; no new native run is claimed.
+Prepare native integration of the signed source artifact with the deployment release reader and the startup release-validation function. Add20 fixed release-consumer cases to the existing40 artifact/package cases, retaining20 mail cases and all13 native controls. Reuse the existing three-package crypto profile; do not import or start gateway.app.
 
 ## RISK
-Packaging a signed declared source set does not independently reconstruct Git history, establish operational producer/issuer authority, select a trust anchor or authorize a deployment. The unpublished CLI replaces --signing-key-file with public manifest/source inputs; external callers of the old CLI are UNKNOWN and require migration review. Full gateway startup remains outside this phase.
+A valid source artifact does not authorize release issuance, production trust, a tenant action or deployment. Release-path fallback must not generate missing evidence. Ambiguous JSON and development signing defaults must not establish production validation. Public synthetic fixtures exercise reader behavior only; they do not demonstrate adopted policy signatures, real node enrollment or operational issuer authority.
 
 ## POLICY_LINK
-Existing AGENTS.md and fail-closed source, trust, identity, tenant and evidence boundaries. PB-375 is an administrative review identifier; this proposal does not adopt a policy or create operational authority.
+Existing AGENTS.md and fail-closed source, trust, tenant, currentness and evidence boundaries. PB-375 remains an administrative validation identifier. No adopted policy, signing algorithm, key storage/provider or operational trust anchor is created by this proposal.
 
 ## REQUIRED_APPROVALS
 - USBAY-AUDIT
 - USBAY-GLOBAL23
 
 ## GOVERNANCE_CHECKS
-- Owner authorized publication of this prepared eight-file batch on PR #427 and at most three evidence-backed new-head CI rounds by replying "lets go" to the explicit scoped request. Stop at first success; no unchanged retry or permission/dependency widening. Earlier scoped authorizations remain historical.
-- Proposed publication changes eight files including accurate review metadata; preserve the entire 27-path cumulative PR inventory.
-- Require independently supplied public verifier trust and exact expected commit/tree references. Reject missing/mismatched bindings, invalid signatures, changed source and an existing destination. No generated/default signer, trust or manifest.
-- Write the public manifest last and verify the copied output. Partial failed output is not automatically reused, deleted or promoted.
-- The public packaging path calls no Git or signing API. The old in-memory producer API remains separate; its Git helper import is deferred until that API is called. No producer module is added to the fixed native export.
-- Preserve all13 controls, existing kernel/identity/source/no-exec checks, capability drop, mapping restoration and existing three hash-locked test dependencies. No dependency or native permission widening.
-- Require all40 fixed artifact/public-package cases,20 mail cases and168 pure harness tests to pass in a future scoped native round. Preserve bounded outcomes and source/dependency bindings.
-- No live mailbox, independent issuer, deployment hook, operational key, merge, deployment, activation or active Replit change. Synthetic test keys exist only in memory.
-- Stop on failure, missing authority/input/binding, unsupported runtime or any requirement for additional permissions. Do not silently fall back to Git/private-key CLI behavior.
+- Owner authorized publication of this eleven-file release-consumer batch on PR #427 and at most three evidence-backed new-head CI rounds by replying "lets go" in this conversation. Stop at first success; earlier batch authorizations remain historical.
+- Authorized budget: at most three evidence-backed new-head CI rounds within this exact batch; stop at first success. No unchanged retries, dependency additions, native permission widening or unrelated changes.
+- Require one current shared/fresh source verifier in the release consumer; reject substituted source objects, stale files and release/source/expected-commit mismatches without Git fallback.
+- Packaged runtime requires explicit release-path selection. A missing or malformed public release must not be generated or repaired; force does not authorize runtime release generation.
+- Tighten existing production signing-input validation: missing independent material and the development default fail closed. Existing key sources/storage and HMAC signature algorithm remain unchanged. No actual signing material is read during preparation or provisioned by this batch.
+- Use a bounded regular-file/no-follow release reader. Reject duplicate object fields, nonfinite numbers and float overflow. Existing missing/malformed-read error classification remains bounded; no raw input or path is logged.
+- Export only the statically identified ten-module consumer closure in addition to the existing fixed sources. Update workflow path coverage for every new exported product path. No Redis/FastAPI/network/service or Git permission is added.
+- Native fixtures use in-memory source keys, explicit test-mode HMAC evidence and public synthetic policy snapshots. Patch fixture paths/cache configuration only; do not mock verifier or signing functions.
+- Require172 pure harness tests,60 exact artifact/package/release cases,20 mail cases and13 controls in a future native round; verify source/runtime/dependency/identity bindings and mapping restoration.
+- No merge, deployment, activation, active Replit update, live state, operational key, provider action or new policy/issuer/recovery/remote-transport authority.
 
 ## AUDIT
-Prepared locally on 41b8368519399c037e3184870fd3224847af82f4 (treefa8896353c8de089e2793315f61ba2cfc9546482). 168 pure harness tests passed. Five new pure tests check CLI inputs, verification/copy/publish ordering, private-key serialization absence, closed source export and bounded argument diagnostics. Existing30 artifact methods remain AST-equal and existing20 mail cases/native safety files are byte-equal. Ten new actual packaging/CLI cases are NOT_RUN. The historical exact-head native result on 41b8368519399c037e3184870fd3224847af82f4 remains163 harness,30 artifact,20 mail and13 controls passed; it is not new proof for this worktree.
+Prepared on c71c89d5b50d714fcdda088c8859c18a736fc002 (tree482cac2e9c9d93a94463473a9a80fe3d597d13b1), preserving the concurrent Cursor packager-path filter correction. Current-base GitHub status reports all15 checks successful; this is not new consumer validation. Local172 pure harness tests pass. One initial structural assertion failure was retained and corrected to inspect the actual signing helper. New20 native release cases are NOT_RUN. The ten-module static import closure requires cryptography only; the existing dependency lock/profile and kernel/inside/bootstrap/no-exec code are unchanged. Historical native40 artifact/package,20 mail,168 harness and13 control results remain bound to their earlier heads.
 
 ## IMPACT
-Remove a private-key-file/Git requirement from the prepared packaging handoff while keeping issuance, trust provisioning and activation independent. This is a bounded next step toward source-package/startup integration; it does not establish production readiness.
+Validate the next real startup component without expanding native permissions or installing the full gateway dependency graph. This is release-reader/source-artifact integration preparation, not full gateway/server startup or Governed Mail production readiness.
 
 ## Decision
 REVIEW_REQUIRED
@@ -35,23 +36,23 @@ REVIEW_REQUIRED
 AWAITING_APPROVAL
 
 ## MECHANISM
-package_preissued_runtime_artifact validates a previously signed public manifest, copies declared bytes through the existing descriptor-based copier, rechecks source and verifies the completed package. The CLI reads only public manifest/trust inputs. No build/run configuration is installed.
+Shared source-artifact consumption in deployment attestation; explicit read-only release selection; packaged-mode Git-lineage denial; stricter production signing-input validation; bounded no-follow JSON parsing with duplicate/nonfinite rejection. The native driver calls actual release resolution and assert_startup_release_integrity using isolated public fixtures.
 
 
 ## GAP
-PARTIAL: new packaging code and ten cases are prepared but native execution is pending. Operational manifest issuance, independently governed trust, runtime-root ownership/selection and actual build-to-runtime handoff remain UNKNOWN. Full gateway imports, state-directory mapping and scanner/provenance composition are unvalidated.
+PARTIAL: actual release-consumer behavior and20 new cases remain unexecuted. Full gateway/scanner imports, mutable-state mapping, producer output to actual runtime-root handoff, operational issuer/root trust and live tenant/provider authority remain unproven. Synthetic policy fixtures are not adopted policy-signature or node-attestation proof. Release-file symlinks and ambiguous JSON formerly accepted by the permissive reader may now be rejected; review compatibility before adoption.
 
 
 ## VALIDATION
-168 local pure harness tests PASS. Syntax/source/patch checks PASS. No product/crypto imports in the local test run; no dependency installation/download or new native execution. Existing native results bind their historical head only.
+172 local pure harness tests PASS; syntax/import-closure/patch checks PASS. The existing40 case method ASTs and native enforcement functions remain unchanged. No product/crypto import or application execution in local preparation. Twenty new native cases NOT_RUN.
 
 
 ## ROLLBACK
-Discard the unpublished proposal if rejected. Failed packaging leaves an unaccepted destination; no automatic deletion, overwrite, promotion or execution. A future failed native round must stop and retain bounded evidence.
+Abandon the unpublished proposal if rejected. Failed native validation stops and preserves bounded evidence. No automatic key/trust replacement, release generation, runtime repair, rollback or deployment action is permitted.
 
 
 ## SOURCE
-https://github.com/USJAY77/usbay-policy-brain-public/commit/41b8368519399c037e3184870fd3224847af82f4
+https://github.com/USJAY77/usbay-policy-brain-public/commit/c71c89d5b50d714fcdda088c8859c18a736fc002
 
 
 ## CHANGED FILES
@@ -61,6 +62,8 @@ https://github.com/USJAY77/usbay-policy-brain-public/commit/41b8368519399c037e31
 - governance/mail_draft_preview.py
 - governance/mail_draft_repository.py
 - governance/mail_preview_access_proposal.py
+- governance/release_integrity.py
+- security/deployment_attestation.py
 - security/runtime_artifact_authority.py
 - security/runtime_artifact_package.py
 - security/runtime_artifact_provenance.py
@@ -85,12 +88,12 @@ https://github.com/USJAY77/usbay-policy-brain-public/commit/41b8368519399c037e31
 
 
 ## VALIDATION RESULTS
-New worktree:168 pure harness tests passed;40 artifact cases prepared (30 unchanged plus10 new),20 existing mail cases retained. New native cases NOT_RUN; no gateway startup or operational readiness claimed.
+172 pure local harness tests passed. Prepared native selection:40 retained artifact/package cases plus20 new release cases;20 mail cases retained. No new native pass, server startup or readiness claim.
 
 
 ## ROLLBACK PLAN
-No active deployment/configuration has changed. Disposable future test runner only; do not infer authority to revert live state.
+Disposable preparation/test environment only; production state and active Replit configuration are unchanged.
 
 
 ## COMMIT OR SOURCE REFERENCE
-Prepared parent 41b8368519399c037e3184870fd3224847af82f4; PR base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. The worktree has no new commit identity and is not externally published.
+Prepared parent c71c89d5b50d714fcdda088c8859c18a736fc002; PR base 53e4c0efea5d5f67c91f70ba6b2b488b067d1530. No new commit identity or publication is claimed. Previous verification/failure artifacts are retained.
