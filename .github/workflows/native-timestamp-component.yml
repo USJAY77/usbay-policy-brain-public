@@ -1,0 +1,98 @@
+name: Native timestamp component validation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - AGENTS.md
+      - requirements-ci.txt
+      - audit/__init__.py
+      - audit/export_input_contract.py
+      - audit/export_timestamp_v2.py
+      - audit/export_intake_v2.py
+      - audit/rfc3161_crypto.py
+      - audit/rfc3161_info.c
+      - security/__init__.py
+      - security/runtime_artifact_provenance.py
+      - fixtures/**
+      - validation/rfc3161/**
+      - .github/workflows/native-timestamp-component.yml
+
+permissions:
+  contents: read
+
+jobs:
+  native-component:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      EXPECTED_COMMIT: ${{ github.event.pull_request.head.sha }}
+    steps:
+      - name: Validate candidate reference and prepare receipts
+        run: |
+          python3 - <<'PY'
+          import os,re,sys
+          if re.fullmatch(r'[0-9a-f]{40}',os.environ.get('EXPECTED_COMMIT','')) is None:
+              sys.exit('SOURCE_REFERENCE_INVALID')
+          PY
+          mkdir -m 700 "$RUNNER_TEMP/usbay-native-receipts"
+      - name: Checkout exact candidate
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Select existing approved Python validation baseline
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+      - name: Project immutable component source
+        run: |
+          python3 - <<'PY'
+          import sys
+          if sys.version_info[:2] != (3,11):
+              sys.exit('VALIDATION_PYTHON_VERSION_UNSUPPORTED')
+          PY
+          SOURCE_TREE=$(/usr/bin/git rev-parse HEAD^{tree})
+          python3 validation/rfc3161/project_source.py \
+            --source "$GITHUB_WORKSPACE" \
+            --destination "$RUNNER_TEMP/usbay-native-source" \
+            --commit "$EXPECTED_COMMIT" --tree "$SOURCE_TREE" \
+            > "$RUNNER_TEMP/usbay-native-receipts/projection-result.json"
+          cp "$RUNNER_TEMP/usbay-native-source/component-projection-receipt.json" \
+            "$RUNNER_TEMP/usbay-native-receipts/source-identity.json"
+      - name: Install existing hash-locked validation dependencies
+        run: |
+          python3 -m venv "$RUNNER_TEMP/usbay-native-venv"
+          "$RUNNER_TEMP/usbay-native-venv/bin/python3" -m pip --isolated install \
+            --require-hashes -r "$RUNNER_TEMP/usbay-native-source/requirements-ci.txt"
+      - name: Build and test exact projected component
+        run: |
+          export PATH="$RUNNER_TEMP/usbay-native-venv/bin:/usr/bin:/bin"
+          sh "$RUNNER_TEMP/usbay-native-source/validation/rfc3161/run.sh"
+      - name: Require address, undefined and leak sanitizer validation
+        run: |
+          SOURCE_TREE=$(/usr/bin/git rev-parse HEAD^{tree})
+          python3 validation/rfc3161/project_source.py --verify \
+            --source "$GITHUB_WORKSPACE" --destination "$RUNNER_TEMP/usbay-native-source" \
+            --commit "$EXPECTED_COMMIT" --tree "$SOURCE_TREE" \
+            > "$RUNNER_TEMP/usbay-native-receipts/source-before-memory.json"
+          "$RUNNER_TEMP/usbay-native-venv/bin/python3" \
+            "$RUNNER_TEMP/usbay-native-source/validation/rfc3161/validate_native_memory.py" \
+            --output "$RUNNER_TEMP/usbay-native-receipts/memory" \
+            > "$RUNNER_TEMP/usbay-native-receipts/memory-result.json"
+          python3 validation/rfc3161/project_source.py --verify \
+            --source "$GITHUB_WORKSPACE" --destination "$RUNNER_TEMP/usbay-native-source" \
+            --commit "$EXPECTED_COMMIT" --tree "$SOURCE_TREE" \
+            > "$RUNNER_TEMP/usbay-native-receipts/source-after-memory.json"
+      - name: Preserve bounded validation receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-timestamp-component-receipts
+          path: |
+            ${{ runner.temp }}/usbay-native-receipts/*.json
+            ${{ runner.temp }}/usbay-native-receipts/memory/*.json
+          if-no-files-found: error
+          retention-days: 14

@@ -141,6 +141,14 @@ def _policy_sha256_from_disk() -> str:
 
 
 def _git_commit_hash() -> str:
+    from security.runtime_artifact_authority import (
+        artifact_runtime_required, get_runtime_artifact_authority,
+    )
+
+    if artifact_runtime_required(ROOT):
+        # Consume the same verified, freshness-checked authority as startup.
+        # Missing/invalid trust must propagate; never fall back to Git.
+        return get_runtime_artifact_authority(ROOT).verified.source_commit
     try:
         result = subprocess.run(
             ["git", "rev-parse", "HEAD"],

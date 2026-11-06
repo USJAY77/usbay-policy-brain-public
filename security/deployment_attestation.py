@@ -4,7 +4,9 @@ from dataclasses import dataclass
 import hashlib
 import hmac
 import json
+import math
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -17,6 +19,10 @@ from security.node_identity import (
     load_node_attestation_policy,
 )
 from security.tenant_context import DEFAULT_TENANT_POLICY_PATH, validate_tenant_id
+from security.runtime_artifact_authority import (
+    RuntimeArtifactAuthority, artifact_runtime_required, get_runtime_artifact_authority, _read_manifest,
+)
+from security.runtime_artifact_provenance import RuntimeArtifactError
 
 
 class DeploymentAttestationError(RuntimeError):
@@ -66,6 +72,7 @@ class RuntimeProvenanceAuthority:
     tenant_id: str
     provenance_context: ProvenanceContext
     authority_id: str
+    artifact_authority: RuntimeArtifactAuthority | None = None
 
     def context_dict(self) -> dict[str, Any]:
         return self.provenance_context.to_dict()
@@ -127,12 +134,17 @@ def resolve_release_manifest_path(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_
     configured = os.getenv("USBAY_GOVERNANCE_RELEASE_PATH", "").strip()
     if configured:
         return Path(configured)
-    if environment_mode() == "production":
+    if environment_mode() == "production" or artifact_runtime_required():
         raise DeploymentAttestationError("release_manifest_path_required")
-    return ensure_runtime_release_manifest()
+    # Path selection is a read boundary, including in development.
+    # Missing or invalid evidence must be rejected by the reader, never regenerated here.
+    # Explicit producer entrypoints remain separate from runtime resolution.
+    return _generated_release_manifest_path()
 
 
 def current_git_commit() -> str:
+    if artifact_runtime_required():
+        return _artifact_authority().verified.source_commit
     try:
         completed = subprocess.run(
             ["git", "rev-parse", "HEAD"],
@@ -150,8 +162,29 @@ def current_git_commit() -> str:
 
 
 def environment_mode() -> str:
-    raw = os.getenv("USBAY_ENV", os.getenv("USBAY_ENVIRONMENT", "test")).strip().lower()
-    return "production" if raw in {"prod", "production"} else "test"
+    from security.runtime_artifact_provenance import runtime_environment_mode
+
+    try:
+        return runtime_environment_mode(default="test")
+    except RuntimeArtifactError as exc:
+        raise DeploymentAttestationError(str(exc)) from None
+
+
+def _artifact_authority(
+    authority: RuntimeArtifactAuthority | None = None,
+) -> RuntimeArtifactAuthority:
+    try:
+        selected = (
+            get_runtime_artifact_authority(authority.root)
+            if isinstance(authority, RuntimeArtifactAuthority) else get_runtime_artifact_authority()
+        )
+        if authority is not None and authority is not selected:
+            raise RuntimeArtifactError("runtime_artifact_authority_mismatch")
+        if not isinstance(selected, RuntimeArtifactAuthority):
+            raise RuntimeArtifactError("runtime_artifact_authority_unverified")
+        return selected.assert_fresh()
+    except RuntimeArtifactError as exc:
+        raise DeploymentAttestationError(str(exc)) from None
 
 
 def github_actions_ci() -> bool:
@@ -170,6 +203,8 @@ def _valid_git_sha(value: str | None) -> str | None:
 
 
 def _git_ancestor(candidate: str, descendant: str) -> bool:
+    if artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_git_forbidden")
     if candidate == descendant:
         return True
     try:
@@ -186,6 +221,8 @@ def _git_ancestor(candidate: str, descendant: str) -> bool:
 
 
 def _git_parents(commit: str) -> set[str]:
+    if artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_git_forbidden")
     try:
         completed = subprocess.run(
             ["git", "rev-list", "--parents", "-n", "1", commit],
@@ -276,10 +313,22 @@ def bootstrap_runtime_provenance(
     *,
     expected_git_commit: str | None = None,
     release_lineage: bool = True,
+    artifact_authority: RuntimeArtifactAuthority | None = None,
 ) -> RuntimeProvenanceBootstrap:
     normalized_release = _valid_git_sha(release_commit)
     if not normalized_release:
         raise DeploymentAttestationError("git_commit_mismatch")
+    if artifact_authority is not None or artifact_runtime_required():
+        artifact = _artifact_authority(artifact_authority)
+        commit = artifact.verified.source_commit
+        if normalized_release != commit or (expected_git_commit is not None and expected_git_commit != commit):
+            raise DeploymentAttestationError("git_commit_mismatch")
+        context = ProvenanceContext(commit, commit, False, (commit,), True, release_lineage)
+        return RuntimeProvenanceBootstrap(context, {
+            "runtime_provenance_bootstrap": "signed-artifact-v1",
+            "verification_reference": artifact.verification_reference,
+            "source_tree_reference": artifact.verified.source_tree_reference,
+        })
     current_commit = current_git_commit()
     ci_mode = environment_mode() != "production" and github_actions_ci()
     expected_commit = expected_git_commit or (_canonical_ci_expected_commit(current_commit) if ci_mode else current_commit)
@@ -366,20 +415,41 @@ def normalized_provenance_context(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_
     return resolve_runtime_provenance_authority(path).context_dict()
 
 
-def _authority_id(path: Path | str, release_digest: str, context: dict[str, Any]) -> str:
+def _authority_id(
+    path: Path | str, release_digest: str, context: dict[str, Any],
+    artifact: RuntimeArtifactAuthority | None = None,
+) -> str:
     payload = {
         "context": context,
         "release_hash": release_digest,
     }
+    if artifact is not None:
+        payload["runtime_artifact"] = {
+            "producer_key_id": artifact.verified.producer_key_id,
+            "source_tree_reference": artifact.verified.source_tree_reference,
+            "verification_reference": artifact.verification_reference,
+            "managed_set_hash": artifact.verified.managed_set_hash,
+        }
     return sha256_text(canonical_json(payload))
 
 
-def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH) -> RuntimeProvenanceAuthority:
+def resolve_runtime_provenance_authority(
+    path: Path | str = DEFAULT_GOVERNANCE_RELEASE_PATH,
+    *, artifact_authority: RuntimeArtifactAuthority | None = None,
+) -> RuntimeProvenanceAuthority:
+    artifact = (
+        _artifact_authority(artifact_authority)
+        if artifact_authority is not None or artifact_runtime_required() else None
+    )
     path = resolve_release_manifest_path(path)
     manifest = _load_manifest(path)
-    bootstrap = bootstrap_runtime_provenance(str(manifest.get("git_commit", "")))
+    bootstrap = bootstrap_runtime_provenance(
+        str(manifest.get("git_commit", "")), artifact_authority=artifact,
+    )
     context = bootstrap.context.to_dict()
-    summary = validate_release_manifest(path, expected_provenance_context=context)
+    summary = validate_release_manifest(
+        path, expected_provenance_context=context, artifact_authority=artifact,
+    )
     if summary["provenance_context"] != context:
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
     normalized = validate_normalized_provenance_context(context, str(manifest.get("git_commit", "")))
@@ -390,7 +460,8 @@ def resolve_runtime_provenance_authority(path: Path | str = DEFAULT_GOVERNANCE_R
         policy_bundle_hash=str(summary["policy_bundle_hash"]),
         tenant_id=str(summary["tenant_id"]),
         provenance_context=normalized,
-        authority_id=_authority_id(path, release_digest, context),
+        authority_id=_authority_id(path, release_digest, context, artifact),
+        artifact_authority=artifact,
     )
 
 
@@ -418,9 +489,14 @@ def assert_runtime_provenance_authority(
 ) -> RuntimeProvenanceAuthority:
     if not isinstance(authority, RuntimeProvenanceAuthority):
         raise DeploymentAttestationError("runtime_provenance_authority_required")
+    if authority.artifact_authority is not None:
+        _artifact_authority(authority.artifact_authority)
     release_path = path or authority.release_path
     context = authority.context_dict()
-    summary = validate_release_manifest(release_path, expected_provenance_context=context)
+    summary = validate_release_manifest(
+        release_path, expected_provenance_context=context,
+        artifact_authority=authority.artifact_authority,
+    )
     if summary["release_hash"] != authority.release_hash:
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
     if summary["policy_bundle_hash"] != authority.policy_bundle_hash:
@@ -429,7 +505,7 @@ def assert_runtime_provenance_authority(
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
     if summary["provenance_context"] != context:
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
-    if _authority_id(release_path, authority.release_hash, context) != authority.authority_id:
+    if _authority_id(release_path, authority.release_hash, context, authority.artifact_authority) != authority.authority_id:
         raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
     return authority
 
@@ -441,8 +517,24 @@ def commit_continuity_valid(release_commit: str, expected_commit: str) -> bool:
     return context.ancestor_continuity or release_commit in context.accepted_commit_set
 
 
-def _signing_material() -> str:
-    return os.getenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", "usbay-local-deployment-signing-material-v1")
+def _signing_material(signing_material: str | None = None) -> str:
+    # A development default is never an independent production authority.
+    mode = environment_mode()
+    explicit_development = mode == "test" and any(
+        name in os.environ for name in ("USBAY_ENV", "USBAY_ENVIRONMENT")
+    )
+    development_material = "usbay-local-deployment-signing-material-v1"
+    material = (
+        os.getenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL")
+        if signing_material is None else signing_material
+    )
+    if material is None or not material.strip():
+        if explicit_development:
+            return development_material
+        raise DeploymentAttestationError("deployment_signing_material_required")
+    if material.strip() == development_material and not explicit_development:
+        raise DeploymentAttestationError("development_signing_material_denied")
+    return material
 
 
 def signature_payload(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -457,7 +549,7 @@ def release_hash(manifest: dict[str, Any]) -> str:
 
 def sign_release_manifest(manifest: dict[str, Any], signing_material: str | None = None) -> str:
     digest = hmac.new(
-        (signing_material or _signing_material()).encode("utf-8"),
+        _signing_material(signing_material).encode("utf-8"),
         canonical_json(signature_payload(manifest)).encode("utf-8"),
         hashlib.sha256,
     ).hexdigest()
@@ -511,12 +603,74 @@ def _canonical_activating_node_id(policy_path: Path | str = DEFAULT_NODE_ATTESTA
     return node_ids[0]
 
 
+def _release_object(pairs: list[tuple]) -> dict:
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise DeploymentAttestationError("release_manifest_duplicate_field")
+        result[key] = value
+    return result
+
+
+def _release_constant(value: str):
+    raise DeploymentAttestationError("release_manifest_invalid")
+
+
+def _release_float(value: str) -> float:
+    number = float(value)
+    if not math.isfinite(number):
+        raise DeploymentAttestationError("release_manifest_invalid")
+    return number
+
+
+def _bounded_release_read_reason(path: Path, error: BaseException) -> str:
+    """Map a failed read to a content-free denial. Never a success or repair path.
+
+    Absence stays release_manifest_missing. A present file that cannot be read
+    is release_manifest_unreadable. A symlink, non-regular file, or replaced
+    parent is release_manifest_substituted. Bytes over the manifest bound, or
+    bytes that are not strict JSON, are release_manifest_malformed. Exception
+    text, paths, and file bytes are not returned.
+    """
+    code = str(error) if isinstance(error, RuntimeArtifactError) else ""
+    if code == "runtime_artifact_manifest_size_invalid":
+        return "release_manifest_malformed"
+    if code in {"runtime_artifact_manifest_file_invalid", "runtime_artifact_manifest_path_invalid"}:
+        return "release_manifest_substituted"
+    if code != "runtime_artifact_manifest_unavailable" and not isinstance(error, OSError):
+        return "release_manifest_unreadable"
+    try:
+        info = Path(path).lstat()
+    except FileNotFoundError:
+        return "release_manifest_missing"
+    except OSError:
+        return "release_manifest_unreadable"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        return "release_manifest_substituted"
+    return "release_manifest_unreadable"
+
+
 def _load_manifest(path: Path | str) -> dict[str, Any]:
     path = resolve_release_manifest_path(path)
     try:
-        manifest = json.loads(Path(path).read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise DeploymentAttestationError("release_manifest_missing") from exc
+        resolved = Path(path).absolute()
+    except OSError:
+        # Normalization produced no absolute path. Deny without inspecting it.
+        raise DeploymentAttestationError("release_manifest_unreadable") from None
+    try:
+        # Bounded regular-file/no-follow reader; no regeneration or repair.
+        raw = _read_manifest(resolved)
+    except (RuntimeArtifactError, OSError, ValueError, RecursionError) as error:
+        raise DeploymentAttestationError(_bounded_release_read_reason(resolved, error)) from None
+    try:
+        manifest = json.loads(
+            raw.decode("utf-8", errors="strict"), object_pairs_hook=_release_object,
+            parse_constant=_release_constant, parse_float=_release_float,
+        )
+    except DeploymentAttestationError:
+        raise
+    except (ValueError, RecursionError):
+        raise DeploymentAttestationError("release_manifest_malformed") from None
     if not isinstance(manifest, dict):
         raise DeploymentAttestationError("release_manifest_invalid")
     return manifest
@@ -635,6 +789,8 @@ def ensure_runtime_release_manifest(
     tenant_id: str = "t1",
     force: bool = False,
 ) -> Path:
+    if environment_mode() == "production" or artifact_runtime_required():
+        raise DeploymentAttestationError("runtime_release_generation_denied")
     if _is_default_release_path(path):
         configured = os.getenv("USBAY_GOVERNANCE_RELEASE_PATH", "").strip()
         target = Path(configured) if configured else _generated_release_manifest_path()
@@ -687,10 +843,29 @@ def validate_release_manifest(
     expected_provenance_authority: RuntimeProvenanceAuthority | None = None,
     node_policy_path: Path | str = DEFAULT_NODE_ATTESTATION_POLICY_PATH,
     now: datetime | None = None,
+    artifact_authority: RuntimeArtifactAuthority | None = None,
 ) -> dict[str, Any]:
+    artifact = (
+        _artifact_authority(artifact_authority)
+        if artifact_authority is not None or artifact_runtime_required() else None
+    )
     path = resolve_release_manifest_path(path)
     manifest = _load_manifest(path)
+    if artifact is not None:
+        if (
+            manifest.get("git_commit") != artifact.verified.source_commit
+            or (expected_git_commit is not None and expected_git_commit != artifact.verified.source_commit)
+        ):
+            raise DeploymentAttestationError("git_commit_mismatch")
+        artifact_context = bootstrap_runtime_provenance(
+            str(manifest.get("git_commit", "")), artifact_authority=artifact,
+        ).context.to_dict()
+        if expected_provenance_context is not None and expected_provenance_context != artifact_context:
+            raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
+        expected_provenance_context = artifact_context
     if expected_provenance_authority is not None:
+        if artifact is not None and expected_provenance_authority.artifact_authority is not artifact:
+            raise DeploymentAttestationError("runtime_provenance_authority_mismatch")
         expected_provenance_context = assert_runtime_provenance_authority(
             expected_provenance_authority,
             path,
@@ -748,6 +923,8 @@ def validate_release_manifest(
         raise DeploymentAttestationError("rollback_lineage_ambiguous")
     if not context.ancestor_continuity and str(manifest.get("git_commit", "")) not in context.accepted_commit_set:
         raise DeploymentAttestationError("git_commit_mismatch")
+    if artifact is not None:
+        artifact.assert_fresh()
     return {
         "release_id": str(manifest["release_id"]),
         "git_commit": str(manifest["git_commit"]),
