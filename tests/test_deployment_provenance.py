@@ -699,6 +699,38 @@ def test_unreadable_release_input_is_not_reported_missing(tmp_path: Path, monkey
     _assert_denial(path, "release_manifest_unreadable", raw)
 
 
+def test_release_path_with_embedded_nul_is_unreadable(tmp_path: Path) -> None:
+    path = tmp_path / f"{_CANARY}\0release.json"
+    before = sorted(tmp_path.iterdir())
+    with pytest.raises(DeploymentAttestationError) as raised:
+        load_release_manifest(path)
+    error = raised.value
+    assert str(error) == "release_manifest_unreadable"
+    assert error.__cause__ is None and error.__suppress_context__ is True
+    assert _CANARY not in "".join(traceback.format_exception(error))
+    assert sorted(tmp_path.iterdir()) == before
+    for flag in _AUTHORITY_FLAGS:
+        assert getattr(error, flag, False) is not True
+
+
+def test_release_reader_valueerror_does_not_parse_or_probe(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "release.json"
+    raw = b'{"valid":true}'
+    path.write_bytes(raw)
+
+    def deny(_target: Path) -> bytes:
+        raise ValueError(_CANARY)
+
+    def forbid(*args, **kwargs):
+        raise AssertionError("parse or filesystem probe after reader failure")
+
+    with monkeypatch.context() as patch:
+        patch.setattr("security.deployment_attestation._read_manifest", deny)
+        patch.setattr("security.deployment_attestation.json.loads", forbid)
+        patch.setattr(Path, "lstat", forbid)
+        _assert_denial(path, "release_manifest_unreadable", raw)
+
+
 def test_release_path_normalization_oserror_is_bounded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     canary = "PRIVATE_CANARY_NORM_b7e2"
     leaked_path = f"/private/{canary}/governance_release.json"

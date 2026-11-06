@@ -633,9 +633,7 @@ def _bounded_release_read_reason(path: Path, error: BaseException) -> str:
     text, paths, and file bytes are not returned.
     """
     code = str(error) if isinstance(error, RuntimeArtifactError) else ""
-    if code == "runtime_artifact_manifest_size_invalid" or isinstance(
-        error, (ValueError, UnicodeError, RecursionError)
-    ):
+    if code == "runtime_artifact_manifest_size_invalid":
         return "release_manifest_malformed"
     if code in {"runtime_artifact_manifest_file_invalid", "runtime_artifact_manifest_path_invalid"}:
         return "release_manifest_substituted"
@@ -662,14 +660,17 @@ def _load_manifest(path: Path | str) -> dict[str, Any]:
     try:
         # Bounded regular-file/no-follow reader; no regeneration or repair.
         raw = _read_manifest(resolved)
+    except (RuntimeArtifactError, OSError, ValueError, RecursionError) as error:
+        raise DeploymentAttestationError(_bounded_release_read_reason(resolved, error)) from None
+    try:
         manifest = json.loads(
             raw.decode("utf-8", errors="strict"), object_pairs_hook=_release_object,
             parse_constant=_release_constant, parse_float=_release_float,
         )
     except DeploymentAttestationError:
         raise
-    except (RuntimeArtifactError, OSError, ValueError, UnicodeError, RecursionError) as error:
-        raise DeploymentAttestationError(_bounded_release_read_reason(resolved, error)) from None
+    except (ValueError, RecursionError):
+        raise DeploymentAttestationError("release_manifest_malformed") from None
     if not isinstance(manifest, dict):
         raise DeploymentAttestationError("release_manifest_invalid")
     return manifest
