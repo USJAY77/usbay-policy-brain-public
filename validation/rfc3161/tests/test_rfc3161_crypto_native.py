@@ -3,6 +3,7 @@
 The request used for the SHA256 fixture is RECONSTRUCTED test data, not evidence
 of its historical request origin or freshness. Trust here is explicitly test-only.
 """
+from public_x509_fixtures import public_fixture_pem
 import concurrent.futures
 from dataclasses import FrozenInstanceError, asdict
 from datetime import datetime, timezone
@@ -31,8 +32,8 @@ class TimestampHarness:
                     request_der=(PROFILE/'reconstructed-test-request.der').read_bytes(),
                     expected_imprint=hashlib.sha256(b'hello').hexdigest(),
                     expected_policy_oid='1.3.6.1.4.1.57264.2',
-                    roots_pem=(PROFILE/'test-only-root.pem').read_bytes(),
-                    intermediates_pem=(PROFILE/'test-only-intermediates.pem').read_bytes(),
+                    roots_pem=public_fixture_pem('sigstage/test-only-root.pem'),
+                    intermediates_pem=public_fixture_pem('sigstage/test-only-intermediates.pem'),
                     evaluation_time=datetime(2026,11,6,tzinfo=timezone.utc))
 
     def reject(self, expected_code=None, **changes):
@@ -98,13 +99,17 @@ class NativeTimestampCryptoTests(TimestampHarness, unittest.TestCase):
     def test_wrong_explicit_root_does_not_fall_back(self):
         from cryptography import x509
         from cryptography.hazmat.primitives.serialization import Encoding
-        root = x509.load_pem_x509_certificates((VECTORS/'test_tsa/ts_chain.pem').read_bytes())[-1]
+        root = x509.load_pem_x509_certificates(public_fixture_pem('test_tsa/ts_chain.pem'))[-1]
         self.reject('TSA_SIGNATURE_CHAIN_IMPRINT_POLICY_FAILED', roots_pem=root.public_bytes(Encoding.PEM))
 
     def test_parent_ca_environment_cannot_replace_wrong_explicit_root(self):
-        with patch.dict(os.environ,{'SSL_CERT_FILE':str(PROFILE/'test-only-root.pem'),
-                                   'OPENSSL_CONF':'/does-not-exist/untrusted-config'}):
-            self.test_wrong_explicit_root_does_not_fall_back()
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            public_root=Path(directory)/'public-root.pem'
+            public_root.write_bytes(public_fixture_pem('sigstage/test-only-root.pem'))
+            with patch.dict(os.environ,{'SSL_CERT_FILE':str(public_root),
+                                       'OPENSSL_CONF':'/does-not-exist/untrusted-config'}):
+                self.test_wrong_explicit_root_does_not_fall_back()
 
     def test_raw_token_cannot_be_substituted_for_response(self):
         result=subprocess.run(['/usr/bin/openssl','ts','-reply','-in',str(PROFILE/'response-sha256.tsr'),'-token_out'],

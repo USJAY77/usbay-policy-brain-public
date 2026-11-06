@@ -12,7 +12,8 @@ unchanged. The dedicated proposed PR job builds the required native helpers and
 executes every component case. No existing security test is skipped or weakened.
 
 The 117 earlier component cases plus 18 immutable-source projection cases make
-135 unique tests. Source projection tests create disposable synthetic Git repos;
+135 unique tests before the fixture-packaging repair. Fourteen additional
+public-vector decoding cases bring the repaired component to 149 unique tests. Source projection tests create disposable synthetic Git repos;
 they never commit to the actual USBAY repository or publish anything.
 
 ## Immutable source projection
@@ -54,7 +55,13 @@ are exported. Receipts retain status/reason/source/binary/diagnostic hashes only
 
 The local environment is known to make LeakSanitizer abort under ptrace. This
 script treats that as a hard failure and never retries with leak checks disabled.
-Proposed CI success is UNKNOWN until an authorized run establishes it. Linked
+The first authorized PR428 run passed all 135 original component cases and
+seven required sanitizer cases on commit 5d04d4780eb36eecd12e2e954e9024cfcdfe3198.
+Its broader governance lane failed six tests: two explicitly rejected ten
+unapproved PEM fixtures, and four staging cases reported unclassified errors.
+The repair converts only public fixture representation and test decoding;
+existing runtime and public-release scanners remain byte-identical. A new head
+requires its own authorized CI evidence; prior success is not inherited. Linked
 OpenSSL itself is not rebuilt with instrumentation; wrapper results are scoped.
 
 ## Publication boundary

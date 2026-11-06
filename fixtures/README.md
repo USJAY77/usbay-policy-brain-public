@@ -22,3 +22,15 @@ authorization, freshness, replay resistance or production policy adoption.
 
 Only public files required by the tests are included in the candidate patch.
 Fixture hashes and upstream Git blob identities are recorded separately.
+
+## Repository-safe public X.509 packaging
+
+The ten original PEM certificate/CRL fixtures are represented in
+public-x509-vectors.json as canonical base64-encoded public DER objects (13
+objects). The test-only public_x509_fixtures decoder requires explicit
+CERTIFICATES/CRLS types, canonical DER and JSON, bounded sizes and canonical
+public PEM SHA256. Original PEM hashes remain provenance metadata. Private-key
+containers, trailing bytes, invalid encodings and substitutions fail closed.
+The decoder returns public PEM only in memory for the existing native verifier;
+no runtime reader, scanner exemption or trust allowlist is introduced. Upstream
+licenses and the signed public X.509 object bytes are preserved.

@@ -57,7 +57,9 @@ limitations are not claimed resolved by running this isolated verifier.
 The native crypto/time/CRL subset has 84 unique passing cases: the 38 earlier
 cases plus 46 additions, not 122. The V2 signed-input observer adds 33 cases,
 bringing that subset to 117. Eighteen immutable-source projection cases bring
-the current standalone candidate to 135 unique passing cases.
+that candidate to 135 unique passing cases. The fixture-packaging repair adds
+14 public-vector decoder cases, for 149 component cases; results remain
+bound to the validated source and environment.
 The new cases include actual signed-time/freshness checks, public PKITS signed
 CRL paths, revoked certificates, forged CRLs and a matching synthetic timestamp,
 request, certificate and CRL chain. Four engine/helper failure cases use negative

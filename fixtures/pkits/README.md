@@ -2,8 +2,8 @@
 
 Source: pyca/cryptography, commit 9f119db1beba2834af325cc631b3d787b895943d,
 vectors/cryptography_vectors/x509/PKITS_data/{certs,crls}.
-PEM files are public DER vectors converted with cryptography's native parser and
-serializer. Upstream Git blob identities and derived hashes are recorded in
+Public DER vectors are stored in ../public-x509-vectors.json and decoded to
+in-memory public PEM with cryptography's native parser and serializer. Upstream Git blob identities and derived hashes are recorded in
 evidence. No private keys are fetched. Upstream license notice is retained.
 
 Tests evaluate this chain at 2010-01-01T08:31:00Z, shortly after its signed CRLs'

@@ -3,6 +3,7 @@
 PKITS historical evaluation is explicit test scope and not current production
 revocation evidence. It is a different chain from the timestamp fixture.
 """
+from public_x509_fixtures import public_fixture_pem
 import base64
 import concurrent.futures
 from datetime import datetime, timedelta, timezone
@@ -92,11 +93,10 @@ class TemporalNativeTests(TimestampHarness, unittest.TestCase):
 
 class RevocationNativeTests(unittest.TestCase):
     def args(self):
-        p=ROOT/'fixtures/pkits'
-        return dict(certificate_pem=(p/'certs/ValidCertificatePathTest1EE.crt.pem').read_bytes(),
-                    intermediates_pem=(p/'certs/GoodCACert.crt.pem').read_bytes(),
-                    roots_pem=(p/'certs/TrustAnchorRootCertificate.crt.pem').read_bytes(),
-                    crls_pem=(p/'crls/TrustAnchorRootCRL.crl.pem').read_bytes()+(p/'crls/GoodCACRL.crl.pem').read_bytes(),
+        return dict(certificate_pem=public_fixture_pem('pkits/certs/ValidCertificatePathTest1EE.crt.pem'),
+                    intermediates_pem=public_fixture_pem('pkits/certs/GoodCACert.crt.pem'),
+                    roots_pem=public_fixture_pem('pkits/certs/TrustAnchorRootCertificate.crt.pem'),
+                    crls_pem=public_fixture_pem('pkits/crls/TrustAnchorRootCRL.crl.pem')+public_fixture_pem('pkits/crls/GoodCACRL.crl.pem'),
                     evaluation_time=datetime(2010,1,1,8,31,tzinfo=timezone.utc),max_crl_age_seconds=3600)
 
     def check(self, **changes):
@@ -112,24 +112,24 @@ class RevocationNativeTests(unittest.TestCase):
         self.assertIn('GOVERNED_TRUST_AND_CLOCK_ADOPTION',result.remaining_requirements)
 
     def test_actually_revoked_certificate_is_denied(self):
-        p=ROOT/'fixtures/pkits/certs/InvalidRevokedEETest3EE.crt.pem'
-        self.reject('TSA_CERTIFICATE_REVOCATION_FAILED',certificate_pem=p.read_bytes())
+        p='pkits/certs/InvalidRevokedEETest3EE.crt.pem'
+        self.reject('TSA_CERTIFICATE_REVOCATION_FAILED',certificate_pem=public_fixture_pem(p))
 
     def test_bad_crl_signature_is_denied(self):
         from cryptography import x509
         from cryptography.hazmat.primitives.serialization import Encoding
-        p=ROOT/'fixtures/pkits/crls/GoodCACRL.crl.pem'
-        bad=bytearray(x509.load_pem_x509_crl(p.read_bytes()).public_bytes(Encoding.DER));bad[-1]^=1
+        p='pkits/crls/GoodCACRL.crl.pem'
+        bad=bytearray(x509.load_pem_x509_crl(public_fixture_pem(p)).public_bytes(Encoding.DER));bad[-1]^=1
         corrupted=x509.load_der_x509_crl(bytes(bad)).public_bytes(Encoding.PEM)
-        root=(ROOT/'fixtures/pkits/crls/TrustAnchorRootCRL.crl.pem').read_bytes()
+        root=public_fixture_pem('pkits/crls/TrustAnchorRootCRL.crl.pem')
         self.reject('TSA_CERTIFICATE_REVOCATION_FAILED',crls_pem=root+corrupted)
 
     def test_missing_leaf_issuer_crl(self):
-        root=(ROOT/'fixtures/pkits/crls/TrustAnchorRootCRL.crl.pem').read_bytes()
+        root=public_fixture_pem('pkits/crls/TrustAnchorRootCRL.crl.pem')
         self.reject('TSA_CERTIFICATE_REVOCATION_FAILED',crls_pem=root)
 
     def test_missing_intermediate_issuer_crl(self):
-        ca=(ROOT/'fixtures/pkits/crls/GoodCACRL.crl.pem').read_bytes()
+        ca=public_fixture_pem('pkits/crls/GoodCACRL.crl.pem')
         self.reject('TSA_CERTIFICATE_REVOCATION_FAILED',crls_pem=ca)
 
     def test_crl_age_not_only_next_update(self):
@@ -173,8 +173,8 @@ class CompositionBoundaryTests(TimestampHarness, unittest.TestCase):
         self.reject('TSA_CRL_PROFILE_INVALID',max_crl_age_seconds=300)
 
     def test_old_unrelated_crls_cannot_upgrade_timestamp_observation(self):
-        p=ROOT/'fixtures/pkits/crls/GoodCACRL.crl.pem'
-        self.reject('TSA_CRL_TIME_INVALID',crls_pem=p.read_bytes(),max_crl_age_seconds=3600)
+        p='pkits/crls/GoodCACRL.crl.pem'
+        self.reject('TSA_CRL_TIME_INVALID',crls_pem=public_fixture_pem(p),max_crl_age_seconds=3600)
 
     def test_empty_crls_cannot_upgrade_timestamp_observation(self):
         self.reject('TSA_INPUT_INVALID',crls_pem=b'',max_crl_age_seconds=300)
