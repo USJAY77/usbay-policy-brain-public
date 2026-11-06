@@ -6,6 +6,7 @@ import hmac
 import json
 import math
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -622,19 +623,53 @@ def _release_float(value: str) -> float:
     return number
 
 
+def _bounded_release_read_reason(path: Path, error: BaseException) -> str:
+    """Map a failed read to a content-free denial. Never a success or repair path.
+
+    Absence stays release_manifest_missing. A present file that cannot be read
+    is release_manifest_unreadable. A symlink, non-regular file, or replaced
+    parent is release_manifest_substituted. Bytes over the manifest bound, or
+    bytes that are not strict JSON, are release_manifest_malformed. Exception
+    text, paths, and file bytes are not returned.
+    """
+    code = str(error) if isinstance(error, RuntimeArtifactError) else ""
+    if code == "runtime_artifact_manifest_size_invalid" or isinstance(
+        error, (ValueError, UnicodeError, RecursionError)
+    ):
+        return "release_manifest_malformed"
+    if code in {"runtime_artifact_manifest_file_invalid", "runtime_artifact_manifest_path_invalid"}:
+        return "release_manifest_substituted"
+    if code != "runtime_artifact_manifest_unavailable" and not isinstance(error, OSError):
+        return "release_manifest_unreadable"
+    try:
+        info = Path(path).lstat()
+    except FileNotFoundError:
+        return "release_manifest_missing"
+    except OSError:
+        return "release_manifest_unreadable"
+    if stat.S_ISLNK(info.st_mode) or not stat.S_ISREG(info.st_mode):
+        return "release_manifest_substituted"
+    return "release_manifest_unreadable"
+
+
 def _load_manifest(path: Path | str) -> dict[str, Any]:
     path = resolve_release_manifest_path(path)
     try:
+        resolved = Path(path).absolute()
+    except OSError:
+        # Normalization produced no absolute path. Deny without inspecting it.
+        raise DeploymentAttestationError("release_manifest_unreadable") from None
+    try:
         # Bounded regular-file/no-follow reader; no regeneration or repair.
-        raw = _read_manifest(Path(path).absolute())
+        raw = _read_manifest(resolved)
         manifest = json.loads(
             raw.decode("utf-8", errors="strict"), object_pairs_hook=_release_object,
             parse_constant=_release_constant, parse_float=_release_float,
         )
     except DeploymentAttestationError:
         raise
-    except (RuntimeArtifactError, OSError, ValueError, UnicodeError, RecursionError):
-        raise DeploymentAttestationError("release_manifest_missing") from None
+    except (RuntimeArtifactError, OSError, ValueError, UnicodeError, RecursionError) as error:
+        raise DeploymentAttestationError(_bounded_release_read_reason(resolved, error)) from None
     if not isinstance(manifest, dict):
         raise DeploymentAttestationError("release_manifest_invalid")
     return manifest

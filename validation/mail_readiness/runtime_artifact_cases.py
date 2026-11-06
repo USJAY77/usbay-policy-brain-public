@@ -394,7 +394,7 @@ class RuntimeArtifactCases(unittest.TestCase):
     def test_release_malformed_file_is_not_repaired(self):
         self.release_fixture()
         self.release_path.write_bytes(b'{')
-        self.release_reject(d.load_release_manifest,'release_manifest_missing')
+        self.release_reject(d.load_release_manifest,'release_manifest_malformed')
         self.assertEqual(self.release_path.read_bytes(),b'{')
 
     def test_release_commit_substitution_rejected(self):
@@ -485,13 +485,13 @@ class RuntimeArtifactCases(unittest.TestCase):
         before = self.release_path.read_bytes()
         link = self.base/'linked-release.json'
         link.symlink_to(self.release_path)
-        self.release_reject(lambda:d.load_release_manifest(link),'release_manifest_missing')
+        self.release_reject(lambda:d.load_release_manifest(link),'release_manifest_substituted')
         self.assertEqual(self.release_path.read_bytes(),before)
 
     def test_release_oversized_file_rejected_without_repair(self):
         self.release_fixture()
         self.release_path.write_bytes(b' '*(p.MAX_MANIFEST_BYTES+1))
-        self.release_reject(d.load_release_manifest,'release_manifest_missing')
+        self.release_reject(d.load_release_manifest,'release_manifest_malformed')
         self.assertEqual(self.release_path.stat().st_size,p.MAX_MANIFEST_BYTES+1)
 
 
