@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import secrets
 import traceback
 from dataclasses import FrozenInstanceError
 from datetime import datetime, timezone
@@ -38,6 +39,19 @@ from security.hydra_consensus import HydraNodeDecision, evaluate_consensus, repl
 from tests.provenance_helpers import install_runtime_authority
 from tests.test_audit_exporter import isolated_anchor_keys
 from tests.test_worm_evidence_archive import _policy as retention_policy
+
+pytestmark = [pytest.mark.governance, pytest.mark.regression]
+
+
+@pytest.fixture(autouse=True)
+def synthetic_release_signer(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep synthetic signatures consistent without selecting an environment.
+
+    Each case gets disposable material, restored by monkeypatch afterward.
+    Tests of missing or development material explicitly replace this input.
+    No production signer, validator or authority is substituted.
+    """
+    monkeypatch.setenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", secrets.token_hex(32))
 
 
 def _node_policy(tmp_path: Path) -> tuple[Path, str]:
@@ -262,7 +276,71 @@ def test_build_release_manifest_rejects_unknown_activating_node(tmp_path: Path) 
         )
 
 
+@pytest.mark.parametrize("mode", [None, "production"])
+def test_missing_signer_is_denied_without_explicit_test_mode(monkeypatch, mode) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.delenv("USBAY_ENVIRONMENT", raising=False)
+    monkeypatch.delenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", raising=False)
+    if mode is not None:
+        monkeypatch.setenv("USBAY_ENV", mode)
+
+    with pytest.raises(DeploymentAttestationError, match="^deployment_signing_material_required$"):
+        sign_release_manifest({"release_id": "synthetic-missing-signer"})
+
+
+@pytest.mark.parametrize("mode", [None, "production"])
+def test_development_signer_is_denied_without_explicit_test_mode(monkeypatch, mode) -> None:
+    monkeypatch.delenv("USBAY_ENV", raising=False)
+    monkeypatch.delenv("USBAY_ENVIRONMENT", raising=False)
+    monkeypatch.setenv("USBAY_DEPLOYMENT_SIGNING_MATERIAL", "usbay-local-deployment-signing-material-v1")
+    if mode is not None:
+        monkeypatch.setenv("USBAY_ENV", mode)
+
+    with pytest.raises(DeploymentAttestationError, match="^development_signing_material_denied$"):
+        sign_release_manifest({"release_id": "synthetic-development-signer"})
+
+
 def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> None:
+    import base64
+    import hashlib
+
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
+    from security import runtime_artifact_authority as artifact_store
+    from security import runtime_artifact_provenance as provenance
+    from security.deployment_attestation import bootstrap_runtime_provenance
+
+    # Production-mode validation requires a real verified source artifact.
+    # This temporary public fixture and in-memory producer are not live trust.
+    root = tmp_path / "synthetic-source"
+    root.mkdir()
+    source = root / "application.py"
+    source.write_bytes(b"# synthetic source only\n")
+    source.chmod(0o644)
+    key = Ed25519PrivateKey.generate()
+    public = key.public_key().public_bytes(Encoding.Raw, PublicFormat.Raw)
+    key_id = provenance.public_key_id(public)
+    entries = [{"path": source.name, "mode": "100644",
+                "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                "size": source.stat().st_size}]
+    manifest = {
+        "schema_version": provenance.MANIFEST_SCHEMA,
+        "producer_contract": provenance.PRODUCER_CONTRACT,
+        "producer_key_id": key_id, "producer_scope": "production",
+        "source_commit": "d" * 40, "source_tree_reference": "e" * 40,
+        "managed_files": entries,
+        "managed_set_hash": hashlib.sha256(provenance.canonical_bytes(entries)).hexdigest(),
+        "build_reference": None, "created_at": "2026-05-11T00:00:00Z",
+        "manifest_id": "f" * 32,
+    }
+    manifest["manifest_digest"] = provenance.manifest_digest(manifest)
+    manifest["signature"] = base64.b64encode(key.sign(provenance.signature_payload(manifest))).decode("ascii")
+    (root / artifact_store.MANIFEST_NAME).write_bytes(provenance.canonical_bytes(manifest))
+    monkeypatch.setattr(artifact_store, "REPO_ROOT", root)
+    monkeypatch.setattr(artifact_store, "_runtime_authority", None)
+    monkeypatch.setenv("USBAY_RUNTIME_ARTIFACT_PRODUCER_PUBLIC_KEY", base64.b64encode(public).decode("ascii"))
+    monkeypatch.setenv("USBAY_RUNTIME_ARTIFACT_PRODUCER_KEY_ID", key_id)
+    monkeypatch.setenv("USBAY_RUNTIME_ARTIFACT_PRODUCER_SCOPE", "production")
     monkeypatch.setenv("USBAY_ENV", "production")
     monkeypatch.setenv("GITHUB_ACTIONS", "true")
     monkeypatch.setenv("GITHUB_REPOSITORY", "owner/repo")
@@ -270,6 +348,11 @@ def test_production_exact_commit_enforcement(tmp_path: Path, monkeypatch) -> Non
     node_policy, node_id = _node_policy(tmp_path)
     path = _write_manifest(tmp_path / "governance_release.json", _manifest(node_id=node_id, git_commit="c" * 40))
 
+    artifact = artifact_store.get_runtime_artifact_authority()
+    assert artifact.verified.source_commit == "d" * 40
+    assert bootstrap_runtime_provenance(
+        "d" * 40, expected_git_commit="d" * 40, artifact_authority=artifact,
+    ).context.ancestor_continuity is True
     with pytest.raises(DeploymentAttestationError, match="git_commit_mismatch"):
         validate_release_manifest(
             path,
