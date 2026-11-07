@@ -333,6 +333,7 @@ def test_live_pilot_script_preserves_tracked_audit_key_registry() -> None:
     assert after == before
 
 
+@pytest.mark.governance
 def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:
     client = configure_gateway(tmp_path, monkeypatch)
 
