@@ -1,0 +1,29 @@
+{
+  "baseline": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "branch": "local/release-owner-contract-v1",
+  "python": "3.12.14",
+  "cases": 131,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "success": true,
+  "artifacts": {
+    "governance/release_owner_contract.py": "fbcd7b08ddf4c8e668bec2abec20f58e45fbab953dd80f83bcaddb895677e124",
+    "tests/test_release_owner_contract.py": "0768bd88c1c0de1a12d769190c84f87add92ac5051d43939c403c822306258d5",
+    "tests/conftest.py": "040fd43a00883e848aef492d137f25940b8bfd1b02ea98ce150181e52972305b",
+    "docs/release-owner-contract-local-validation.md": "4d753299847b9a022be0e377b4aa9f39050a8ae68328411c3a00f169ff5011a8"
+  },
+  "initial_failure": {
+    "command": "python3 -m unittest discover -s tests -p test_release_owner_contract.py -v",
+    "exit_code": 1,
+    "passing_target_cases": 114,
+    "loader_errors": 1,
+    "cause": "tests/helpers import attempted gateway.app; ModuleNotFoundError: No module named fastapi",
+    "fixed_by": "target explicit unittest module; no helper changes or dependency installation"
+  },
+  "limits": [
+    "No protected writer, consumption, signing, adoption or operational authority",
+    "No native pytest/full application/CI/Mac/live deployment run",
+    "Four ephemeral synthetic role keys per test run, never persisted"
+  ]
+}

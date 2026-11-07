@@ -1,0 +1,50 @@
+{
+  "baseline": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "python": "3.12.14",
+  "cryptography": "50.0.2",
+  "cases": 213,
+  "groups": {
+    "owner_contract": 135,
+    "writer": 69,
+    "actual_consumer": 9
+  },
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "success": true,
+  "pre_source_sha256": {
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "governance/release_transaction_writer.py": "0e3e56f9cfe40425f5f02b0350f6c8eb28fad85091894e1d3ca993e1573918e8",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/test_release_transaction_writer.py": "eaa635d82a20af7ede335aa6625d881713ae8fa3e141b480c40bb24ea057d202",
+    "tests/test_release_writer_native_compatibility.py": "baf910bc639a99162d2ab4a4eb1c261cfb036924edac0695ef8b2b9a377172dc",
+    "tests/conftest.py": "538e795ed141616d024a7ab4888a9abbfd7ccfdf0c63738f751fe1570740f068",
+    "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+    "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+    "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+    "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+    "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+  },
+  "post_source_sha256": {
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "governance/release_transaction_writer.py": "0e3e56f9cfe40425f5f02b0350f6c8eb28fad85091894e1d3ca993e1573918e8",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/test_release_transaction_writer.py": "eaa635d82a20af7ede335aa6625d881713ae8fa3e141b480c40bb24ea057d202",
+    "tests/test_release_writer_native_compatibility.py": "baf910bc639a99162d2ab4a4eb1c261cfb036924edac0695ef8b2b9a377172dc",
+    "tests/conftest.py": "538e795ed141616d024a7ab4888a9abbfd7ccfdf0c63738f751fe1570740f068",
+    "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+    "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+    "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+    "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+    "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+  },
+  "observed_native_children": 9,
+  "test_output_sha256": "74c5f32f042a3349619f1035f8221580d41b32347a326d48defcdba41ef69d43",
+  "consumer_observations_sha256": "094e5b571dd818eccbe33d116b637c16258e00cbcb08778c8332c20ac5b2e3c4",
+  "scope": "Local synthetic actual-consumer compatibility; no application startup, CI or deployment",
+  "preserved_failures": [
+    "native-compat-before-fix.txt",
+    "native-compat-first-correction.txt"
+  ],
+  "authority": "NOT_ADOPTED; no operational adapters installed"
+}

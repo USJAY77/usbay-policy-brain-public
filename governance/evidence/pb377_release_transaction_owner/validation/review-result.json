@@ -1,0 +1,45 @@
+{
+  "baseline": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "branch": "local/release-owner-contract-v1",
+  "python": "3.12.14",
+  "review_findings": [
+    {
+      "id": "LOCAL-RELEASE-TIME-01",
+      "issue": "Request issue time and interval were not bounded by referenced review policy",
+      "status": "CORRECTED_WITH_SYNTHETIC_REGRESSION"
+    },
+    {
+      "id": "LOCAL-RELEASE-TIME-02",
+      "issue": "Status issue time and interval were not bounded by referenced owner review",
+      "status": "CORRECTED_WITH_SYNTHETIC_REGRESSION"
+    }
+  ],
+  "pre_fix": {
+    "cases": 2,
+    "failures": 2,
+    "exit_code": 1
+  },
+  "post_fix": {
+    "cases": 135,
+    "failures": 0,
+    "errors": 0,
+    "exit_code": 0
+  },
+  "protected_files_unchanged": true,
+  "git_diff_check": "PASS",
+  "artifacts": {
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/conftest.py": "040fd43a00883e848aef492d137f25940b8bfd1b02ea98ce150181e52972305b",
+    "docs/release-owner-contract-local-validation.md": "73ef2815f41ae7b74d16a83a3ec3021db195e022be23e9399be4173baa8ba542",
+    "local-validation-release-owner/review-before-fix.txt": "4703676658b63a6395041cfbd8693b640207a83103b01c5909eb33128dba0803",
+    "local-validation-release-owner/review-after-fix.txt": "942cc2b692717238f9ca255fb75ac4e9b9606f75da5c871637679d5837e6c41c",
+    "local-validation-release-owner/result.json": "82ba183326a04e46b0f04cfe7b625ff071610ba532dfb6c264cc5a62ec25f22c"
+  },
+  "limits": [
+    "All results remain DENY; no live adoption, writer or durable consumption",
+    "Local self-review, not independent human acceptance",
+    "No native pytest, CI, Mac, full application or deployment validation",
+    "No commit, push, publication or activation"
+  ]
+}
