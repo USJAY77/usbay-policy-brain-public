@@ -1,0 +1,148 @@
+[
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_future_timestamp",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "deployment_timestamp_invalid",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_invalid_hmac",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "release_signature_invalid",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_missing_history",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "rollback_lineage_ambiguous",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_unaccepted_commit",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "git_commit_mismatch",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_unknown_node",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "activating_node_unknown",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_wrong_bundle",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "policy_bundle_hash_mismatch",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_native_verifier_rejects_wrong_predecessor",
+    "observed": {
+      "outcome": "DENY",
+      "reason": "previous_release_hash_mismatch",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_second_generation_passes_existing_release_verifier",
+    "observed": {
+      "outcome": "PASS",
+      "signature_valid": true,
+      "release_hash": "b519893b89fadc51f54c39a7fa024781a4ece173790dad782eb6d0dc677a34a7",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  },
+  {
+    "case": "tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_writer_output_passes_existing_release_verifier",
+    "observed": {
+      "outcome": "PASS",
+      "signature_valid": true,
+      "release_hash": "ed43df0cbf126704769b3950c06d7fd5ea8779aec7910c5d2a8639a080d13c4a",
+      "gateway_imported": false,
+      "module_hashes": {
+        "security/deployment_attestation.py": "a969ab15932c18738ea3d1cb3330e8f1d130c9fe339cea282e2a90dc827e5e53",
+        "security/node_identity.py": "2a42a18f65db59be92bcae90c148c63e08f62a662e7b166d7ea34e34a736bb0f",
+        "security/tenant_context.py": "57e758b719bdc7a3fd307b623d3292774f6b4541f1e90d878d8957d9551cd892",
+        "security/runtime_artifact_authority.py": "8f3d58eec126b9d2367ace41aae575d9af2d13f94eaf5ffa72538d5f263ddc34",
+        "security/runtime_artifact_provenance.py": "338e522c5040954e16d93941983d0859cda25ffc72614fc3d2f123a48ca80b6a"
+      },
+      "module_origins_match": true
+    }
+  }
+]

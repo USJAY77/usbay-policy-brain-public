@@ -1,0 +1,15 @@
+======================================================================
+FAIL: test_writer_output_passes_existing_release_verifier (tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests.test_writer_output_passes_existing_release_verifier)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tests/test_release_writer_native_compatibility.py", line 87, in test_writer_output_passes_existing_release_verifier
+    self.assertEqual(output["outcome"],"PASS",output)
+AssertionError: 'DENY' != 'PASS'
+- DENY
++ PASS
+ : {'outcome': 'DENY', 'reason': 'rollback_lineage_ambiguous', 'gateway_imported': False}
+
+----------------------------------------------------------------------
+Ran 1 test in 0.073s
+
+FAILED (failures=1)

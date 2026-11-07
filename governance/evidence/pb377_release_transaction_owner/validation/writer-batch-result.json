@@ -1,0 +1,28 @@
+{
+  "baseline": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "branch": "local/release-owner-contract-v1",
+  "python": "3.12.14",
+  "platform": "Linux; synthetic task-owned fixtures only",
+  "cases": 197,
+  "contract_cases": 135,
+  "writer_cases": 62,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "success": true,
+  "child_processes": {
+    "concurrent_writer_children": 2,
+    "crash_before_commit_children": 1,
+    "crash_after_commit_children": 1
+  },
+  "test_output_sha256": "ceb4e313fba7967b148c0f074d1a1453faa8886ec1711dec797e39c43ceebe3b",
+  "operational_adapters_installed": false,
+  "external_publication": false,
+  "limits": [
+    "No live trust/adoption, signer, authority fence, source or rollback anchor installed",
+    "No Gateway or legacy writer integration; protected DB output only",
+    "External signer effects are not atomic with SQLite",
+    "Reconciliation confirms protected-store consistency, not renewed authority or independent audit authenticity",
+    "No native pytest, CI, macOS or deployment run"
+  ]
+}

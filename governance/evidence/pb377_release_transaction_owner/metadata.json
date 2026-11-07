@@ -1,0 +1,196 @@
+{
+  "pb_number": 377,
+  "pb_slug": "release-owner-transaction-v1",
+  "pb_title": "Add Dormant Release Contract and Transactional Writer",
+  "decision": "REVIEW_REQUIRED",
+  "status": "AWAITING_APPROVAL",
+  "branch_name": "governance/release-owner-transaction-v1",
+  "commit_title": "PB-377 REVIEW_REQUIRED: Add Dormant Release Contract and Transactional Writer",
+  "pr_title": "PB-377 REVIEW_REQUIRED: Add Dormant Release Contract and Transactional Writer",
+  "pr_body": "## PURPOSE\nAdd a dormant non-production release chain verifier and transactional output store. A synthetic authorized request commits signed output, nonce consumption, grant budget and successor head together. The complete approved core includes release history, so the existing unchanged release verifier accepts both an initial successor and a second generation. Missing privileged authority, adoption, signer or fence dependencies denies before signing.\n\n## RISK\nA signature or plausible key list must not create root, issuer, reviewer or execution authority. Separate replay and file writes cannot guarantee one atomic issuance. Initial local output omitted required non-GENESIS history and was rejected by the actual consumer; that failure is preserved and the writer corrected. No operational adapter is installed.\n\n## POLICY LINK\nPinned baseline AGENTS.md and generated PB-023/PB-026 metadata rules; existing fail-closed authorization, tenant isolation, currentness and one-time replay principles. PB-377 is a proposed administrative identifier, not an authority grant. Owner-only non-production contract design does not amend repository review requirements or production/staging policy.\n\n## REQUIRED APPROVALS\n- USBAY-AUDIT\n- USBAY-GLOBAL23\n\n## GOVERNANCE CHECKS\n- Owner authorized this exact candidate as a public branch and Draft PR, including existing automatic repository checks. No merge, manual workflow dispatch, deployment, activation or operational trust adoption is authorized.\n- Existing repository review requirements remain unchanged. Both labels are owner-controlled accounts and no independent human approval is claimed or recorded.\n- No operational root/adoption, source, signer or fence provider installed. Interface inputs are privileged composition, never request-selected trust.\n- No merge, deployment, activation, permission change, application startup or manual workflow dispatch.\n- Preserve existing consumer, Gateway, .replit, locks and workflow bytes. New tests join the existing governance selection.\n\n## AUDIT\nFinal local Linux Python 3.12 run: 213 unique cases (135 owner-contract, 69 writer, 9 actual unchanged-consumer calls), zero failures/errors/skips. Final source hashes matched before/after. Consumer child module origins and hashes matched five pinned baseline security modules; gateway.app was not imported. Failures, intermediate passing results, final test IDs and bounded child observations are retained under governance/evidence/pb377_release_transaction_owner/validation/.\n\n## IMPACT\nMakes the local dormant release contract/writer candidate reviewable. COMMITTED means protected SQLite output and consumption only. It does not mean public release, provider acceptance, delivery, operational adoption or production readiness.\n\n## Decision\nREVIEW_REQUIRED\n\n## Status\nAWAITING_APPROVAL\n\n## MECHANISM\nVersioned exact Ed25519 record schemas; independently pinned root/grant/policy/status; exact non-production tenant/actor/tool/source/core/predecessor bindings; temporal attenuation, owner review, revocation and status freshness. An explicitly configured authority port must hold its fence through SQLite COMMIT. Output, bounded receipt, stable-issuer nonce reference, one-use grant budget and successor head are one transaction. Full history stays inside the authorized hash and HMAC payload. Missing or mismatched dependencies deny. UNKNOWN commit outcomes reconcile by exact transaction identity without signing or automatic retry.\n\n## GAP\nOperational human-adopted root and verified identities/custody are not provisioned. Currentness/source/rollback anchors, authenticated crash-safe fence service, external signer idempotency and runtime wiring remain open. Synthetic fixture references do not establish live authority. No native pytest/CI, Mac, full Gateway, production history/key-rotation matrix or deployment validation has run.\n\n## VALIDATION\npython3 -m unittest tests.test_release_owner_contract.ReleaseOwnerContractTests tests.test_release_transaction_writer.ReleaseTransactionWriterTests tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests -q; 213/213 passed, no skips. Separate exact source/consumer hash binding and patch application check against clean pinned main passed. Reuse unchanged evidence; do not automatically rerun failed CI.\n\n## ROLLBACK\nBefore publication discard the local candidate. After any future adoption, reversal requires a separate governed change. Never delete consumed records, reset history, replace trust or re-sign to hide failure. This candidate has not been merged or activated.\n\n## SOURCE\nhttps://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2167dc6bdbe8e5b1c988bb27e9176e388e\n\n## VALIDATION RESULTS\n213 local synthetic cases passed, including thread contention, two competing forked processes, actual death before/after COMMIT and nine real consumer subprocesses. Native positive release hashes equal committed writer heads. Negative cases preserve signature, history, predecessor, bundle, accepted-commit, timestamp and node denial. Historical two temporal defects, initial consumer lineage failure and first-correction fixture mismatch remain evidence, not PASS.\n\n## ROLLBACK PLAN\nKeep the future PR Draft and unmerged if native validation or review fails; retain bounded failure evidence. No automatic CI retry, administrative override, record repair, trust change or deployment.\n\n## COMMIT OR SOURCE REFERENCE\nBase dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; local candidate has no commit/push yet. Owner authorized public branch and Draft PR publication with existing automatic checks. This records publication scope only; no human review approval or operational authority is granted.\n\n## CHANGED FILES\n- tests/conftest.py\n- governance/release_owner_contract.py\n- governance/release_transaction_writer.py\n- tests/test_release_owner_contract.py\n- tests/test_release_transaction_writer.py\n- tests/test_release_writer_native_compatibility.py\n- docs/release-owner-contract-local-validation.md\n- docs/release-writer-integration-next-batch.md\n- docs/release-transaction-writer-local-validation.md\n- docs/release-writer-native-compatibility.md\n- governance/evidence/pb377_release_transaction_owner/metadata.json\n- governance/evidence/pb377_release_transaction_owner/generated_pr_body.md\n- governance/evidence/pb377_release_transaction_owner/validation/ (retained sanitized evidence)\n",
+  "base_commit": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "generated_sections": {
+    "purpose": "Add a dormant non-production release chain verifier and transactional output store. A synthetic authorized request commits signed output, nonce consumption, grant budget and successor head together. The complete approved core includes release history, so the existing unchanged release verifier accepts both an initial successor and a second generation. Missing privileged authority, adoption, signer or fence dependencies denies before signing.",
+    "risk": "A signature or plausible key list must not create root, issuer, reviewer or execution authority. Separate replay and file writes cannot guarantee one atomic issuance. Initial local output omitted required non-GENESIS history and was rejected by the actual consumer; that failure is preserved and the writer corrected. No operational adapter is installed.",
+    "policy_link": "Pinned baseline AGENTS.md and generated PB-023/PB-026 metadata rules; existing fail-closed authorization, tenant isolation, currentness and one-time replay principles. PB-377 is a proposed administrative identifier, not an authority grant. Owner-only non-production contract design does not amend repository review requirements or production/staging policy.",
+    "required_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "governance_checks": [
+      "Owner authorized this exact candidate as a public branch and Draft PR, including existing automatic repository checks. No merge, manual workflow dispatch, deployment, activation or operational trust adoption is authorized.",
+      "Existing repository review requirements remain unchanged. Both labels are owner-controlled accounts and no independent human approval is claimed or recorded.",
+      "No operational root/adoption, source, signer or fence provider installed. Interface inputs are privileged composition, never request-selected trust.",
+      "No merge, deployment, activation, permission change, application startup or manual workflow dispatch.",
+      "Preserve existing consumer, Gateway, .replit, locks and workflow bytes. New tests join the existing governance selection."
+    ],
+    "audit": "Final local Linux Python 3.12 run: 213 unique cases (135 owner-contract, 69 writer, 9 actual unchanged-consumer calls), zero failures/errors/skips. Final source hashes matched before/after. Consumer child module origins and hashes matched five pinned baseline security modules; gateway.app was not imported. Failures, intermediate passing results, final test IDs and bounded child observations are retained under governance/evidence/pb377_release_transaction_owner/validation/.",
+    "impact": "Makes the local dormant release contract/writer candidate reviewable. COMMITTED means protected SQLite output and consumption only. It does not mean public release, provider acceptance, delivery, operational adoption or production readiness."
+  },
+  "generated_supplements": {
+    "MECHANISM": "Versioned exact Ed25519 record schemas; independently pinned root/grant/policy/status; exact non-production tenant/actor/tool/source/core/predecessor bindings; temporal attenuation, owner review, revocation and status freshness. An explicitly configured authority port must hold its fence through SQLite COMMIT. Output, bounded receipt, stable-issuer nonce reference, one-use grant budget and successor head are one transaction. Full history stays inside the authorized hash and HMAC payload. Missing or mismatched dependencies deny. UNKNOWN commit outcomes reconcile by exact transaction identity without signing or automatic retry.",
+    "GAP": "Operational human-adopted root and verified identities/custody are not provisioned. Currentness/source/rollback anchors, authenticated crash-safe fence service, external signer idempotency and runtime wiring remain open. Synthetic fixture references do not establish live authority. No native pytest/CI, Mac, full Gateway, production history/key-rotation matrix or deployment validation has run.",
+    "VALIDATION": "python3 -m unittest tests.test_release_owner_contract.ReleaseOwnerContractTests tests.test_release_transaction_writer.ReleaseTransactionWriterTests tests.test_release_writer_native_compatibility.NativeReleaseCompatibilityTests -q; 213/213 passed, no skips. Separate exact source/consumer hash binding and patch application check against clean pinned main passed. Reuse unchanged evidence; do not automatically rerun failed CI.",
+    "ROLLBACK": "Before publication discard the local candidate. After any future adoption, reversal requires a separate governed change. Never delete consumed records, reset history, replace trust or re-sign to hide failure. This candidate has not been merged or activated.",
+    "SOURCE": "https://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+    "VALIDATION RESULTS": "213 local synthetic cases passed, including thread contention, two competing forked processes, actual death before/after COMMIT and nine real consumer subprocesses. Native positive release hashes equal committed writer heads. Negative cases preserve signature, history, predecessor, bundle, accepted-commit, timestamp and node denial. Historical two temporal defects, initial consumer lineage failure and first-correction fixture mismatch remain evidence, not PASS.",
+    "ROLLBACK PLAN": "Keep the future PR Draft and unmerged if native validation or review fails; retain bounded failure evidence. No automatic CI retry, administrative override, record repair, trust change or deployment.",
+    "COMMIT OR SOURCE REFERENCE": "Base dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; local candidate has no commit/push yet. Owner authorized public branch and Draft PR publication with existing automatic checks. This records publication scope only; no human review approval or operational authority is granted.",
+    "CHANGED FILES": "- tests/conftest.py\n- governance/release_owner_contract.py\n- governance/release_transaction_writer.py\n- tests/test_release_owner_contract.py\n- tests/test_release_transaction_writer.py\n- tests/test_release_writer_native_compatibility.py\n- docs/release-owner-contract-local-validation.md\n- docs/release-writer-integration-next-batch.md\n- docs/release-transaction-writer-local-validation.md\n- docs/release-writer-native-compatibility.md\n- governance/evidence/pb377_release_transaction_owner/metadata.json\n- governance/evidence/pb377_release_transaction_owner/generated_pr_body.md\n- governance/evidence/pb377_release_transaction_owner/validation/ (retained sanitized evidence)"
+  },
+  "local_validation": {
+    "cases": 213,
+    "owner_contract": 135,
+    "writer": 69,
+    "actual_consumer": 9,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "native_ci": "NOT_RUN"
+  },
+  "authority": {
+    "publication": "AUTHORIZED_PUBLIC_BRANCH_AND_DRAFT_PR",
+    "workflow_dispatch": false,
+    "merge": false,
+    "deployment": false,
+    "activation": false,
+    "trust_adoption": false,
+    "automatic_existing_pr_checks": true
+  },
+  "identifier_status": "PB-377 publication candidate; immediate remote conflict check performed before publication",
+  "retained_validation": {
+    "compatibility-child-observations.json": {
+      "original_sha256": "094e5b571dd818eccbe33d116b637c16258e00cbcb08778c8332c20ac5b2e3c4",
+      "published_sha256": "094e5b571dd818eccbe33d116b637c16258e00cbcb08778c8332c20ac5b2e3c4",
+      "path_sanitized": false
+    },
+    "compatibility-final-result.json": {
+      "original_sha256": "6c2aba20f4fc45daf69c518143f98d31d732da481e2e8f7da0cb0cbf4c7b1899",
+      "published_sha256": "6c2aba20f4fc45daf69c518143f98d31d732da481e2e8f7da0cb0cbf4c7b1899",
+      "path_sanitized": false
+    },
+    "compatibility-final-tests.txt": {
+      "original_sha256": "74c5f32f042a3349619f1035f8221580d41b32347a326d48defcdba41ef69d43",
+      "published_sha256": "74c5f32f042a3349619f1035f8221580d41b32347a326d48defcdba41ef69d43",
+      "path_sanitized": false
+    },
+    "native-compat-after-fix.txt": {
+      "original_sha256": "e79952e8a6918bea924e68d52d4a0efc5bbaa26a7ac1a660bc35f3f023363c58",
+      "published_sha256": "e79952e8a6918bea924e68d52d4a0efc5bbaa26a7ac1a660bc35f3f023363c58",
+      "path_sanitized": false
+    },
+    "native-compat-before-fix.txt": {
+      "original_sha256": "8ba36c59443cb9ba2e2670e77d098f3f749c942a38b74a9447bd3649bd92b541",
+      "published_sha256": "ce5860ea8b3e495936ecef11a7aa526a631bee202f90dd970846942310cab989",
+      "path_sanitized": true
+    },
+    "native-compat-first-correction.txt": {
+      "original_sha256": "35135192e447def51a3189ee60b7d162ab191c70d09af49a6b00b55431d66e22",
+      "published_sha256": "3447330653d2d790fad58bb5229b91f6327c1c0b22b05f6f6d817861cdd4f002",
+      "path_sanitized": true
+    },
+    "native-compat-origin-check.txt": {
+      "original_sha256": "633b7301a89fc8e25eee3bc2d02743bb4f11a26ba16d59b3e04379b19d1130f0",
+      "published_sha256": "633b7301a89fc8e25eee3bc2d02743bb4f11a26ba16d59b3e04379b19d1130f0",
+      "path_sanitized": false
+    },
+    "result.json": {
+      "original_sha256": "82ba183326a04e46b0f04cfe7b625ff071610ba532dfb6c264cc5a62ec25f22c",
+      "published_sha256": "82ba183326a04e46b0f04cfe7b625ff071610ba532dfb6c264cc5a62ec25f22c",
+      "path_sanitized": false
+    },
+    "review-after-fix.txt": {
+      "original_sha256": "942cc2b692717238f9ca255fb75ac4e9b9606f75da5c871637679d5837e6c41c",
+      "published_sha256": "942cc2b692717238f9ca255fb75ac4e9b9606f75da5c871637679d5837e6c41c",
+      "path_sanitized": false
+    },
+    "review-before-fix.txt": {
+      "original_sha256": "4703676658b63a6395041cfbd8693b640207a83103b01c5909eb33128dba0803",
+      "published_sha256": "abd827ed18fa931837c68b6d7dcc25e715edea724cae61b6729cb23eb3acfda5",
+      "path_sanitized": true
+    },
+    "review-result.json": {
+      "original_sha256": "9daee27efda3b529054ce1ab177c6b87cb731a89fb4acef1867882085bc3e42c",
+      "published_sha256": "9daee27efda3b529054ce1ab177c6b87cb731a89fb4acef1867882085bc3e42c",
+      "path_sanitized": false
+    },
+    "writer-batch-result.json": {
+      "original_sha256": "a240936d303eb4c09b60e66b5566a84f5e843cc16b39689d98b553016f16b061",
+      "published_sha256": "a240936d303eb4c09b60e66b5566a84f5e843cc16b39689d98b553016f16b061",
+      "path_sanitized": false
+    },
+    "writer-batch-tests.txt": {
+      "original_sha256": "ceb4e313fba7967b148c0f074d1a1453faa8886ec1711dec797e39c43ceebe3b",
+      "published_sha256": "ceb4e313fba7967b148c0f074d1a1453faa8886ec1711dec797e39c43ceebe3b",
+      "path_sanitized": false
+    },
+    "writer-final-result.json": {
+      "original_sha256": "d0d284197ba7149a54a6c08cd79310e3e88574808c93cc01a9c53863e0624d70",
+      "published_sha256": "d0d284197ba7149a54a6c08cd79310e3e88574808c93cc01a9c53863e0624d70",
+      "path_sanitized": false
+    },
+    "writer-final-tests.txt": {
+      "original_sha256": "6f632c60800f0f6bee42f9d973ac6d717ab4033a5b2d8c172d8c8ae3aa69f602",
+      "published_sha256": "6f632c60800f0f6bee42f9d973ac6d717ab4033a5b2d8c172d8c8ae3aa69f602",
+      "path_sanitized": false
+    }
+  },
+  "source_sha256": {
+    "tests/conftest.py": "538e795ed141616d024a7ab4888a9abbfd7ccfdf0c63738f751fe1570740f068",
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "governance/release_transaction_writer.py": "0e3e56f9cfe40425f5f02b0350f6c8eb28fad85091894e1d3ca993e1573918e8",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/test_release_transaction_writer.py": "eaa635d82a20af7ede335aa6625d881713ae8fa3e141b480c40bb24ea057d202",
+    "tests/test_release_writer_native_compatibility.py": "baf910bc639a99162d2ab4a4eb1c261cfb036924edac0695ef8b2b9a377172dc",
+    "docs/release-owner-contract-local-validation.md": "c895a2bfe059e5bda1fd73e571d512bf364f00d8984ca7ef14330af8acbda7ff",
+    "docs/release-writer-integration-next-batch.md": "bd09f32a6cb902c9cc64e79451ff4f05d29e1ec9cb7ce7f6c776d7247b5bac0f",
+    "docs/release-transaction-writer-local-validation.md": "47f3beb6b6c1ec5eb8d24cf73d5b3b1f3abb3dd15857a5229c82c6b5916510e9",
+    "docs/release-writer-native-compatibility.md": "23060b3536e7ae085a4460d90b61290b0eebc6657d576a94346e3231f7b5eae5"
+  },
+  "body_validation": {
+    "body_hash": "308d1f4db9118a6c514c31d37b1c2f0025d332b138735069f9b6fd77006e69ff",
+    "required_sections": {
+      "PURPOSE": "POPULATED",
+      "RISK": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "AUDIT": "POPULATED",
+      "IMPACT": "POPULATED",
+      "Decision": "POPULATED",
+      "Status": "POPULATED"
+    },
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT"
+    }
+  },
+  "evidence_validation": {
+    "evidence_mode": "GENERATED_GOVERNANCE_EVIDENCE",
+    "source_reference": "https://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+    "required_sections": {
+      "RISK": "POPULATED",
+      "MECHANISM": "POPULATED",
+      "GAP": "POPULATED",
+      "AUDIT": "POPULATED",
+      "IMPACT": "POPULATED",
+      "DECISION": "POPULATED",
+      "STATUS": "POPULATED",
+      "VALIDATION": "POPULATED",
+      "ROLLBACK": "POPULATED",
+      "SOURCE": "POPULATED",
+      "CHANGED FILES": "POPULATED",
+      "VALIDATION RESULTS": "POPULATED",
+      "ROLLBACK PLAN": "POPULATED",
+      "COMMIT OR SOURCE REFERENCE": "POPULATED"
+    },
+    "body_hash": "308d1f4db9118a6c514c31d37b1c2f0025d332b138735069f9b6fd77006e69ff",
+    "source_reference_hash": "bdcd647f8e6d7841ebdf2620e72c8582dc39039cf97e1bc9ca1eddea7f2241fb",
+    "fallback_template": "ABSENT",
+    "unresolved_placeholders": "ABSENT"
+  }
+}
