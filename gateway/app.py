@@ -4726,6 +4726,10 @@ def governance_gateway_html():
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>USBAY Governance Gateway</title>
+  <style>
+    body { overflow-wrap: anywhere; }
+    pre { max-width: 100%%; white-space: pre-wrap; overflow-wrap: anywhere; }
+  </style>
 </head>
 <body>
   <main>
@@ -4858,8 +4862,25 @@ def governance_gateway_html():
     const setText = (id, label, value) => {
       document.getElementById(id).textContent = label + ": " + value;
     };
+    const clearAssessmentResponse = (stage) => {
+      [
+        ["euria-live-recommendation", "Euria Recommendation"],
+        ["euria-live-missing-evidence", "Missing Evidence"],
+        ["euria-live-unsupported-claims", "Unsupported Claims"],
+        ["euria-live-privacy-risks", "Privacy Risks"],
+        ["euria-live-request-id", "Request ID"],
+        ["euria-live-analysis-id", "Euria Analysis ID"],
+        ["euria-live-decision-id", "Decision ID"],
+        ["euria-live-policy-id", "Policy ID"],
+        ["euria-live-audit-record-id", "Audit Record ID"],
+        ["euria-live-signature-status", "Reported analysis signature field (not an independent issuer check)"],
+        ["euria-live-timestamp-status", "Reported analysis timestamp field (not freshness verification)"]
+      ].forEach(([id, label]) => setText(id, label, "UNKNOWN"));
+      document.getElementById("euria-live-audit-output").textContent = "Audit Output: " + stage;
+    };
     euriaForm.addEventListener("submit", async (event) => {
       event.preventDefault();
+      clearAssessmentResponse("AWAITING_BACKEND_RESPONSE");
       euriaResult.dataset.decision = "BLOCKED";
       setText("euria-live-usbay-decision", "Reported analysis outcome (not action authorization)", "BLOCKED");
       setText("euria-live-human-approval-status", "Reported reviewer-item outcome (identity/authority not verified here)", "PENDING_BACKEND_DECISION");
@@ -4900,6 +4921,7 @@ def governance_gateway_html():
         setText("euria-live-timestamp-status", "Reported analysis timestamp field (not freshness verification)", body.timestamp_status || "BLOCKED");
         document.getElementById("euria-live-audit-output").textContent = "Audit Output: " + JSON.stringify(body.audit_output || {}, null, 2);
       } catch (error) {
+        clearAssessmentResponse("ASSESSMENT_API_UNAVAILABLE");
         euriaResult.dataset.decision = "BLOCKED";
         setText("euria-live-recommendation", "Euria Recommendation", "BLOCKED");
         setText("euria-live-usbay-decision", "Reported analysis outcome (not action authorization)", "BLOCKED");
