@@ -4736,7 +4736,7 @@ def governance_gateway_html():
     <h1>USBAY Governance Gateway</h1>
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
-    <p id="runtime-state">Runtime observation (not action permission): %s</p>
+    <p id="runtime-state">Runtime state: (reported observation; not action permission) %s</p>
 	    <section id="governance-evidence-state">
 	      <h2>Governance Evidence</h2>
 	      <p id="governance-fetch-status">%s</p>

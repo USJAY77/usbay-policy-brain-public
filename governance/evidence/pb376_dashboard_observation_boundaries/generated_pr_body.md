@@ -18,9 +18,10 @@ Baseline AGENTS.md; existing fail-closed identity, tenant, signature, revocation
 - Only three presentation functions, two pure rendering helpers and twelve copy-dependent assertion strings change; 193 other top-level function/class raw blocks and module initialization match the pinned base.
 - Do not incorporate unrelated signer-fixture PR431, removed Replit runtime modules, workflow/dependency changes, provider operations or deployment.
 - Observe actual exact-head CI results and preserve failures. Echo-only gates are not runtime validation; selection of the four backend UI tests must be confirmed from collection evidence.
+- Retain the unchanged live-pilot verifier and its assertions. Restore the Runtime state: display prefix with the explicit reported-observation/no-permission qualification. A real source correction creates new-head automatic CI; do not rerun the failed unchanged head.
 
 ## AUDIT
-Fresh local Python 3.12.14 standard-library renderer-only run passed 17 unique cases and 31 subtests, exit 0. All 11 private preservation files were remotely reread and SHA256-matched at preservation commit 5ae899ab453326808f5601f24ce2fd84bef51242. Public source patch SHA256: 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. Private preservation is evidence storage, not an application commit or approval.
+Fresh local Python 3.12.14 standard-library renderer-only run passed 17 unique cases and 31 subtests, exit 0. All 11 private preservation files were remotely reread and SHA256-matched at preservation commit 5ae899ab453326808f5601f24ce2fd84bef51242. Public source patch SHA256: c66d61c93acb7cb4d749c44311ae78a8baa78b4c2f065f7e2958502b1f722c0c. Private preservation is evidence storage, not an application commit or approval. Initial native run 42362290089 at head 41fd42b56b1c169e3349efbbf314dc7081d22c64 reported 2848 passed, 1 failed and 194 subtests passed; its failed unchanged pilot verifier expected the literal Runtime state: prefix. Preserve this failure; new-head CI is pending.
 
 ## IMPACT
 Reviewers can distinguish reported checks and analysis/review items from actual action authority. Dynamic values render as text. The patch does not enable mail execution, establish production readiness or synchronize a proven serving build.
@@ -32,10 +33,10 @@ REVIEW_REQUIRED
 AWAITING_APPROVAL
 
 ## MECHANISM
-Display specific digest/sourcehash/policy-signature observations separately; preserve observation scope and times; show missing authority/freshness as UNKNOWN; qualify review items; escape verdict/runtime text and nested JSON. Existing assessment JavaScript remains textContent-based.
+Display specific digest/sourcehash/policy-signature observations separately; preserve observation scope and times; show missing authority/freshness as UNKNOWN; qualify review items; escape verdict/runtime text and nested JSON. Existing assessment JavaScript remains textContent-based. Retain the existing Runtime state: compatibility prefix while explicitly qualifying it as a reported observation, not action permission; no verifier or marker definition is changed.
 
 ## GAP
-The four backend-coupled UI tests, full application import/lifespan, browser/provider/live acceptance and serving-build binding remain unproven locally. Existing record-transfer and operational authority gaps remain open. No independent human review has been established.
+Current corrected-head native CI remains pending. The standalone boot test is not selected by the existing PR marker lane; browser/live/provider acceptance and serving-build binding remain open. Historical native success on other tests is scoped to head 41fd42b56b1c169e3349efbbf314dc7081d22c64. No independent human review or production readiness is established.
 
 ## VALIDATION
 17 renderer-only cases and 31 subtests passed on Python 3.12.14 without Gateway import or dependency installation. Static AST/raw-block checks confirmed rendering-only changes and preserved non-copy test AST. Existing automatic PR CI is pending; no workflow configuration changes.
@@ -54,10 +55,10 @@ Pinned base: https://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2
 - governance/evidence/pb376_dashboard_observation_boundaries/generated_pr_body.md
 
 ## VALIDATION RESULTS
-Candidate: 17/17 cases, 31 subtests, zero failures/errors/skips, exit 0. Focused existing-renderer baseline control: three failing cases and one already-passing demo case; these four are a subset of the seventeen. Initial full-harness baseline extraction failure is retained as a harness diagnostic, not functional regression evidence. Four backend UI tests remain NOT RUN locally.
+Candidate: 17/17 cases, 31 subtests, zero failures/errors/skips, exit 0. Focused existing-renderer baseline control: three failing cases and one already-passing demo case; these four are a subset of the seventeen. Initial full-harness baseline extraction failure is retained as a harness diagnostic, not functional regression evidence. Four backend UI tests remain NOT RUN locally. Initial native CI: 2848 passed, 1 failed, 194 subtests passed at head 41fd42b56b1c169e3349efbbf314dc7081d22c64. The selected three Gateway UI tests were absent from the sole-failure list and no skips were reported; the standalone boot test was deselected. The unchanged verifier dashboard predicate was reproduced false against the first presentation candidate and true after the qualified-prefix correction, without importing Gateway/verifier. The same 17 renderer cases and 31 subtests passed again on corrected bytes. New-head native CI remains pending; reruns are not additional unique cases.
 
 ## ROLLBACK PLAN
 No merge, deployment, activation, permission change or automatic CI retry. Retain the public Draft PR and exact-head failure evidence for review if native CI fails.
 
 ## COMMIT OR SOURCE REFERENCE
-Application base dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; registration https://github.com/USJAY77/usbay-policy-brain-public/issues/432; prepared source patch SHA256 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. The prior Replit-bound candidate is not used as source identity or new test evidence.
+Application base dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; registration https://github.com/USJAY77/usbay-policy-brain-public/issues/432; prepared source patch SHA256 c66d61c93acb7cb4d749c44311ae78a8baa78b4c2f065f7e2958502b1f722c0c. The prior Replit-bound candidate is not used as source identity or new test evidence. Initial native failure: https://github.com/USJAY77/usbay-policy-brain-public/actions/runs/42362290089/job/128373004954 .
