@@ -333,6 +333,7 @@ def test_live_pilot_script_preserves_tracked_audit_key_registry() -> None:
     assert after == before
 
 
+@pytest.mark.governance
 def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:
     client = configure_gateway(tmp_path, monkeypatch)
 
@@ -341,7 +342,7 @@ def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:
     assert response.status_code == 200
     assert response.text.strip()
     assert "USBAY Live Pilot v1" in response.text
-    assert "Runtime state:" in response.text
+    assert "Runtime state: (reported observation; not action permission)" in response.text
 
 
 def test_runtime_starts_and_reports_backend_truth(tmp_path, monkeypatch) -> None:
