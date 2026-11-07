@@ -341,7 +341,7 @@ def test_dashboard_boot_cannot_be_blank(tmp_path, monkeypatch) -> None:
     assert response.status_code == 200
     assert response.text.strip()
     assert "USBAY Live Pilot v1" in response.text
-    assert "Runtime state:" in response.text
+    assert "Runtime observation (not action permission):" in response.text
 
 
 def test_runtime_starts_and_reports_backend_truth(tmp_path, monkeypatch) -> None:

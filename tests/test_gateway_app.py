@@ -1075,15 +1075,15 @@ def test_governance_evidence_retrieval_and_signature_validation_succeeds(tmp_pat
     assert "HUMAN_REVIEW_REQUIRED" in euria["missing_evidence"]
     assert "Euria approval authority is unsupported" in euria["unsupported_claims"]
     assert dashboard.status_code == 200
-    assert "Governance Verified" in dashboard.text
-    assert "Signature Verified" in dashboard.text
+    assert "Evidence checks are separate from action authority" in dashboard.text
+    assert "Reported policy signature check: PASS (reported)" in dashboard.text
     assert "Euria Governance Outputs" in dashboard.text
     assert "Euria Recommendation: BLOCKED" in dashboard.text
-    assert "USBAY Decision: BLOCKED" in dashboard.text
-    assert "Human Approval Status: REQUIRED" in dashboard.text
+    assert "Reported analysis outcome (not action authorization): BLOCKED" in dashboard.text
+    assert "Reported reviewer-item outcome (identity/authority not verified here): REQUIRED" in dashboard.text
     assert "Audit Record ID:" in dashboard.text
-    assert "Signature Status: VERIFIED" in dashboard.text
-    assert "Timestamp Status: TIMESTAMP_EVIDENCE_PRESENT" in dashboard.text
+    assert "Reported analysis signature field (not an independent issuer check): VERIFIED" in dashboard.text
+    assert "Reported analysis timestamp field (not freshness verification): TIMESTAMP_EVIDENCE_PRESENT" in dashboard.text
     assert "Euria remains analysis only" in dashboard.text
     assert "GOVERNANCE_FETCH_FAILED" not in dashboard.text
 
@@ -1356,15 +1356,15 @@ def test_control_plane_renders_live_euria_assessment_form(tmp_path, monkeypatch)
     assert 'id="euria-assessment-form"' in response.text
     assert 'fetch("/api/euria/assessment"' in response.text
     assert "Euria Recommendation: BLOCKED" in response.text
-    assert "USBAY Decision: BLOCKED" in response.text
+    assert "Reported analysis outcome (not action authorization): BLOCKED" in response.text
     assert "Request ID: NOT_GENERATED" in response.text
     assert "Euria Analysis ID: NOT_GENERATED" in response.text
     assert "Decision ID: NOT_GENERATED" in response.text
     assert "Policy ID: NOT_GENERATED" in response.text
-    assert "Human Approval Status: BLOCKED" in response.text
+    assert "Reported reviewer-item outcome (identity/authority not verified here): BLOCKED" in response.text
     assert "Audit Record ID: NOT_GENERATED" in response.text
-    assert "Signature Status: BLOCKED" in response.text
-    assert "Timestamp Status: BLOCKED" in response.text
+    assert "Reported analysis signature field (not an independent issuer check): BLOCKED" in response.text
+    assert "Reported analysis timestamp field (not freshness verification): BLOCKED" in response.text
 
 
 def test_governance_demo_state_api_exposes_pbsec_blockers(tmp_path, monkeypatch):
@@ -1867,7 +1867,7 @@ def test_dashboard_renders_governance_sync_sections_without_hiding_blocked_state
     assert "Execution adapter status: DISABLED" in response.text
     assert "Execution engine status: DISABLED" in response.text
     assert "Adapter status: NOT_IMPLEMENTED" in response.text
-    assert "Review state: BLOCKED" in response.text
+    assert "Reported review state (not authenticated reviewer or action authority): BLOCKED" in response.text
     assert "Pending reviews: 0" in response.text
     assert "Status: BLOCKED" in response.text
     assert "New work items: 0" in response.text

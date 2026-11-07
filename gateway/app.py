@@ -3827,6 +3827,63 @@ def _html_list(items):
     return "".join(f"<li>{html.escape(str(item))}</li>" for item in items)
 
 
+def _reported_check_label(value):
+    """Presentation only: a reported check is not an authorization decision."""
+    if value is True:
+        return "PASS (reported)"
+    if value is False:
+        return "NOT_PASSED (reported)"
+    return "UNKNOWN"
+
+
+def _governance_observations_html(evidence, runtime_snapshot):
+    """Keep independently supplied observations separate; never issue authority."""
+    evidence = evidence if isinstance(evidence, dict) else {}
+    runtime_snapshot = runtime_snapshot if isinstance(runtime_snapshot, dict) else {}
+    analysis = evidence.get("euria_governance_outputs", {})
+    analysis = analysis if isinstance(analysis, dict) else {}
+    rows = []
+    for label, key in (
+        ("Audit digest comparison", "dashboard_audit_hash_valid"),
+        ("Evidence-source content hash comparison", "evidence_source_hashes_valid"),
+        ("Policy signature check", "policy_signature_valid"),
+    ):
+        rows.append("<p>" + label + ": " + _reported_check_label(evidence.get(key)) + "</p>")
+    for group, observation in (
+        ("Evidence report", evidence),
+        ("Runtime report", runtime_snapshot),
+        ("Analysis report", analysis),
+    ):
+        rows.append("<section><h3>" + group + "</h3><dl>")
+        for label, key in (
+            ("Reported source identifier", "source_id"),
+            ("Reported tenant label (not authenticated here)", "tenant_id"),
+            ("Reported scope", "scope"),
+            ("Reported action label", "action"),
+            ("Reported resource label", "resource"),
+            ("Reported observed_at", "observed_at"),
+            ("Reported generated_at", "generated_at"),
+            ("Reported timestamp field", "timestamp"),
+            ("Reported freshness", "freshness"),
+        ):
+            value = observation.get(key)
+            text = "UNKNOWN" if value is None or value == "" else str(value)
+            rows.append("<dt>" + label + "</dt><dd>" + html.escape(text) + "</dd>")
+        rows.append("</dl></section>")
+    return (
+        '<section id="display-observation-boundaries" data-authority="none">'
+        "<h2>Reported checks and observation boundaries</h2>"
+        "<p>Checks describe only the comparisons named below. They do not establish "
+        "an independently authorized issuer, human reviewer, or execution permission.</p>"
+        "<p>These reports are not a shared snapshot. Times remain separate; a timestamp "
+        "field does not prove freshness. Missing source, scope and freshness stay UNKNOWN.</p>"
+        "<p>Review accounts and approval items are not proof of distinct independent humans.</p>"
+        '<p id="action-authority">Action authority: UNKNOWN. Execution/send unavailable '
+        "in this view; no authorization decision is issued by this presentation.</p>"
+        + "".join(rows) + "</section>"
+    )
+
+
 def _governance_demo_dashboard_html(state):
     pb_rows = []
     for pb_id, record in state.get("pb_status", {}).items():
@@ -3990,7 +4047,8 @@ def _governance_demo_dashboard_html(state):
     ]
     return """
 	    <section id="governance-demo-sync-dashboard" data-source="read-only-governance-evidence">
-	      <h2>Governance Demo Synchronization</h2>
+      <h2>Governance Demo Synchronization</h2>
+      <p>Reported observations, not a synchronized snapshot or execution permission.</p>
 	      <p id="runtime-governance-state">Runtime governance state: %s</p>
 	      <p id="runtime-readiness-state">Runtime readiness: %s</p>
 	      <p id="deployment-readiness-state">Deployment readiness: %s</p>
@@ -4039,7 +4097,7 @@ def _governance_demo_dashboard_html(state):
 	      <p id="vx-observation-id">Latest observation ID: %s</p>
 	      <p id="vx-proposal-id">Latest proposal ID: %s</p>
 	      <p id="vx-execution-request-id">Latest execution request ID: %s</p>
-	      <p id="vx-human-approval-status">Latest human approval status: %s</p>
+      <p id="vx-human-approval-status">Latest reported approval item (identity/authority unverified here): %s</p>
 	      <p id="vx-execution-decision">Latest execution decision: %s</p>
 	      <p id="vx-bridge-status">Bridge status: %s</p>
 	      <p id="vx-lineage-hash">Lineage hash: %s</p>
@@ -4051,12 +4109,12 @@ def _governance_demo_dashboard_html(state):
 	      <h2>Governed Operator Review Queue</h2>
 	      <p id="operator-review-id">Review ID: %s</p>
 	      <p id="operator-role">Operator role: %s</p>
-	      <p id="operator-review-state">Review state: %s</p>
+      <p id="operator-review-state">Reported review state (not authenticated reviewer or action authority): %s</p>
 	      <p id="operator-decision">Decision: %s</p>
 	      <p id="operator-decision-reason">Decision reason: %s</p>
 	      <p id="operator-review-timestamp">Review timestamp: %s</p>
 	      <p id="operator-queue-pending">Pending reviews: %s</p>
-	      <p id="operator-queue-approved">Approved reviews: %s</p>
+      <p id="operator-queue-approved">Reported approved review items (not distinct verified humans): %s</p>
 	      <p id="operator-queue-rejected">Rejected reviews: %s</p>
 	      <p id="operator-queue-needs-information">Needs information reviews: %s</p>
 	      <p id="operator-audit-hash">Operator audit hash: %s</p>
@@ -4645,8 +4703,10 @@ def governance_gateway_html():
     verifier_state = str(verifier.get("continuity_state", "VERIFIER_CONTINUITY_NOT_STARTED"))
     device_trust_status = str(snapshot.get("device_trust_status", "DEGRADED"))
     governance_fetch_status = str(governance_evidence.get("fetch_status", "GOVERNANCE_FETCH_FAILED"))
-    governance_signature_label = str(governance_evidence.get("signature_label", "Signature Unverified"))
-    governance_state_label = str(governance_evidence.get("governance_state_label", "Governance Unverified"))
+    governance_signature_label = "Reported policy signature check: " + _reported_check_label(
+        governance_evidence.get("policy_signature_valid")
+    )
+    governance_state_label = "Evidence checks are separate from action authority"
     governance_verdict = str(governance_evidence.get("governance_verdict", "UNKNOWN"))
     euria_outputs = governance_evidence.get("euria_governance_outputs")
     if not isinstance(euria_outputs, dict):
@@ -4676,31 +4736,31 @@ def governance_gateway_html():
     <h1>USBAY Governance Gateway</h1>
     <p id="live-pilot-label">USBAY Live Pilot v1</p>
     <p id="route-owner">Route owner: Governance Control Plane</p>
-    <p id="runtime-state">Runtime state: %s</p>
+    <p id="runtime-state">Runtime observation (not action permission): %s</p>
 	    <section id="governance-evidence-state">
 	      <h2>Governance Evidence</h2>
 	      <p id="governance-fetch-status">%s</p>
 	      <p id="governance-state-label">%s</p>
 	      <p id="governance-signature-status">%s</p>
-	      <p id="governance-verdict">Governance verdict: %s</p>
+      <p id="governance-verdict">Reported evidence outcome (not action authorization): %s</p>
 	    </section>
 	    %s
 	    <section id="euria-governance-outputs" data-authority="analysis-only">
       <h2>Euria Governance Outputs</h2>
-      <p>Euria remains analysis only. USBAY remains enforcement authority. Human approval remains mandatory.</p>
+      <p>Euria remains analysis only. Reported analysis and reviewer items do not prove action authority or independently verified human approval.</p>
       <p id="euria-recommendation">Euria Recommendation: %s</p>
       <p id="euria-missing-evidence">Missing Evidence: %s</p>
       <p id="euria-unsupported-claims">Unsupported Claims: %s</p>
       <p id="euria-privacy-risks">Privacy Risks: %s</p>
-      <p id="euria-usbay-decision">USBAY Decision: %s</p>
-      <p id="euria-human-approval-status">Human Approval Status: %s</p>
+      <p id="euria-usbay-decision">Reported analysis outcome (not action authorization): %s</p>
+      <p id="euria-human-approval-status">Reported reviewer-item outcome (identity/authority not verified here): %s</p>
       <p id="euria-audit-record-id">Audit Record ID: %s</p>
-      <p id="euria-signature-status">Signature Status: %s</p>
-      <p id="euria-timestamp-status">Timestamp Status: %s</p>
+      <p id="euria-signature-status">Reported analysis signature field (not an independent issuer check): %s</p>
+      <p id="euria-timestamp-status">Reported analysis timestamp field (not freshness verification): %s</p>
     </section>
     <section id="euria-live-assessment">
       <h2>Live Euria Governance Assessment</h2>
-      <p>Euria remains ANALYSIS_ONLY. USBAY remains ENFORCEMENT_AUTHORITY. Human approval is mandatory.</p>
+      <p>Euria remains ANALYSIS_ONLY. Submitted claims and reported assessment results do not establish execution or human-review authority.</p>
       <form id="euria-assessment-form">
         <label>Evidence Package
           <textarea name="evidence_package" rows="4" required></textarea>
@@ -4720,18 +4780,18 @@ def governance_gateway_html():
           </select>
         </label>
         <label><input name="evidence_verified" type="checkbox"> Evidence verified</label>
-        <label><input name="human_approval_completed" type="checkbox"> Human approval completed</label>
+        <label><input name="human_approval_completed" type="checkbox"> Caller-reported human approval completed (not verified)</label>
         <label><input name="audit_chain_complete" type="checkbox"> Audit chain complete</label>
         <label><input name="approval_threshold_exceeded" type="checkbox"> Approval threshold exceeded</label>
         <label><input name="escalation_required" type="checkbox"> Escalation required</label>
-        <label>Signature Status
+        <label>Reported signature field (not independently verified)
           <select name="signature_status">
             <option value="">missing</option>
             <option value="SIGNED">SIGNED</option>
             <option value="VERIFIED">VERIFIED</option>
           </select>
         </label>
-        <label>Timestamp Status
+        <label>Reported timestamp field (not freshness verification)
           <select name="timestamp_status">
             <option value="">missing</option>
             <option value="TIMESTAMPED">TIMESTAMPED</option>
@@ -4749,11 +4809,11 @@ def governance_gateway_html():
         <p id="euria-live-analysis-id">Euria Analysis ID: NOT_GENERATED</p>
         <p id="euria-live-decision-id">Decision ID: NOT_GENERATED</p>
         <p id="euria-live-policy-id">Policy ID: NOT_GENERATED</p>
-        <p id="euria-live-usbay-decision">USBAY Decision: BLOCKED</p>
-        <p id="euria-live-human-approval-status">Human Approval Status: BLOCKED</p>
+        <p id="euria-live-usbay-decision">Reported analysis outcome (not action authorization): BLOCKED</p>
+        <p id="euria-live-human-approval-status">Reported reviewer-item outcome (identity/authority not verified here): BLOCKED</p>
         <p id="euria-live-audit-record-id">Audit Record ID: NOT_GENERATED</p>
-        <p id="euria-live-signature-status">Signature Status: BLOCKED</p>
-        <p id="euria-live-timestamp-status">Timestamp Status: BLOCKED</p>
+        <p id="euria-live-signature-status">Reported analysis signature field (not an independent issuer check): BLOCKED</p>
+        <p id="euria-live-timestamp-status">Reported analysis timestamp field (not freshness verification): BLOCKED</p>
         <pre id="euria-live-audit-output">Audit Output: NOT_GENERATED</pre>
       </div>
     </section>
@@ -4801,8 +4861,8 @@ def governance_gateway_html():
     euriaForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       euriaResult.dataset.decision = "BLOCKED";
-      setText("euria-live-usbay-decision", "USBAY Decision", "BLOCKED");
-      setText("euria-live-human-approval-status", "Human Approval Status", "PENDING_BACKEND_DECISION");
+      setText("euria-live-usbay-decision", "Reported analysis outcome (not action authorization)", "BLOCKED");
+      setText("euria-live-human-approval-status", "Reported reviewer-item outcome (identity/authority not verified here)", "PENDING_BACKEND_DECISION");
       const formData = new FormData(euriaForm);
       const payload = {
         evidence_package: formData.get("evidence_package") || "",
@@ -4833,17 +4893,17 @@ def governance_gateway_html():
         setText("euria-live-analysis-id", "Euria Analysis ID", body.euria_analysis_id || "NOT_GENERATED");
         setText("euria-live-decision-id", "Decision ID", body.decision_id || "NOT_GENERATED");
         setText("euria-live-policy-id", "Policy ID", body.policy_id || "NOT_GENERATED");
-        setText("euria-live-usbay-decision", "USBAY Decision", body.usbay_decision || "BLOCKED");
-        setText("euria-live-human-approval-status", "Human Approval Status", body.human_approval_status || "BLOCKED");
+        setText("euria-live-usbay-decision", "Reported analysis outcome (not action authorization)", body.usbay_decision || "BLOCKED");
+        setText("euria-live-human-approval-status", "Reported reviewer-item outcome (identity/authority not verified here)", body.human_approval_status || "BLOCKED");
         setText("euria-live-audit-record-id", "Audit Record ID", body.audit_record_id || "NOT_GENERATED");
-        setText("euria-live-signature-status", "Signature Status", body.signature_status || "BLOCKED");
-        setText("euria-live-timestamp-status", "Timestamp Status", body.timestamp_status || "BLOCKED");
+        setText("euria-live-signature-status", "Reported analysis signature field (not an independent issuer check)", body.signature_status || "BLOCKED");
+        setText("euria-live-timestamp-status", "Reported analysis timestamp field (not freshness verification)", body.timestamp_status || "BLOCKED");
         document.getElementById("euria-live-audit-output").textContent = "Audit Output: " + JSON.stringify(body.audit_output || {}, null, 2);
       } catch (error) {
         euriaResult.dataset.decision = "BLOCKED";
         setText("euria-live-recommendation", "Euria Recommendation", "BLOCKED");
-        setText("euria-live-usbay-decision", "USBAY Decision", "BLOCKED");
-        setText("euria-live-human-approval-status", "Human Approval Status", "BLOCKED");
+        setText("euria-live-usbay-decision", "Reported analysis outcome (not action authorization)", "BLOCKED");
+        setText("euria-live-human-approval-status", "Reported reviewer-item outcome (identity/authority not verified here)", "BLOCKED");
         document.getElementById("euria-live-audit-output").textContent = "Audit Output: ASSESSMENT_API_UNAVAILABLE";
       }
     });
@@ -4851,12 +4911,13 @@ def governance_gateway_html():
 </body>
 </html>
 """ % (
-        state_label,
-        governance_fetch_status,
-        governance_state_label,
-	        governance_signature_label,
-	        governance_verdict,
-	        _governance_demo_dashboard_html(demo_state),
+        html.escape(state_label),
+        html.escape(governance_fetch_status),
+        html.escape(governance_state_label),
+        html.escape(governance_signature_label),
+        html.escape(governance_verdict),
+        _governance_observations_html(governance_evidence, snapshot)
+        + _governance_demo_dashboard_html(demo_state),
 	        html.escape(str(euria_outputs.get("euria_recommendation", "BLOCKED"))),
         html.escape(", ".join(str(item) for item in euria_missing_evidence)),
         html.escape(", ".join(str(item) for item in euria_unsupported_claims)),
@@ -4866,23 +4927,23 @@ def governance_gateway_html():
         html.escape(str(euria_outputs.get("audit_record_id", ""))),
         html.escape(str(euria_outputs.get("signature_status", "GOVERNANCE_EVIDENCE_SIGNATURE_UNVERIFIED"))),
         html.escape(str(euria_outputs.get("timestamp_status", "BLOCKED"))),
-        parity_status,
+        html.escape(parity_status),
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
-        device_trust_status,
-        identity_status,
-        identity_state,
+        html.escape(device_trust_status),
+        html.escape(identity_status),
+        html.escape(identity_state),
         "" if identity_status == "VERIFIED" else "Device identity is incomplete, expired, revoked, unsigned, or policy-mismatched.",
-        challenge_status,
-        challenge_state,
+        html.escape(challenge_status),
+        html.escape(challenge_state),
         "" if challenge_status == "VERIFIED" else "Live challenge-response is missing, expired, replayed, unsigned, or policy-mismatched.",
-        renewal_status,
-        renewal_state,
+        html.escape(renewal_status),
+        html.escape(renewal_state),
         "" if renewal_status == "VERIFIED" else "Continuous trust renewal is missing, expired, replayed, revoked, unsigned, or stale.",
-        verifier_status,
-        verifier_state,
+        html.escape(verifier_status),
+        html.escape(verifier_state),
         "VERIFIER_QUORUM_REACHED" if verifier_status == "VERIFIED" else "VERIFIER_QUORUM_FAILED",
         "VERIFIER_FAILOVER_ACTIVE" if verifier_state == "VERIFIER_FAILOVER_ACTIVE" else "VERIFIER_FAILOVER_INACTIVE",
-        json.dumps(snapshot, sort_keys=True),
+        html.escape(json.dumps(snapshot, sort_keys=True)),
     )
 
 
@@ -4952,17 +5013,17 @@ def playground_html(route_label="Playground / Demo Tooling"):
 </body>
 </html>
 """ % (
-        route_label,
-        parity_status,
+        html.escape(str(route_label)),
+        html.escape(parity_status),
         "" if parity_status == "VERIFIED" else "Runtime parity mismatch or untrusted attestation requires governance review.",
-        identity_status,
-        identity_state,
-        challenge_status,
-        challenge_state,
-        renewal_status,
-        renewal_state,
-        verifier_status,
-        verifier_state,
+        html.escape(identity_status),
+        html.escape(identity_state),
+        html.escape(challenge_status),
+        html.escape(challenge_state),
+        html.escape(renewal_status),
+        html.escape(renewal_state),
+        html.escape(verifier_status),
+        html.escape(verifier_state),
     )
 
 

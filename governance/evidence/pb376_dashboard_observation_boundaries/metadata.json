@@ -1,0 +1,87 @@
+{
+  "pb_number": 376,
+  "pb_slug": "dashboard-observation-boundaries",
+  "pb_title": "Clarify Dashboard Observation and Authority Boundaries",
+  "decision": "REVIEW_REQUIRED",
+  "status": "AWAITING_APPROVAL",
+  "branch_name": "governance/dashboard-observation-boundaries",
+  "commit_title": "PB-376 REVIEW_REQUIRED: Clarify Dashboard Observation and Authority Boundaries",
+  "pr_title": "PB-376 REVIEW_REQUIRED: Clarify Dashboard Observation and Authority Boundaries",
+  "pr_body": "## PURPOSE\nCorrect dashboard wording that can imply general approval from narrower evidence checks, and render evidence/runtime values as literal text. Administrative proposal: https://github.com/USJAY77/usbay-policy-brain-public/issues/432. The presentation patch is bound to reachable public main dc549b2167dc6bdbe8e5b1c988bb27e9176e388e.\n\n## RISK\nBroad approval labels can overstate execution authority or human independence. Direct HTML interpolation of verdict/runtime text can create a conditional injection route. Renderer checks alone do not prove backend, browser or production safety.\n\n## POLICY LINK\nBaseline AGENTS.md; existing fail-closed identity, tenant, signature, revocation, replay and audit controls; PB-023 metadata authority and PB-026 generated review-body contract. No policy, trust or permissions are changed.\n\n## REQUIRED APPROVALS\n- USBAY-AUDIT\n- USBAY-GLOBAL23\n\n## GOVERNANCE CHECKS\n- Owner authorized one separate public branch and Draft PR with existing automatic PR CI; no manual reruns or merge are authorized.\n- Keep REVIEW_REQUIRED / AWAITING_APPROVAL. Existing reviewer accounts are controlled by one owner and do not prove two independent human reviewers. No human approval is supplied.\n- Preserve backend producers, route handlers, API outcomes, policy/identity/signature/replay/revocation/audit enforcement and all non-copy test assertions.\n- Only three presentation functions, two pure rendering helpers and twelve copy-dependent assertion strings change; 193 other top-level function/class raw blocks and module initialization match the pinned base.\n- Do not incorporate unrelated signer-fixture PR431, removed Replit runtime modules, workflow/dependency changes, provider operations or deployment.\n- Observe actual exact-head CI results and preserve failures. Echo-only gates are not runtime validation; selection of the four backend UI tests must be confirmed from collection evidence.\n\n## AUDIT\nFresh local Python 3.12.14 standard-library renderer-only run passed 17 unique cases and 31 subtests, exit 0. All 11 private preservation files were remotely reread and SHA256-matched at preservation commit 5ae899ab453326808f5601f24ce2fd84bef51242. Public source patch SHA256: 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. Private preservation is evidence storage, not an application commit or approval.\n\n## IMPACT\nReviewers can distinguish reported checks and analysis/review items from actual action authority. Dynamic values render as text. The patch does not enable mail execution, establish production readiness or synchronize a proven serving build.\n\n## Decision\nREVIEW_REQUIRED\n\n## Status\nAWAITING_APPROVAL\n\n## MECHANISM\nDisplay specific digest/sourcehash/policy-signature observations separately; preserve observation scope and times; show missing authority/freshness as UNKNOWN; qualify review items; escape verdict/runtime text and nested JSON. Existing assessment JavaScript remains textContent-based.\n\n## GAP\nThe four backend-coupled UI tests, full application import/lifespan, browser/provider/live acceptance and serving-build binding remain unproven locally. Existing record-transfer and operational authority gaps remain open. No independent human review has been established.\n\n## VALIDATION\n17 renderer-only cases and 31 subtests passed on Python 3.12.14 without Gateway import or dependency installation. Static AST/raw-block checks confirmed rendering-only changes and preserved non-copy test AST. Existing automatic PR CI is pending; no workflow configuration changes.\n\n## ROLLBACK\nKeep this proposal unmerged on any failed or unresolved required check. Preserve all commits and failure evidence. Any later reversal after adoption requires its own reviewed change.\n\n## SOURCE\nPinned base: https://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2167dc6bdbe8e5b1c988bb27e9176e388e . Proposed source bytes are identified by the PR head and metadata file hashes; no circular self-hash is embedded.\n\n## CHANGED FILES\n- gateway/app.py\n- tests/test_gateway_app.py\n- tests/test_live_pilot_v1.py\n- governance/evidence/pb376_dashboard_observation_boundaries/metadata.json\n- governance/evidence/pb376_dashboard_observation_boundaries/generated_pr_body.md\n\n## VALIDATION RESULTS\nCandidate: 17/17 cases, 31 subtests, zero failures/errors/skips, exit 0. Focused existing-renderer baseline control: three failing cases and one already-passing demo case; these four are a subset of the seventeen. Initial full-harness baseline extraction failure is retained as a harness diagnostic, not functional regression evidence. Four backend UI tests remain NOT RUN locally.\n\n## ROLLBACK PLAN\nNo merge, deployment, activation, permission change or automatic CI retry. Retain the public Draft PR and exact-head failure evidence for review if native CI fails.\n\n## COMMIT OR SOURCE REFERENCE\nApplication base dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; registration https://github.com/USJAY77/usbay-policy-brain-public/issues/432; prepared source patch SHA256 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. The prior Replit-bound candidate is not used as source identity or new test evidence.\n",
+  "base_commit": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "base_tree": "b83475115eafe1ca75df661272958f21aac08665",
+  "registration": "https://github.com/USJAY77/usbay-policy-brain-public/issues/432",
+  "generated_sections": {
+    "pb_number": 376,
+    "pb_title": "Clarify Dashboard Observation and Authority Boundaries",
+    "decision": "REVIEW_REQUIRED",
+    "status": "AWAITING_APPROVAL",
+    "purpose": "Correct dashboard wording that can imply general approval from narrower evidence checks, and render evidence/runtime values as literal text. Administrative proposal: https://github.com/USJAY77/usbay-policy-brain-public/issues/432. The presentation patch is bound to reachable public main dc549b2167dc6bdbe8e5b1c988bb27e9176e388e.",
+    "risk": "Broad approval labels can overstate execution authority or human independence. Direct HTML interpolation of verdict/runtime text can create a conditional injection route. Renderer checks alone do not prove backend, browser or production safety.",
+    "policy_link": "Baseline AGENTS.md; existing fail-closed identity, tenant, signature, revocation, replay and audit controls; PB-023 metadata authority and PB-026 generated review-body contract. No policy, trust or permissions are changed.",
+    "required_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "governance_checks": [
+      "Owner authorized one separate public branch and Draft PR with existing automatic PR CI; no manual reruns or merge are authorized.",
+      "Keep REVIEW_REQUIRED / AWAITING_APPROVAL. Existing reviewer accounts are controlled by one owner and do not prove two independent human reviewers. No human approval is supplied.",
+      "Preserve backend producers, route handlers, API outcomes, policy/identity/signature/replay/revocation/audit enforcement and all non-copy test assertions.",
+      "Only three presentation functions, two pure rendering helpers and twelve copy-dependent assertion strings change; 193 other top-level function/class raw blocks and module initialization match the pinned base.",
+      "Do not incorporate unrelated signer-fixture PR431, removed Replit runtime modules, workflow/dependency changes, provider operations or deployment.",
+      "Observe actual exact-head CI results and preserve failures. Echo-only gates are not runtime validation; selection of the four backend UI tests must be confirmed from collection evidence."
+    ],
+    "audit": "Fresh local Python 3.12.14 standard-library renderer-only run passed 17 unique cases and 31 subtests, exit 0. All 11 private preservation files were remotely reread and SHA256-matched at preservation commit 5ae899ab453326808f5601f24ce2fd84bef51242. Public source patch SHA256: 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. Private preservation is evidence storage, not an application commit or approval.",
+    "impact": "Reviewers can distinguish reported checks and analysis/review items from actual action authority. Dynamic values render as text. The patch does not enable mail execution, establish production readiness or synchronize a proven serving build."
+  },
+  "generated_supplements": {
+    "MECHANISM": "Display specific digest/sourcehash/policy-signature observations separately; preserve observation scope and times; show missing authority/freshness as UNKNOWN; qualify review items; escape verdict/runtime text and nested JSON. Existing assessment JavaScript remains textContent-based.",
+    "GAP": "The four backend-coupled UI tests, full application import/lifespan, browser/provider/live acceptance and serving-build binding remain unproven locally. Existing record-transfer and operational authority gaps remain open. No independent human review has been established.",
+    "VALIDATION": "17 renderer-only cases and 31 subtests passed on Python 3.12.14 without Gateway import or dependency installation. Static AST/raw-block checks confirmed rendering-only changes and preserved non-copy test AST. Existing automatic PR CI is pending; no workflow configuration changes.",
+    "ROLLBACK": "Keep this proposal unmerged on any failed or unresolved required check. Preserve all commits and failure evidence. Any later reversal after adoption requires its own reviewed change.",
+    "SOURCE": "Pinned base: https://github.com/USJAY77/usbay-policy-brain-public/commit/dc549b2167dc6bdbe8e5b1c988bb27e9176e388e . Proposed source bytes are identified by the PR head and metadata file hashes; no circular self-hash is embedded.",
+    "CHANGED FILES": "- gateway/app.py\n- tests/test_gateway_app.py\n- tests/test_live_pilot_v1.py\n- governance/evidence/pb376_dashboard_observation_boundaries/metadata.json\n- governance/evidence/pb376_dashboard_observation_boundaries/generated_pr_body.md",
+    "VALIDATION RESULTS": "Candidate: 17/17 cases, 31 subtests, zero failures/errors/skips, exit 0. Focused existing-renderer baseline control: three failing cases and one already-passing demo case; these four are a subset of the seventeen. Initial full-harness baseline extraction failure is retained as a harness diagnostic, not functional regression evidence. Four backend UI tests remain NOT RUN locally.",
+    "ROLLBACK PLAN": "No merge, deployment, activation, permission change or automatic CI retry. Retain the public Draft PR and exact-head failure evidence for review if native CI fails.",
+    "COMMIT OR SOURCE REFERENCE": "Application base dc549b2167dc6bdbe8e5b1c988bb27e9176e388e; registration https://github.com/USJAY77/usbay-policy-brain-public/issues/432; prepared source patch SHA256 11cf82cac44fe5f41f48b8265623d833c85ca83a9741032195c538c19b61c0a9. The prior Replit-bound candidate is not used as source identity or new test evidence."
+  },
+  "files": [
+    {
+      "path": "gateway/app.py",
+      "base_sha256": "d5e0c6feb0ca19a95a9fdccaca65bdbaf0039957d81c9854a6baede67596f80e",
+      "candidate_sha256": "a4be72ae026b28db39a3e9b3b0f43f38a5f9d17e2aacc38bf9050056016a5726",
+      "base_bytes": 263436,
+      "candidate_bytes": 267915
+    },
+    {
+      "path": "tests/test_gateway_app.py",
+      "base_sha256": "9c314865076f74af6b4b5513d85f3428c2acfb59f1cf9e987b918be4c78f5a35",
+      "candidate_sha256": "00e8f3c0f4a85a7ab917164716f1825ceb353e39b839e5b5ec2db3142259ac85",
+      "base_bytes": 118398,
+      "candidate_bytes": 118883
+    },
+    {
+      "path": "tests/test_live_pilot_v1.py",
+      "base_sha256": "ac2090f508389af47ae4dc8d6ef28eeb89d4c012f939325a8b6c41ea1558c7d3",
+      "candidate_sha256": "61b1904eb7bc5d0c82946f9a035ef23a3587ac2aeca4e5df71946f08a0fecb00",
+      "base_bytes": 19683,
+      "candidate_bytes": 19713
+    }
+  ],
+  "local_validation": {
+    "cases": 17,
+    "subtests": 31,
+    "exit": 0,
+    "python": "3.12.14",
+    "application_imported": false
+  },
+  "native_validation": "PENDING",
+  "authority": {
+    "draft_publication": "AUTHORIZED",
+    "existing_automatic_pr_ci": "AUTHORIZED",
+    "merge": false,
+    "deploy": false,
+    "activate": false
+  },
+  "human_review": "NOT_ESTABLISHED; two owner-controlled accounts are not two independent humans"
+}
