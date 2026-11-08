@@ -1,0 +1,24 @@
+import json, pathlib, sys, unittest
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+before = set(sys.modules)
+import test_boundary
+import test_synthetic
+mode = sys.argv[1]
+suite = (unittest.TestSuite(test_boundary.BoundaryTests(name)
+         for name in test_boundary.REPRODUCTION_CASES)
+         if mode == 'reproduce' else
+         unittest.defaultTestLoader.loadTestsFromTestCase(test_boundary.BoundaryTests))
+result = unittest.TextTestRunner(verbosity=2, resultclass=test_synthetic.CountingResult).run(suite)
+modules = []
+for name in sorted(set(sys.modules) - before):
+    module = sys.modules[name]
+    location = getattr(module, '__file__', None)
+    if location:
+        modules.append({'name': name, 'file': str(location)})
+observed = {'unique_cases': result.testsRun, 'failures': len(result.failures),
+            'errors': len(result.errors), 'skipped': len(result.skipped),
+            'subtests': result.subtests, 'subtest_failures': result.subtest_failures,
+            'new_modules_with_files': modules,
+            'module_observation_limit': 'sys.modules delta in this child only; not kernel isolation or pre-existing-module attestation'}
+print('BOUND_RESULT=' + json.dumps(observed, sort_keys=True))
+sys.exit(0 if result.wasSuccessful() else 1)

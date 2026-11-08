@@ -1,0 +1,21 @@
+{
+  "close_fds": true,
+  "command": [
+    "/home/runner/workspace/.pythonlibs/bin/python3",
+    "-I",
+    "-B",
+    "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/execute_suite.py",
+    "reproduce"
+  ],
+  "cryptography": "50.0.0",
+  "cwd": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source",
+  "entrypoint": "/home/runner/workspace/.pythonlibs/bin/python3",
+  "entrypoint_sha256": "ba44db06e5cab4bed5ee1f711f98df7cc9ab13ded452c31eb53b8dfb6d36de01",
+  "environment_keys": [],
+  "executable": "/nix/store/flbj8bq2vznkcwss7sm0ky8rd0k6kar7-python-wrapped-0.1.0/bin/.python-wrapped",
+  "executable_sha256": "ba44db06e5cab4bed5ee1f711f98df7cc9ab13ded452c31eb53b8dfb6d36de01",
+  "pre_run_sha256": "11e29846d20517a7b1d691bc1a54a99d13cda80273d11cddc38b32df82ca2d72",
+  "python": "3.11.14",
+  "stdin": "DEVNULL",
+  "timeout_seconds": 20
+}

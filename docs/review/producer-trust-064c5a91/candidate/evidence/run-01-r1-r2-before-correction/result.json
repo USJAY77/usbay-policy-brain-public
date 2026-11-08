@@ -1,0 +1,453 @@
+{
+  "duration_seconds": 3.045745529998385,
+  "exit_code": 1,
+  "mode": "reproduce",
+  "post_run_sha256": "11e29846d20517a7b1d691bc1a54a99d13cda80273d11cddc38b32df82ca2d72",
+  "source_unchanged": true,
+  "stderr_sha256": "a92dcc3f1c51498c7bcda09f6c8b9be8ddf442e94c83c182e014e8fec63741da",
+  "stdout_sha256": "90624054df51fb97d46b257665101a428e8045394aa56347da8af631451b8331",
+  "summary": {
+    "errors": 0,
+    "failures": 4,
+    "module_observation_limit": "sys.modules delta in this child only; not kernel isolation or pre-existing-module attestation",
+    "new_modules_with_files": [
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_asyncio.cpython-311-x86_64-linux-gnu.so",
+        "name": "_asyncio"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_bisect.cpython-311-x86_64-linux-gnu.so",
+        "name": "_bisect"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_blake2.cpython-311-x86_64-linux-gnu.so",
+        "name": "_blake2"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/_cffi_backend.cpython-311-x86_64-linux-gnu.so",
+        "name": "_cffi_backend"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_contextvars.cpython-311-x86_64-linux-gnu.so",
+        "name": "_contextvars"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_hashlib.cpython-311-x86_64-linux-gnu.so",
+        "name": "_hashlib"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_posixsubprocess.cpython-311-x86_64-linux-gnu.so",
+        "name": "_posixsubprocess"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_queue.cpython-311-x86_64-linux-gnu.so",
+        "name": "_queue"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_random.cpython-311-x86_64-linux-gnu.so",
+        "name": "_random"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_sha512.cpython-311-x86_64-linux-gnu.so",
+        "name": "_sha512"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_socket.cpython-311-x86_64-linux-gnu.so",
+        "name": "_socket"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_ssl.cpython-311-x86_64-linux-gnu.so",
+        "name": "_ssl"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_struct.cpython-311-x86_64-linux-gnu.so",
+        "name": "_struct"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/_typing.cpython-311-x86_64-linux-gnu.so",
+        "name": "_typing"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/array.cpython-311-x86_64-linux-gnu.so",
+        "name": "array"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/__init__.py",
+        "name": "asyncio"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_events.py",
+        "name": "asyncio.base_events"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_futures.py",
+        "name": "asyncio.base_futures"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_subprocess.py",
+        "name": "asyncio.base_subprocess"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/base_tasks.py",
+        "name": "asyncio.base_tasks"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/constants.py",
+        "name": "asyncio.constants"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/coroutines.py",
+        "name": "asyncio.coroutines"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/events.py",
+        "name": "asyncio.events"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/exceptions.py",
+        "name": "asyncio.exceptions"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/format_helpers.py",
+        "name": "asyncio.format_helpers"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/futures.py",
+        "name": "asyncio.futures"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/locks.py",
+        "name": "asyncio.locks"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/log.py",
+        "name": "asyncio.log"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/mixins.py",
+        "name": "asyncio.mixins"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/protocols.py",
+        "name": "asyncio.protocols"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/queues.py",
+        "name": "asyncio.queues"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/runners.py",
+        "name": "asyncio.runners"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/selector_events.py",
+        "name": "asyncio.selector_events"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/sslproto.py",
+        "name": "asyncio.sslproto"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/staggered.py",
+        "name": "asyncio.staggered"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/streams.py",
+        "name": "asyncio.streams"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/subprocess.py",
+        "name": "asyncio.subprocess"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/taskgroups.py",
+        "name": "asyncio.taskgroups"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/tasks.py",
+        "name": "asyncio.tasks"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/threads.py",
+        "name": "asyncio.threads"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/timeouts.py",
+        "name": "asyncio.timeouts"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/transports.py",
+        "name": "asyncio.transports"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/trsock.py",
+        "name": "asyncio.trsock"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/asyncio/unix_events.py",
+        "name": "asyncio.unix_events"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/base64.py",
+        "name": "base64"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/binascii.cpython-311-x86_64-linux-gnu.so",
+        "name": "binascii"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/bisect.py",
+        "name": "bisect"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/__init__.py",
+        "name": "concurrent"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/__init__.py",
+        "name": "concurrent.futures"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/_base.py",
+        "name": "concurrent.futures._base"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/concurrent/futures/thread.py",
+        "name": "concurrent.futures.thread"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/contextvars.py",
+        "name": "contextvars"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/contracts.py",
+        "name": "contracts"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/__init__.py",
+        "name": "cryptography"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/__about__.py",
+        "name": "cryptography.__about__"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/exceptions.py",
+        "name": "cryptography.exceptions"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/__init__.py",
+        "name": "cryptography.hazmat"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/_oid.py",
+        "name": "cryptography.hazmat._oid"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/bindings/__init__.py",
+        "name": "cryptography.hazmat.bindings"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/bindings/_rust.abi3.so",
+        "name": "cryptography.hazmat.bindings._rust"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/decrepit/__init__.py",
+        "name": "cryptography.hazmat.decrepit"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/decrepit/ciphers/__init__.py",
+        "name": "cryptography.hazmat.decrepit.ciphers"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/decrepit/ciphers/algorithms.py",
+        "name": "cryptography.hazmat.decrepit.ciphers.algorithms"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/decrepit/ciphers/modes.py",
+        "name": "cryptography.hazmat.decrepit.ciphers.modes"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/__init__.py",
+        "name": "cryptography.hazmat.primitives"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/_asymmetric.py",
+        "name": "cryptography.hazmat.primitives._asymmetric"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/_cipheralgorithm.py",
+        "name": "cryptography.hazmat.primitives._cipheralgorithm"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/_modes.py",
+        "name": "cryptography.hazmat.primitives._modes"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/_serialization.py",
+        "name": "cryptography.hazmat.primitives._serialization"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/__init__.py",
+        "name": "cryptography.hazmat.primitives.asymmetric"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/dh.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.dh"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/dsa.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.dsa"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/ec.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.ec"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/ed25519.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.ed25519"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/padding.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.padding"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/rsa.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.rsa"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/asymmetric/utils.py",
+        "name": "cryptography.hazmat.primitives.asymmetric.utils"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/ciphers/__init__.py",
+        "name": "cryptography.hazmat.primitives.ciphers"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/ciphers/algorithms.py",
+        "name": "cryptography.hazmat.primitives.ciphers.algorithms"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/ciphers/base.py",
+        "name": "cryptography.hazmat.primitives.ciphers.base"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/ciphers/modes.py",
+        "name": "cryptography.hazmat.primitives.ciphers.modes"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/hashes.py",
+        "name": "cryptography.hazmat.primitives.hashes"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/serialization/__init__.py",
+        "name": "cryptography.hazmat.primitives.serialization"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/serialization/base.py",
+        "name": "cryptography.hazmat.primitives.serialization.base"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/hazmat/primitives/serialization/ssh.py",
+        "name": "cryptography.hazmat.primitives.serialization.ssh"
+      },
+      {
+        "file": "/home/runner/workspace/.pythonlibs/lib/python3.11/site-packages/cryptography/utils.py",
+        "name": "cryptography.utils"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/fcntl.cpython-311-x86_64-linux-gnu.so",
+        "name": "fcntl"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/hashlib.py",
+        "name": "hashlib"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/locale.py",
+        "name": "locale"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/logging/__init__.py",
+        "name": "logging"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/math.cpython-311-x86_64-linux-gnu.so",
+        "name": "math"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/pkgutil.py",
+        "name": "pkgutil"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/queue.py",
+        "name": "queue"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/random.py",
+        "name": "random"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/lib-dynload/select.cpython-311-x86_64-linux-gnu.so",
+        "name": "select"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/selectors.py",
+        "name": "selectors"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/socket.py",
+        "name": "socket"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/ssl.py",
+        "name": "ssl"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/string.py",
+        "name": "string"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/struct.py",
+        "name": "struct"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/subprocess.py",
+        "name": "subprocess"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/synthetic_fence.py",
+        "name": "synthetic_fence"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_boundary.py",
+        "name": "test_boundary"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_review.py",
+        "name": "test_review"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_synthetic.py",
+        "name": "test_synthetic"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/typing.py",
+        "name": "typing"
+      },
+      {
+        "file": "/nix/store/6334pjf6w2q623rgvwi499qaiym1p6yv-python3-3.11.14/lib/python3.11/unittest/mock.py",
+        "name": "unittest.mock"
+      },
+      {
+        "file": "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/verifier.py",
+        "name": "verifier"
+      }
+    ],
+    "skipped": 0,
+    "subtest_failures": 0,
+    "subtests": 0,
+    "unique_cases": 4
+  },
+  "timeout": false
+}

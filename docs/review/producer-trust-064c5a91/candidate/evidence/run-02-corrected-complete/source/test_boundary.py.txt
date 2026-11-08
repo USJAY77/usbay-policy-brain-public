@@ -1,0 +1,373 @@
+"""R1/R2 deterministic synthetic regressions; never import the application."""
+from contextlib import contextmanager
+import copy
+from dataclasses import replace
+import json
+from unittest.mock import patch
+
+from contracts import Rejected, digest
+import test_review
+from test_synthetic import envelope
+import verifier
+
+
+class FailNonceWrite(dict):
+    def __setitem__(self, key, value):
+        raise MemoryError("synthetic_nonce_write_failure")
+
+
+class BoundaryTests(test_review.ReviewTests):
+    def bundle(self, *, sequence=1, version=1, nonce="e", end=130,
+               next_update=120, revoked=(), snapshot_id="synthetic-snapshot"):
+        adoption, selection, snapshot = (
+            copy.deepcopy(value) for value in
+            (self.adoption, self.selection, self.revocation))
+        adoption.update(nonce=nonce * 64, valid_until=end)
+        selection.update(sequence=sequence, adoption_digest=digest(adoption),
+                         valid_until=end)
+        snapshot.update(version=version, next_update=next_update,
+                        revoked=list(revoked), id=snapshot_id)
+        return [envelope(kind, payload, [(identity, self.keys[identity])])
+                for kind, payload, identity in (
+                    ("adoption", adoption, "synthetic-adopter"),
+                    ("selection", selection, "synthetic-selector"),
+                    ("revocation", snapshot, "synthetic-revoker"))]
+
+    def test_reentrant_later_release_blocks_outer_earlier_acceptance(self):
+        outer = self.bundle(sequence=3, end=105)
+        inner = self.bundle(sequence=2, nonce="f")
+        original = self.fence.record
+        nested = []
+
+        def intercepted(receipt, **options):
+            if receipt.sequence != 3:
+                return original(receipt, **options)
+
+            def callback():
+                self.assertEqual("RECORDED", self.run_verify(
+                    inner, now=110, clock=lambda: 110))
+                nested.append((self.fence.snapshot(), self.fence.currentness()))
+                return 100
+            return original(receipt, clock=callback)
+
+        with patch.object(self.fence, "record", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(outer)
+        self.assertEqual(1, len(nested))
+        self.assertEqual(nested[0], (self.fence.snapshot(), self.fence.currentness()))
+        self.assertEqual(2, self.fence.snapshot()[0][self.target].sequence)
+
+    def test_reentrant_later_snapshot_blocks_expired_higher_outer(self):
+        outer = self.bundle(sequence=3, version=3, next_update=105)
+        inner = self.bundle(sequence=2, version=2, nonce="f")
+        original = self.fence.observe
+        nested = []
+
+        def intercepted(snapshot, **options):
+            if snapshot.version != 3:
+                return original(snapshot, **options)
+
+            def callback():
+                self.assertEqual("RECORDED", self.run_verify(
+                    inner, now=110, clock=lambda: 110))
+                nested.append((self.fence.snapshot(), self.fence.currentness()))
+                return 100
+            return original(snapshot, clock=callback)
+
+        with patch.object(self.fence, "observe", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(outer)
+        self.assertEqual(1, len(nested))
+        self.assertEqual(nested[0], (self.fence.snapshot(), self.fence.currentness()))
+        self.assertEqual(2, self.fence.currentness()[0][self.target].version)
+
+    def test_reentrant_exact_retry_must_not_restore_earlier_time(self):
+        inputs = self.bundle()
+        self.assertEqual("RECORDED", self.run_verify(inputs))
+        before = self.fence.snapshot()
+        original = self.fence.record
+        nesting = []
+
+        def intercepted(receipt, **options):
+            if nesting:
+                return original(receipt, **options)
+
+            def callback():
+                nesting.append(True)
+                self.assertEqual("IDEMPOTENT", self.run_verify(
+                    inputs, now=110, clock=lambda: 110))
+                return 100
+            return original(receipt, clock=callback)
+
+        with patch.object(self.fence, "record", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(inputs)
+        self.assertEqual(before, self.fence.snapshot())
+
+    @contextmanager
+    def nonce_failure(self):
+        """Inject the same logical second-write fault before/after correction."""
+        if hasattr(self.fence, "_prepare_nonce"):
+            original = self.fence._prepare_nonce
+
+            def failed(*args):
+                original(*args)
+                raise MemoryError("synthetic_nonce_write_failure")
+            with patch.object(self.fence, "_prepare_nonce", failed):
+                yield
+        else:
+            with patch.object(self.fence, "_nonces", FailNonceWrite(
+                    self.fence.snapshot()[1])):
+                yield
+
+    def test_nonce_write_failure_is_atomic(self):
+        before = self.fence.snapshot()
+        with self.nonce_failure():
+            with self.assertRaisesRegex(MemoryError, "^synthetic_nonce_write_failure$"):
+                self.run_verify()
+        self.assertEqual(before, self.fence.snapshot())
+        self.assertEqual("RECORDED", self.run_verify())
+        states, nonces = self.fence.snapshot()
+        receipt = states[self.target]
+        self.assertEqual(receipt.adoption_digest,
+                         nonces[(self.target, receipt.adoption_nonce)])
+
+    def all_state(self):
+        return (self.fence.snapshot(), self.fence.currentness(),
+                self.fence.known_times())
+
+    def test_same_version_retry_preserves_release_and_advances_known_time(self):
+        inputs = self.bundle()
+        self.run_verify(inputs)
+        accepted = self.fence.snapshot()
+        self.assertEqual("IDEMPOTENT", self.run_verify(
+            inputs, now=110, clock=lambda: 110))
+        self.assertEqual(accepted, self.fence.snapshot())
+        self.assertEqual([110], list(self.fence.known_times().values()))
+        before = self.all_state()
+        with self.assertRaisesRegex(Rejected, "^clock_rollback$"):
+            self.run_verify(inputs, now=109, clock=lambda: 109)
+        self.assertEqual(before, self.all_state())
+
+    def test_retry_expiry_does_not_advance_accepted_release(self):
+        inputs = self.bundle(end=105)
+        self.run_verify(inputs)
+        accepted = self.fence.snapshot()
+        with self.assertRaises(Rejected):
+            self.run_verify(inputs, now=105, clock=lambda: 105)
+        self.assertEqual(accepted, self.fence.snapshot())
+        # The valid snapshot observation at 105 remains legitimate knowledge.
+        self.assertEqual([105], list(self.fence.known_times().values()))
+        before = self.all_state()
+        with self.assertRaisesRegex(Rejected, "^clock_rollback$"):
+            self.run_verify(inputs, now=104, clock=lambda: 104)
+        self.assertEqual(before, self.all_state())
+
+    def test_unauthenticated_snapshot_cannot_advance_time(self):
+        import base64
+        self.run_verify()
+        before = self.all_state()
+        inputs = self.bundle(version=2)
+        snapshot = json.loads(inputs[2])
+        snapshot["signatures"][0]["signature"] = base64.b64encode(bytes(64)).decode()
+        from contracts import canonical
+        inputs[2] = canonical(snapshot)
+        calls = []
+        with self.assertRaises(Rejected):
+            self.run_verify(inputs, now=110, clock=lambda: calls.append(110) or 110)
+        self.assertEqual([], calls)
+        self.assertEqual(before, self.all_state())
+
+    def test_wrong_scope_snapshot_cannot_advance_time(self):
+        self.run_verify()
+        before = self.all_state()
+        inputs = self.bundle(version=2)
+        payload = json.loads(inputs[2])["payload"]
+        payload["target"]["tenant"] = "synthetic-other-tenant"
+        inputs[2] = envelope("revocation", payload, [
+            ("synthetic-revoker", self.keys["synthetic-revoker"])])
+        calls = []
+        with self.assertRaises(Rejected):
+            self.run_verify(inputs, now=110, clock=lambda: calls.append(110) or 110)
+        self.assertEqual([], calls)
+        self.assertEqual(before, self.all_state())
+
+    def test_foreign_authority_cannot_poison_known_time(self):
+        self.run_verify()
+        before = self.all_state()
+        authority = replace(self.authority, max_revocation_age=31)
+        with self.assertRaisesRegex(Rejected, "^authority_context_changed$"):
+            self.run_verify(self.bundle(version=2), authority=authority,
+                            now=110, clock=lambda: 110)
+        self.assertEqual(before, self.all_state())
+
+    def test_snapshot_expired_at_boundary_cannot_poison_known_time(self):
+        self.run_verify()
+        before = self.all_state()
+        with self.assertRaisesRegex(Rejected, "^snapshot_expired$"):
+            self.run_verify(self.bundle(version=2, next_update=105),
+                            clock=lambda: 110)
+        self.assertEqual(before, self.all_state())
+
+    def test_current_revocation_blocks_retry_and_old_clean_time(self):
+        clean = self.bundle()
+        self.run_verify(clean)
+        accepted = self.fence.snapshot()
+        revoked = self.bundle(version=2, revoked=("synthetic-producer",))
+        with self.assertRaisesRegex(Rejected, "^producer_revoked$"):
+            self.run_verify(revoked, now=110, clock=lambda: 110)
+        self.assertEqual(accepted, self.fence.snapshot())
+        self.assertEqual([110], list(self.fence.known_times().values()))
+        before = self.all_state()
+        with self.assertRaisesRegex(Rejected, "^snapshot_rollback$"):
+            self.run_verify(clean, now=111, clock=lambda: 111)
+        self.assertEqual(before, self.all_state())
+
+    def test_reentrant_foreign_context_cannot_raise_target_time(self):
+        original = self.fence.record
+        authority = replace(self.authority, max_revocation_age=31)
+        nested = []
+
+        def intercepted(receipt, **options):
+            def callback():
+                before = self.all_state()
+                with self.assertRaisesRegex(Rejected, "^authority_context_changed$"):
+                    self.run_verify(self.bundle(version=2), authority=authority,
+                                    now=110, clock=lambda: 110)
+                self.assertEqual(before, self.all_state())
+                nested.append(True)
+                return 100
+            return original(receipt, clock=callback)
+
+        with patch.object(self.fence, "record", intercepted):
+            self.assertEqual("RECORDED", self.run_verify())
+        self.assertEqual([True], nested)
+        self.assertEqual([100], list(self.fence.known_times().values()))
+
+    def test_known_time_is_partitioned_by_exact_tenant_and_authority(self):
+        self.run_verify()
+        binding = dict(self.binding, tenant="synthetic-other-tenant")
+        target = (binding["app"], binding["environment"], binding["tenant"],
+                  binding["purpose"])
+        authority = replace(self.authority, principals=tuple(
+            replace(p, target=target) for p in self.authority.principals))
+        records = [json.loads(raw)["payload"] for raw in self.bundle()]
+        records[0]["binding"] = dict(binding)
+        records[1]["binding"] = dict(binding)
+        records[1]["adoption_digest"] = digest(records[0])
+        records[2]["target"] = dict(zip(
+            ("app", "environment", "tenant", "purpose"), target))
+        inputs = [envelope(kind, payload, [(identity, self.keys[identity])])
+                  for kind, payload, identity in zip(
+                      ("adoption", "selection", "revocation"), records,
+                      ("synthetic-adopter", "synthetic-selector", "synthetic-revoker"))]
+        self.assertEqual("RECORDED", verifier.verify_and_record(
+            *inputs, fence=self.fence, authority=authority, expected_binding=binding,
+            now=115, clock=lambda: 115))
+        self.assertEqual("IDEMPOTENT", self.run_verify(now=101, clock=lambda: 101))
+        self.assertEqual([101, 115], sorted(self.fence.known_times().values()))
+        self.assertEqual({self.target, target}, set(self.fence.snapshot()[0]))
+
+    def test_snapshot_prepare_failure_is_atomic(self):
+        before = self.all_state()
+        with patch.object(self.fence, "_prepare_times",
+                          side_effect=MemoryError("synthetic_time_prepare_failure")):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_time_prepare_failure$"):
+                self.run_verify()
+        self.assertEqual(before, self.all_state())
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_snapshot_publication_failure_is_atomic(self):
+        before = self.all_state()
+        with patch.object(self.fence, "_publish",
+                          side_effect=MemoryError("synthetic_publication_failure")):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_publication_failure$"):
+                self.run_verify()
+        self.assertEqual(before, self.all_state())
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_conflict_preparation_failure_does_not_publish_ambiguity(self):
+        self.run_verify()
+        before = self.all_state()
+        inputs = self.bundle(snapshot_id="synthetic-equivocation")
+        with patch.object(self.fence, "_prepare_times",
+                          side_effect=MemoryError("synthetic_conflict_prepare_failure")):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_conflict_prepare_failure$"):
+                self.run_verify(inputs, now=110, clock=lambda: 110)
+        self.assertEqual(before, self.all_state())
+        with self.assertRaisesRegex(Rejected, "^snapshot_equivocation$"):
+            self.run_verify(inputs, now=110, clock=lambda: 110)
+        self.assertEqual(before[0], self.fence.snapshot())
+        self.assertIn(self.target, self.fence.currentness()[1])
+        self.assertEqual([110], list(self.fence.known_times().values()))
+
+    def test_release_preparation_failure_is_atomic(self):
+        before = self.fence.snapshot()
+        original = self.fence._prepare_states
+        reached = []
+
+        def failed(*args):
+            original(*args)
+            reached.append(True)
+            raise MemoryError("synthetic_release_prepare_failure")
+        with patch.object(self.fence, "_prepare_states", failed):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_release_prepare_failure$"):
+                self.run_verify()
+        self.assertEqual([True], reached)
+        self.assertEqual(before, self.fence.snapshot())
+        self.assertEqual([100], list(self.fence.known_times().values()))
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_release_publication_failure_is_atomic(self):
+        original = self.fence._publish
+        reached = []
+
+        def failed(state, prepared):
+            if prepared.states != state.states:
+                reached.append(self.all_state())
+                raise MemoryError("synthetic_release_publication_failure")
+            return original(state, prepared)
+        with patch.object(self.fence, "_publish", failed):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_release_publication_failure$"):
+                self.run_verify()
+        self.assertEqual(1, len(reached))
+        self.assertEqual(reached[0], self.all_state())
+        self.assertEqual(({}, {}), self.fence.snapshot())
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_final_time_preparation_failure_cannot_publish_release_or_nonce(self):
+        original = self.fence._prepare_times
+        calls = []
+
+        def failed(*args):
+            prepared = original(*args)
+            calls.append(True)
+            if len(calls) == 2:
+                raise MemoryError("synthetic_final_prepare_failure")
+            return prepared
+        with patch.object(self.fence, "_prepare_times", failed):
+            with self.assertRaisesRegex(MemoryError, "^synthetic_final_prepare_failure$"):
+                self.run_verify()
+        self.assertEqual(2, len(calls))
+        self.assertEqual(({}, {}), self.fence.snapshot())
+        self.assertEqual([100], list(self.fence.known_times().values()))
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_observation_copy_cannot_mutate_trusted_time_or_release(self):
+        self.run_verify()
+        before = self.all_state()
+        self.fence.known_times().clear()
+        states, nonces = self.fence.snapshot()
+        states.clear()
+        nonces.clear()
+        current, conflicts = self.fence.currentness()
+        current.clear()
+        self.assertEqual(before, self.all_state())
+
+
+REPRODUCTION_CASES = (
+    "test_reentrant_later_release_blocks_outer_earlier_acceptance",
+    "test_reentrant_later_snapshot_blocks_expired_higher_outer",
+    "test_reentrant_exact_retry_must_not_restore_earlier_time",
+    "test_nonce_write_failure_is_atomic",
+)

@@ -1,0 +1,98 @@
+"""Static metadata sealing only: no application imports or test execution."""
+import ast
+import hashlib
+import json
+from pathlib import Path
+
+
+def sha(raw):
+    return hashlib.sha256(raw).hexdigest()
+
+
+def checked_manifest(root, expected):
+    raw = (root / "MANIFEST.json").read_bytes()
+    assert sha(raw) == expected
+    record = json.loads(raw)
+    for item in record["files"]:
+        path = root / item["path"]
+        assert path.is_file() and not path.is_symlink()
+        data = path.read_bytes()
+        assert len(data) == item["bytes"] and sha(data) == item["sha256"]
+    return record
+
+
+def main():
+    root = Path(__file__).resolve().parent
+    predecessor = root.parent / "producer-trust-corrected-20261108"
+    previous_sha = "9c3fcc25a74f48cb4b0042c2c2d5af3be06448624a6956011ac9779f66310aa8"
+    previous = checked_manifest(predecessor, previous_sha)
+    original = checked_manifest(root.parent / "producer-trust-20261108",
+        "9ed03468855b5680e7661fbbc5926caa4d3af2b97203b26683f7026a17bf259b")
+    for path in root.glob("*.py"):
+        ast.parse(path.read_bytes(), filename=path.name)
+    unchanged = ("contracts.py", "verifier.py", "test_synthetic.py", "test_review.py")
+    for name in unchanged:
+        assert (root / name).read_bytes() == (predecessor / name).read_bytes()
+    runs = sorted((root / "evidence").iterdir())
+    for run in runs:
+        pre_raw, post_raw = ((run / name).read_bytes()
+                            for name in ("pre-run.json", "post-run.json"))
+        assert pre_raw == post_raw
+        pre = json.loads(pre_raw)
+        result = json.loads((run / "result.json").read_bytes())
+        runner = json.loads((run / "runner.json").read_bytes())
+        assert runner["pre_run_sha256"] == sha(pre_raw)
+        assert result["post_run_sha256"] == sha(post_raw)
+        for item in pre:
+            path = run / "source" / item["path"]
+            assert path.is_file() and not path.is_symlink()
+            data = path.read_bytes()
+            assert len(data) == item["bytes"] and sha(data) == item["sha256"]
+        for name in ("stdout", "stderr"):
+            assert sha((run / (name + ".log")).read_bytes()) == result[name + "_sha256"]
+        for module in ("contracts", "verifier", "synthetic_fence", "test_review",
+                       "test_synthetic", "test_boundary"):
+            actual = [item["file"] for item in result["summary"]["new_modules_with_files"]
+                      if item["name"] == module]
+            assert actual == [str(run / "source" / (module + ".py"))]
+    final = root / "evidence" / "run-03-final-boundary"
+    final_result = json.loads((final / "result.json").read_bytes())
+    assert final_result["exit_code"] == 0 and not final_result["timeout"]
+    assert final_result["summary"]["unique_cases"] == 85
+    assert final_result["summary"]["subtests"] == 163
+    assert final_result["summary"]["failures"] == final_result["summary"]["errors"] == 0
+    names = (*unchanged, "synthetic_fence.py", "test_boundary.py", "run_bound_suite.py")
+    for name in names:
+        assert (root / name).read_bytes() == (final / "source" / name).read_bytes()
+    files = []
+    for path in sorted(root.rglob("*")):
+        assert not path.is_symlink()
+        if path.is_file() and path.name != "MANIFEST.json":
+            raw = path.read_bytes()
+            files.append({"path": path.relative_to(root).as_posix(),
+                          "bytes": len(raw), "sha256": sha(raw)})
+    manifest = {
+        "candidate": root.name,
+        "base_head": "3fdd34305311f2e4a97d34544c95d87e0dbf781c",
+        "base_tree": "ae0f1774ed72add2da4a62d4f6203dca4cfc39d0",
+        "predecessor_manifest_sha256": previous_sha,
+        "unchanged_predecessor_sources": list(unchanged),
+        "final_run": final.name,
+        "files": files,
+    }
+    raw = (json.dumps(manifest, sort_keys=True, indent=2) + "\n").encode()
+    with (root / "MANIFEST.json").open("xb") as stream:
+        stream.write(raw)
+    print(json.dumps({
+        "manifest_sha256": sha(raw), "inventory_files": len(files),
+        "preserved_predecessor_files": len(previous["files"]),
+        "preserved_original_files": len(original["files"]),
+        "verified_source_bound_runs": len(runs),
+        "final_tested_sources_match": len(names),
+        "syntax_files": len(list(root.glob("*.py"))),
+        "final_import_delta": len(final_result["summary"]["new_modules_with_files"]),
+    }, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

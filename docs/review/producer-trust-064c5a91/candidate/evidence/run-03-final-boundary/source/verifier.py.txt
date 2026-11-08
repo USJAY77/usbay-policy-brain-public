@@ -1,0 +1,184 @@
+"""Dormant synthetic producer verification; never imports repository app code."""
+import base64
+import hashlib
+import json
+
+from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+from contracts import (ADOPTION, DOMAINS, REVOCATION, SELECTION, TARGET, Authority,
+                       CurrentSnapshot, Principal, Receipt, Rejected, canonical,
+                       digest, exact, freeze_binding, hex_value, integer, require, text,
+                       binding)
+
+
+def decode(value, length):
+    try:
+        require(type(value) is str, "invalid_base64")
+        raw = base64.b64decode(value, validate=True)
+        require(len(raw) == length and base64.b64encode(raw).decode() == value,
+                "invalid_base64")
+        return raw
+    except (ValueError, TypeError):
+        raise Rejected("invalid_base64") from None
+
+
+def read_envelope(raw):
+    require(type(raw) is bytes and 0 < len(raw) <= 65536, "invalid_envelope")
+
+    def pairs(items):
+        result = {}
+        for key, value in items:
+            require(key not in result, "duplicate_field")
+            result[key] = value
+        return result
+
+    try:
+        value = json.loads(raw.decode("ascii"), object_pairs_hook=pairs)
+    except (ValueError, UnicodeError, RecursionError):
+        raise Rejected("invalid_envelope") from None
+    require(canonical(value) == raw, "noncanonical_envelope")
+    exact(value, ("domain", "payload", "signatures"))
+    return value
+
+
+def validate_authority(authority, target):
+    require(type(authority) is Authority, "authority_required")
+    require(type(authority.principals) is tuple and authority.principals,
+            "authority_required")
+    for count in (authority.adoption_threshold, authority.selection_threshold,
+                  authority.revocation_threshold, authority.max_revocation_age):
+        integer(count)
+        require(count > 0, "invalid_authority_limits")
+    identities, keys = set(), set()
+    for principal in authority.principals:
+        require(type(principal) is Principal, "invalid_principal")
+        text(principal.identity)
+        require(type(principal.role) is str and principal.role in DOMAINS, "invalid_role")
+        require(type(principal.target) is tuple and len(principal.target) == 4,
+                "invalid_target")
+        for value in principal.target:
+            text(value)
+        require(type(principal.public_key) is bytes and len(principal.public_key) == 32,
+                "invalid_public_key")
+        identity, key = (principal.role, principal.identity), (principal.role, principal.public_key)
+        require(identity not in identities and key not in keys, "duplicate_principal")
+        identities.add(identity)
+        keys.add(key)
+    require(type(target) is tuple and len(target) == 4, "invalid_target")
+    for value in target:
+        text(value)
+    # Bind currentness to these exact externally supplied immutable trust inputs.
+    return digest({
+        "principals": sorted([p.identity, p.role, p.public_key.hex(), list(p.target)]
+                             for p in authority.principals),
+        "thresholds": [authority.adoption_threshold, authority.selection_threshold,
+                       authority.revocation_threshold],
+        "max_revocation_age": authority.max_revocation_age,
+    })
+
+
+def signed_payload(raw, kind, authority, target, revoked=()):
+    envelope = read_envelope(raw)
+    require(envelope["domain"] == DOMAINS[kind], "wrong_domain")
+    signatures = envelope["signatures"]
+    require(type(signatures) is list and 0 < len(signatures) <= 32,
+            "signatures_required")
+    payload = canonical({"domain": envelope["domain"], "payload": envelope["payload"]})
+    seen, seen_keys = set(), set()
+    for signature in signatures:
+        exact(signature, ("identity", "signature"))
+        identity = text(signature["identity"])
+        require(identity not in seen, "duplicate_signature")
+        matches = [p for p in authority.principals
+                   if p.identity == identity and p.role == kind and p.target == target]
+        require(len(matches) == 1, "unauthorized_signer")
+        principal = matches[0]
+        key_id = "sha256:" + hashlib.sha256(principal.public_key).hexdigest()
+        require(identity not in revoked and key_id not in revoked, "revoked_signer")
+        require(principal.public_key not in seen_keys, "duplicate_signing_key")
+        try:
+            Ed25519PublicKey.from_public_bytes(principal.public_key).verify(
+                decode(signature["signature"], 64), payload)
+        except (InvalidSignature, ValueError):
+            raise Rejected("signature_invalid") from None
+        seen.add(identity)
+        seen_keys.add(principal.public_key)
+    require(len(seen) >= getattr(authority, kind + "_threshold"), "threshold_not_met")
+    return envelope["payload"]
+
+
+def window(payload, now):
+    start, end = integer(payload["valid_from"]), integer(payload["valid_until"])
+    require(start <= now < end, "invalid_validity")
+
+
+def authenticate_snapshot(raw, *, authority, frozen, authority_digest, now):
+    """No state changes until the entire snapshot is authenticated and in scope."""
+    snapshot = signed_payload(raw, "revocation", authority, frozen.target)
+    exact(snapshot, REVOCATION)
+    text(snapshot["id"])
+    exact(snapshot["target"], TARGET)
+    require(snapshot["target"] == dict(zip(TARGET, frozen.target)), "target_mismatch")
+    integer(snapshot["version"])
+    issued, until = integer(snapshot["issued_at"]), integer(snapshot["next_update"])
+    require(issued <= now < until and now - issued <= authority.max_revocation_age,
+            "revocation_stale_or_future")
+    revoked = snapshot["revoked"]
+    require(type(revoked) is list and len(revoked) <= 512, "invalid_revocations")
+    for identifier in revoked:
+        text(identifier)
+    require(len(set(revoked)) == len(revoked), "duplicate_revocation")
+    signed_payload(raw, "revocation", authority, frozen.target, revoked)
+    return CurrentSnapshot(
+        frozen.target, authority_digest, snapshot["version"], digest(snapshot),
+        tuple(revoked), now, min(until, issued + authority.max_revocation_age + 1))
+
+
+def verify_release(adoption, selection, *, authority, frozen, snapshot, now):
+    """Pure release checks against one captured binding and authenticated snapshot.
+
+    Does not verify actual source-manifest, package, dependency or image bytes.
+    """
+    adopted = signed_payload(adoption, "adoption", authority, frozen.target, snapshot.revoked)
+    selected = signed_payload(selection, "selection", authority, frozen.target, snapshot.revoked)
+    exact(adopted, ADOPTION)
+    exact(selected, SELECTION)
+    for record in (adopted, selected):
+        text(record["id"])
+        binding(record["binding"])
+        require(record["binding"] == frozen.as_dict(), "binding_mismatch")
+        require(record["id"] not in snapshot.revoked, "record_revoked")
+        window(record, now)
+        integer(record["epoch"])
+    public = decode(adopted["producer_public_key"], 32)
+    producer_key_id = "sha256:" + hashlib.sha256(public).hexdigest()
+    expected = frozen.as_dict()
+    require(expected["producer_key_id"] == producer_key_id, "producer_key_mismatch")
+    require(expected["producer_id"] not in snapshot.revoked
+            and producer_key_id not in snapshot.revoked, "producer_revoked")
+    hex_value(adopted["nonce"])
+    require(selected["adoption_digest"] == digest(adopted), "adoption_mismatch")
+    require(adopted["epoch"] == selected["epoch"], "epoch_mismatch")
+    integer(selected["sequence"])
+    return Receipt(
+        frozen.target, snapshot.authority_digest, selected["epoch"], selected["sequence"],
+        snapshot.version, digest(adopted), adopted["nonce"], digest(selected),
+        snapshot.snapshot_digest, (adopted["id"], selected["id"]), now,
+        min(adopted["valid_until"], selected["valid_until"], snapshot.valid_until))
+
+
+def verify_and_record(adoption, selection, revocation, *, fence, authority,
+                      expected_binding, now, clock):
+    """Authenticated currentness observation is NOT accepted-release advancement."""
+    from synthetic_fence import SyntheticFence
+    require(type(fence) is SyntheticFence, "synthetic_fence_required")
+    frozen = freeze_binding(expected_binding)
+    authority_digest = validate_authority(authority, frozen.target)
+    integer(now)
+    snapshot = authenticate_snapshot(revocation, authority=authority, frozen=frozen,
+                                     authority_digest=authority_digest, now=now)
+    fence.observe(snapshot, clock=clock)
+    receipt = verify_release(adoption, selection, authority=authority, frozen=frozen,
+                             snapshot=snapshot, now=now)
+    return fence.record(receipt, clock=clock)

@@ -1,0 +1,47 @@
+test_reentrant_later_release_blocks_outer_earlier_acceptance (test_boundary.BoundaryTests.test_reentrant_later_release_blocks_outer_earlier_acceptance) ... FAIL
+test_reentrant_later_snapshot_blocks_expired_higher_outer (test_boundary.BoundaryTests.test_reentrant_later_snapshot_blocks_expired_higher_outer) ... FAIL
+test_reentrant_exact_retry_must_not_restore_earlier_time (test_boundary.BoundaryTests.test_reentrant_exact_retry_must_not_restore_earlier_time) ... FAIL
+test_nonce_write_failure_is_atomic (test_boundary.BoundaryTests.test_nonce_write_failure_is_atomic) ... FAIL
+
+======================================================================
+FAIL: test_reentrant_later_release_blocks_outer_earlier_acceptance (test_boundary.BoundaryTests.test_reentrant_later_release_blocks_outer_earlier_acceptance)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_boundary.py", line 51, in test_reentrant_later_release_blocks_outer_earlier_acceptance
+    with self.assertRaises(Rejected):
+AssertionError: Rejected not raised
+
+======================================================================
+FAIL: test_reentrant_later_snapshot_blocks_expired_higher_outer (test_boundary.BoundaryTests.test_reentrant_later_snapshot_blocks_expired_higher_outer)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_boundary.py", line 75, in test_reentrant_later_snapshot_blocks_expired_higher_outer
+    with self.assertRaises(Rejected):
+AssertionError: Rejected not raised
+
+======================================================================
+FAIL: test_reentrant_exact_retry_must_not_restore_earlier_time (test_boundary.BoundaryTests.test_reentrant_exact_retry_must_not_restore_earlier_time)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_boundary.py", line 100, in test_reentrant_exact_retry_must_not_restore_earlier_time
+    with self.assertRaises(Rejected):
+AssertionError: Rejected not raised
+
+======================================================================
+FAIL: test_nonce_write_failure_is_atomic (test_boundary.BoundaryTests.test_nonce_write_failure_is_atomic)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/runner/workspace/.local/isolated-candidates/producer-trust-atomic-time-20261108/evidence/run-01-r1-r2-before-correction/source/test_boundary.py", line 125, in test_nonce_write_failure_is_atomic
+    self.assertEqual(before, self.fence.snapshot())
+AssertionError: Tuples differ: ({}, {}) != ({('synthetic-app', 'synthetic-environment'[694 chars], {})
+
+First differing element 0:
+{}
+{('synthetic-app', 'synthetic-environment'[689 chars]120)}
+
+Diff is 2205 characters long. Set self.maxDiff to None to see it.
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.016s
+
+FAILED (failures=4)

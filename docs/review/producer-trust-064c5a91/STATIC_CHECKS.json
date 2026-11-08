@@ -1,0 +1,46 @@
+{
+  "application_execution": false,
+  "candidate_files_exported": 54,
+  "check_scope": "static publication integrity only; no candidate imports or tests",
+  "historical_runs": {
+    "run-01-r1-r2-before-correction": {
+      "errors": 0,
+      "exit_code": 1,
+      "failures": 4,
+      "historical_only_not_rerun": true,
+      "pre_post_sha256": "11e29846d20517a7b1d691bc1a54a99d13cda80273d11cddc38b32df82ca2d72",
+      "skipped": 0,
+      "subtests": 0,
+      "unique_cases": 4
+    },
+    "run-02-corrected-complete": {
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "historical_only_not_rerun": true,
+      "pre_post_sha256": "47972ee4035c138a91c022762a517cec9f09f24df09f91d5515c7dc40a40709d",
+      "skipped": 0,
+      "subtests": 163,
+      "unique_cases": 84
+    },
+    "run-03-final-boundary": {
+      "errors": 0,
+      "exit_code": 0,
+      "failures": 0,
+      "historical_only_not_rerun": true,
+      "pre_post_sha256": "c19987564ab4f1b154a759b447a086eb6732c15e8356e2fe684d8ec02780517b",
+      "skipped": 0,
+      "subtests": 163,
+      "unique_cases": 85
+    }
+  },
+  "inert_python_files_ast_parsed": 32,
+  "new_test_execution": false,
+  "operational_decisions": "UNRESOLVED",
+  "original_candidate_manifest_sha256": "064c5a91a88c06af3208aea574a561522d4f5a1ea74eed502576761583d458f3",
+  "original_handoff_archive_sha256": "23540896ca0a28b702550d90bd5d0d963039bce8544b316220ec525127cccbbf",
+  "original_handoff_integrity_verified_before_export": true,
+  "original_inventory_verified_locally": 53,
+  "scan_limit": "Bounded content/pattern and provenance inspection, not a full security audit",
+  "sensitive_pattern_findings": 0
+}

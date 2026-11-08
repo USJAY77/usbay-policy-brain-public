@@ -1,0 +1,141 @@
+"""Task-only source-bound test recorder. Never imports the application or tests.
+
+Materializes only explicit task source files, never repository/application data.
+Each new run has immutable-by-convention source copies and pre/post inventories.
+This is local evidence, not an independent execution attestation or durable backup.
+"""
+import hashlib
+import importlib.metadata
+import json
+import os
+from pathlib import Path
+import platform
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+
+def inventory(root):
+    return [{"path": p.name, "bytes": len(p.read_bytes()),
+             "sha256": hashlib.sha256(p.read_bytes()).hexdigest()}
+            for p in sorted(root.iterdir()) if p.is_file()]
+
+
+def write_json(path, value):
+    with path.open("x", encoding="utf-8") as stream:
+        json.dump(value, stream, sort_keys=True, indent=2)
+        stream.write("\n")
+
+
+def main():
+    here = Path(__file__).resolve().parent
+    mode, run_name = sys.argv[1:]
+    if mode not in ("reproduce", "final") or not run_name.startswith("run-"):
+        raise SystemExit("invalid_recording_request")
+    original = here.parent / "producer-trust-corrected-20261108"
+    source = original if mode == "reproduce" else here
+    original_raw = (original / "MANIFEST.json").read_bytes()
+    if hashlib.sha256(original_raw).hexdigest() != (
+            "9c3fcc25a74f48cb4b0042c2c2d5af3be06448624a6956011ac9779f66310aa8"):
+        raise SystemExit("predecessor_manifest_changed")
+    for item in json.loads(original_raw)["files"]:
+        candidate = original / item["path"]
+        if candidate.is_symlink() or not candidate.is_file():
+            raise SystemExit("predecessor_source_type_invalid")
+        raw = candidate.read_bytes()
+        if len(raw) != item["bytes"] or hashlib.sha256(raw).hexdigest() != item["sha256"]:
+            raise SystemExit("predecessor_source_changed")
+    run = here / "evidence" / run_name
+    run.mkdir(parents=True, exist_ok=False)
+    snapshot = run / "source"
+    snapshot.mkdir()
+    names = ["contracts.py", "verifier.py", "synthetic_fence.py", "test_synthetic.py"]
+    for name in names:
+        candidate = source / name
+        if candidate.is_symlink() or not candidate.is_file():
+            raise SystemExit("source_type_invalid")
+        shutil.copyfile(candidate, snapshot / name)
+    for name in ("test_review.py", "test_boundary.py", "run_bound_suite.py"):
+        shutil.copyfile(here / name, snapshot / name)
+    # A fixed launcher is also preserved and hashed before execution.
+    launcher = """import json, pathlib, sys, unittest
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+before = set(sys.modules)
+import test_boundary
+import test_synthetic
+mode = sys.argv[1]
+suite = (unittest.TestSuite(test_boundary.BoundaryTests(name)
+         for name in test_boundary.REPRODUCTION_CASES)
+         if mode == 'reproduce' else
+         unittest.defaultTestLoader.loadTestsFromTestCase(test_boundary.BoundaryTests))
+result = unittest.TextTestRunner(verbosity=2, resultclass=test_synthetic.CountingResult).run(suite)
+modules = []
+for name in sorted(set(sys.modules) - before):
+    module = sys.modules[name]
+    location = getattr(module, '__file__', None)
+    if location:
+        modules.append({'name': name, 'file': str(location)})
+observed = {'unique_cases': result.testsRun, 'failures': len(result.failures),
+            'errors': len(result.errors), 'skipped': len(result.skipped),
+            'subtests': result.subtests, 'subtest_failures': result.subtest_failures,
+            'new_modules_with_files': modules,
+            'module_observation_limit': 'sys.modules delta in this child only; not kernel isolation or pre-existing-module attestation'}
+print('BOUND_RESULT=' + json.dumps(observed, sort_keys=True))
+sys.exit(0 if result.wasSuccessful() else 1)
+"""
+    (snapshot / "execute_suite.py").write_text(launcher, encoding="utf-8")
+    pre = inventory(snapshot)
+    write_json(run / "pre-run.json", pre)
+    executable = Path(sys.executable).resolve()
+    # Existing project Python entrypoint supplies installed dependency paths.
+    # Launching the resolved Nix interpreter loses that existing wrapper setup.
+    entrypoint = Path("/home/runner/workspace/.pythonlibs/bin/python3")
+    command = [str(entrypoint), "-I", "-B", str(snapshot / "execute_suite.py"), mode]
+    runner = {"python": platform.python_version(), "executable": str(executable),
+              "executable_sha256": hashlib.sha256(executable.read_bytes()).hexdigest(),
+              "entrypoint": str(entrypoint),
+              "entrypoint_sha256": hashlib.sha256(entrypoint.read_bytes()).hexdigest(),
+              "cryptography": importlib.metadata.version("cryptography"),
+              "command": command, "cwd": str(snapshot), "environment_keys": [],
+              "stdin": "DEVNULL", "close_fds": True, "timeout_seconds": 20,
+              "pre_run_sha256": hashlib.sha256((run / "pre-run.json").read_bytes()).hexdigest()}
+    write_json(run / "runner.json", runner)
+    start = time.monotonic()
+    process = subprocess.Popen(command, cwd=snapshot, env={}, close_fds=True,
+                               stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, start_new_session=True)
+    timeout = False
+    try:
+        stdout, stderr = process.communicate(timeout=20)
+    except subprocess.TimeoutExpired:
+        timeout = True
+        os.killpg(process.pid, signal.SIGKILL)
+        stdout, stderr = process.communicate(timeout=2)
+    (run / "stdout.log").write_bytes(stdout)
+    (run / "stderr.log").write_bytes(stderr)
+    post = inventory(snapshot)
+    write_json(run / "post-run.json", post)
+    summary = None
+    for line in stdout.decode("utf-8").splitlines():
+        if line.startswith("BOUND_RESULT="):
+            summary = json.loads(line[len("BOUND_RESULT="):])
+    result = {"mode": mode, "exit_code": process.returncode, "timeout": timeout,
+              "duration_seconds": time.monotonic() - start, "source_unchanged": pre == post,
+              "summary": summary, "stdout_sha256": hashlib.sha256(stdout).hexdigest(),
+              "stderr_sha256": hashlib.sha256(stderr).hexdigest(),
+              "post_run_sha256": hashlib.sha256((run / "post-run.json").read_bytes()).hexdigest()}
+    write_json(run / "result.json", result)
+    print(json.dumps({key: value for key, value in result.items() if key != "summary"},
+                     sort_keys=True))
+    if summary is not None:
+        print(json.dumps({key: value for key, value in summary.items()
+                          if key != "new_modules_with_files"}, sort_keys=True))
+    if pre != post or timeout:
+        raise SystemExit(2)
+    raise SystemExit(process.returncode)
+
+
+if __name__ == "__main__":
+    main()
