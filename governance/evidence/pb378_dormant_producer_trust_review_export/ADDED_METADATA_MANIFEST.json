@@ -1,0 +1,50 @@
+{
+  "files": [
+    {
+      "bytes": 2487,
+      "path": "SUPERSESSION.json",
+      "sha256": "627c73c0ac4934cfb4af71a68a73d5a6b1a80c5d9a429f90c380e174a39ec59f"
+    },
+    {
+      "bytes": 7983,
+      "path": "generated_pr_body.md",
+      "sha256": "6b33478aee5fff04a60f927aca7ebf7e679b98bd5d0cb3da2b00fe7b696790d1"
+    },
+    {
+      "bytes": 11630,
+      "path": "metadata.json",
+      "sha256": "de1a2bc6c6964b167060c48ac6fa29717a42f083dab5e62a0b448a30fd8ed654"
+    },
+    {
+      "bytes": 3071,
+      "path": "metadata_validation.json",
+      "sha256": "a963ac439a8447bc400dfce7080c5354abadb5aaba4af36691636b33ed7a1fe6"
+    },
+    {
+      "bytes": 1082,
+      "path": "prior-preparation/ADDED_METADATA_MANIFEST.json",
+      "sha256": "f3bc17429df31d490d7ca59174d6d86eb4f7bfbd34c742255eb2881eb095004b"
+    },
+    {
+      "bytes": 7495,
+      "path": "prior-preparation/generated_pr_body.md",
+      "sha256": "0a752a2e7bd14752862c2aee7af1131c5c86b659fdb739276fd47cfcb5114153"
+    },
+    {
+      "bytes": 11109,
+      "path": "prior-preparation/metadata.json",
+      "sha256": "3132d8e828c20434ef352b85ba494f3c5c17db5037141ce32639fa7e40bb052a"
+    },
+    {
+      "bytes": 5173,
+      "path": "prior-preparation/metadata_validation.json",
+      "sha256": "87503b442190900920ed671160e6c954d1957160964d878645a6af97b2c40da2"
+    }
+  ],
+  "kind": "separate_administrative_export_inventory_not_historical_test_manifest",
+  "original_reviewed_parent": "72f6250912dda77a785d51f37e4961a6353c2c96",
+  "self_excluded": true,
+  "self_hash_location": "External publication receipt, not this inventory or its dependencies.",
+  "unchanged_candidate_manifest_sha256": "064c5a91a88c06af3208aea574a561522d4f5a1ea74eed502576761583d458f3",
+  "unchanged_original_export_manifest_sha256": "66f41da26c289c2a67784a24b56722f1247af812c2b85d5609866af5cc4c92ff"
+}

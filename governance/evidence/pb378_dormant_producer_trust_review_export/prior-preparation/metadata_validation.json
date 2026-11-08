@@ -1,0 +1,119 @@
+{
+  "actual_existing_pr": {
+    "actual_branch_validation_error": "MANUAL_METADATA_OVERRIDE_BLOCKED:branch_name",
+    "body_update": "NOT_PERFORMED",
+    "branch": "review/dormant-producer-trust-064c5a91",
+    "branch_consistency": "BLOCKED",
+    "draft": true,
+    "followup_commit_push": "NOT_PERFORMED",
+    "head": "72f6250912dda77a785d51f37e4961a6353c2c96",
+    "number": 435,
+    "title": "Review dormant producer-trust candidate (no runtime integration)",
+    "title_update": "NOT_PERFORMED"
+  },
+  "application_module_delta": [],
+  "application_or_synthetic_tests_run": 0,
+  "body_format_validation": {
+    "body_hash": "0a752a2e7bd14752862c2aee7af1131c5c86b659fdb739276fd47cfcb5114153",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    }
+  },
+  "canonical": {
+    "branch_name": "governance/dormant-producer-trust-review-export",
+    "commit_title": "PB-378 REVIEW_REQUIRED: Dormant Producer-Trust Review Export",
+    "decision": "REVIEW_REQUIRED",
+    "pr_title": "PB-378 REVIEW_REQUIRED: Dormant Producer-Trust Review Export",
+    "status": "AWAITING_APPROVAL"
+  },
+  "generated_body_sha256": "0a752a2e7bd14752862c2aee7af1131c5c86b659fdb739276fd47cfcb5114153",
+  "generated_evidence_format_validation": {
+    "body_hash": "0a752a2e7bd14752862c2aee7af1131c5c86b659fdb739276fd47cfcb5114153",
+    "evidence_mode": "GENERATED_GOVERNANCE_EVIDENCE",
+    "fallback_template": "ABSENT",
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "CHANGED FILES": "POPULATED",
+      "COMMIT OR SOURCE REFERENCE": "POPULATED",
+      "DECISION": "POPULATED",
+      "GAP": "POPULATED",
+      "IMPACT": "POPULATED",
+      "MECHANISM": "POPULATED",
+      "RISK": "POPULATED",
+      "ROLLBACK": "POPULATED",
+      "ROLLBACK PLAN": "POPULATED",
+      "SOURCE": "POPULATED",
+      "STATUS": "POPULATED",
+      "VALIDATION": "POPULATED",
+      "VALIDATION RESULTS": "POPULATED"
+    },
+    "source_reference": "https://github.com/USJAY77/usbay-policy-brain-public/issues/436; metadata.json SHA256=3132d8e828c20434ef352b85ba494f3c5c17db5037141ce32639fa7e40bb052a",
+    "source_reference_hash": "1762ce1fe0776451ccdc85c0faa1325ae916bf219bcf3a3ededfbd2e63dca08b",
+    "unresolved_placeholders": "ABSENT"
+  },
+  "generator_sources": [
+    {
+      "import_path": "/home/runner/workspace/.local/publication/producer-trust-064c5a91/pb378-administration/tools/usbay_pb_metadata_authority.py",
+      "path": "scripts/usbay_pb_metadata_authority.py",
+      "sha256": "8893794c7cbf8ff9270a4bcad84763f405c800909a43208fcec82b789c42e74c",
+      "source_commit": "72f6250912dda77a785d51f37e4961a6353c2c96"
+    },
+    {
+      "import_path": "/home/runner/workspace/.local/publication/producer-trust-064c5a91/pb378-administration/tools/governance_pr_body_integration.py",
+      "path": "scripts/governance_pr_body_integration.py",
+      "sha256": "68eb8a57d04f152bebfd2db2fc652d8dca982dc780bda7af925a9994f779421a",
+      "source_commit": "72f6250912dda77a785d51f37e4961a6353c2c96"
+    }
+  ],
+  "kind": "metadata_generation_and_static_validation_only",
+  "metadata_command_exit_on_success": 0,
+  "module_observation_limit": "Only new sys.modules names observed in this metadata helper; not an attestation of interpreter bootstrap or OS isolation.",
+  "new_module_names": [
+    "_typing",
+    "argparse",
+    "gettext",
+    "pb378_body_integration",
+    "pb378_metadata_authority",
+    "typing",
+    "typing.io",
+    "typing.re"
+  ],
+  "publication_readiness": "BLOCKED_ON_SAFE_PR_PRESERVING_BRANCH_COMPLIANCE",
+  "registration": {
+    "created_at": "2026-11-08T01:37:18Z",
+    "issue_id": 6266360811,
+    "issue_number": 436,
+    "issue_url": "https://github.com/USJAY77/usbay-policy-brain-public/issues/436",
+    "kind": "administrative_work_identifier_only",
+    "repository": "USJAY77/usbay-policy-brain-public",
+    "repository_id": 1222897702
+  },
+  "source_record_sha256": "3132d8e828c20434ef352b85ba494f3c5c17db5037141ce32639fa7e40bb052a",
+  "successful_metadata_check_count": 8,
+  "successful_metadata_checks": [
+    "PB023 source validation and deterministic canonical derivation",
+    "PB026 generation from explicit REVIEW_REQUIRED/AWAITING_APPROVAL inputs; deterministic repeat",
+    "PB026 required body sections, populated fields and placeholder validation",
+    "PB023 extended generated metadata/body validation without override",
+    "PB026 generated evidence sections and source-reference format validation",
+    "No VERIFIED/default promotion; exact requested administrative decision/status",
+    "All 61 original export files unchanged; original export manifest not amended",
+    "Both original reviewer records remain UNFILLED/UNRESOLVED"
+  ]
+}

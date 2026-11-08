@@ -1,0 +1,73 @@
+{
+  "PB023": "PASSED_WITHOUT_OVERRIDE",
+  "PB026_body": {
+    "body_hash": "6b33478aee5fff04a60f927aca7ebf7e679b98bd5d0cb3da2b00fe7b696790d1",
+    "forbidden_placeholders": {
+      "Describe what is changing and why.": "ABSENT",
+      "Policy ID:": "ABSENT",
+      "Policy version / hash:": "ABSENT",
+      "Risk level:": "ABSENT",
+      "System impact:": "ABSENT",
+      "User impact:": "ABSENT"
+    },
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "Decision": "POPULATED",
+      "GOVERNANCE CHECKS": "POPULATED",
+      "IMPACT": "POPULATED",
+      "POLICY LINK": "POPULATED",
+      "PURPOSE": "POPULATED",
+      "REQUIRED APPROVALS": "POPULATED",
+      "RISK": "POPULATED",
+      "Status": "POPULATED"
+    }
+  },
+  "PB026_evidence": {
+    "body_hash": "6b33478aee5fff04a60f927aca7ebf7e679b98bd5d0cb3da2b00fe7b696790d1",
+    "evidence_mode": "GENERATED_GOVERNANCE_EVIDENCE",
+    "fallback_template": "ABSENT",
+    "required_sections": {
+      "AUDIT": "POPULATED",
+      "CHANGED FILES": "POPULATED",
+      "COMMIT OR SOURCE REFERENCE": "POPULATED",
+      "DECISION": "POPULATED",
+      "GAP": "POPULATED",
+      "IMPACT": "POPULATED",
+      "MECHANISM": "POPULATED",
+      "RISK": "POPULATED",
+      "ROLLBACK": "POPULATED",
+      "ROLLBACK PLAN": "POPULATED",
+      "SOURCE": "POPULATED",
+      "STATUS": "POPULATED",
+      "VALIDATION": "POPULATED",
+      "VALIDATION RESULTS": "POPULATED"
+    },
+    "source_reference": "https://github.com/USJAY77/usbay-policy-brain-public/issues/436; metadata.json SHA256=de1a2bc6c6964b167060c48ac6fa29717a42f083dab5e62a0b448a30fd8ed654",
+    "source_reference_hash": "93b675df549df4496f587c7df9d4bb8c65a6bcf41ae2fda2ac4d3a16a84fb34b",
+    "unresolved_placeholders": "ABSENT"
+  },
+  "actual_branch": "governance/dormant-producer-trust-review-export",
+  "application_or_synthetic_tests_run": 0,
+  "candidate_changes": [],
+  "deterministic_body_repeat": true,
+  "expected_followup_commit_and_pr_title": "PB-378 REVIEW_REQUIRED: Dormant Producer-Trust Review Export",
+  "generated_body_sha256": "6b33478aee5fff04a60f927aca7ebf7e679b98bd5d0cb3da2b00fe7b696790d1",
+  "governed_generator_sources": [
+    {
+      "path": "scripts/usbay_pb_metadata_authority.py",
+      "sha256": "8893794c7cbf8ff9270a4bcad84763f405c800909a43208fcec82b789c42e74c",
+      "source_commit": "72f6250912dda77a785d51f37e4961a6353c2c96"
+    },
+    {
+      "path": "scripts/governance_pr_body_integration.py",
+      "sha256": "68eb8a57d04f152bebfd2db2fc652d8dca982dc780bda7af925a9994f779421a",
+      "source_commit": "72f6250912dda77a785d51f37e4961a6353c2c96"
+    }
+  ],
+  "historical_test_source_binding_unchanged": true,
+  "latest_commit_and_remote_pr_validation": "REQUIRED_AFTER_COMMIT_OUTSIDE_THIS_COMMIT",
+  "phase": "PRE_COMMIT_STATIC_METADATA_VALIDATION",
+  "production_gates": "OPEN; review-required metadata conveys no production authority",
+  "source_record_sha256": "de1a2bc6c6964b167060c48ac6fa29717a42f083dab5e62a0b448a30fd8ed654",
+  "supersession_mapping_sha256": "627c73c0ac4934cfb4af71a68a73d5a6b1a80c5d9a429f90c380e174a39ec59f"
+}
