@@ -1,0 +1,25 @@
+{
+  "baseline": "dc549b2167dc6bdbe8e5b1c988bb27e9176e388e",
+  "python": "3.12.14",
+  "cases": 197,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 0,
+  "success": true,
+  "pre_source_sha256": {
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "governance/release_transaction_writer.py": "00946b92c30125039a16e32929ac4578f7b13340cecea3eed3dbd1fedb7293a1",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/test_release_transaction_writer.py": "03b123c67ded273517043c96e2d2cebb9955d0e52b897c7009a31654fc840097",
+    "tests/conftest.py": "3148f500035d80b7d304d1b2de501b085f040d25dd2bff683f241a4958afeb1b"
+  },
+  "post_source_sha256": {
+    "governance/release_owner_contract.py": "0fe38ca381f3f76f7f602464e1455a704bb9d62434ac424f524eb724f7b3d92f",
+    "governance/release_transaction_writer.py": "00946b92c30125039a16e32929ac4578f7b13340cecea3eed3dbd1fedb7293a1",
+    "tests/test_release_owner_contract.py": "7026b419d0b71aa347bb98e410d2958a061c5ca69c4a5dd4f4987df572777535",
+    "tests/test_release_transaction_writer.py": "03b123c67ded273517043c96e2d2cebb9955d0e52b897c7009a31654fc840097",
+    "tests/conftest.py": "3148f500035d80b7d304d1b2de501b085f040d25dd2bff683f241a4958afeb1b"
+  },
+  "test_output_sha256": "6f632c60800f0f6bee42f9d973ac6d717ab4033a5b2d8c172d8c8ae3aa69f602",
+  "scope": "Local synthetic Linux validation; no operational adoption or external publication"
+}

@@ -15,6 +15,9 @@ CRITICAL_NODEIDS = {
 }
 
 GOVERNANCE_FILES = {
+    "tests/test_release_owner_contract.py",
+    "tests/test_release_transaction_writer.py",
+    "tests/test_release_writer_native_compatibility.py",
     "tests/test_enterprise_nonce_replay.py",
     "tests/test_gateway_app.py",
     "tests/test_gateway_hydra.py",

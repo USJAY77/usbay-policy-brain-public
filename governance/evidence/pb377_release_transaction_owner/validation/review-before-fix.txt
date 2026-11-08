@@ -1,0 +1,26 @@
+======================================================================
+FAIL: test_status_cannot_predate_the_review_it_attests (tests.test_release_owner_contract.ReleaseOwnerContractTests.test_status_cannot_predate_the_review_it_attests)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tests/test_release_owner_contract.py", line 200, in test_status_cannot_predate_the_review_it_attests
+    self.assertEqual(self.inspect(*self.chain(mutate)).reason, "VALIDITY_BROADENING")
+AssertionError: 'RELEASE_WRITER_UNAVAILABLE' != 'VALIDITY_BROADENING'
+- RELEASE_WRITER_UNAVAILABLE
++ VALIDITY_BROADENING
+
+
+======================================================================
+FAIL: test_request_cannot_predate_its_review_policy (tests.test_release_owner_contract.ReleaseOwnerContractTests.test_request_cannot_predate_its_review_policy)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tests/test_release_owner_contract.py", line 206, in test_request_cannot_predate_its_review_policy
+    self.assertEqual(self.inspect(*self.chain(mutate)).reason, "VALIDITY_BROADENING")
+AssertionError: 'RELEASE_WRITER_UNAVAILABLE' != 'VALIDITY_BROADENING'
+- RELEASE_WRITER_UNAVAILABLE
++ VALIDITY_BROADENING
+
+
+----------------------------------------------------------------------
+Ran 2 tests in 0.006s
+
+FAILED (failures=2)
