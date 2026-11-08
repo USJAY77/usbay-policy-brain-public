@@ -1,0 +1,346 @@
+"""Deterministic review regressions; original modules are used for reproduction."""
+import copy
+from dataclasses import replace
+from threading import Lock
+from threading import Event
+from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import patch
+import unittest
+
+import contracts
+from contracts import Rejected, canonical, digest
+import verifier
+import test_synthetic as inherited
+
+
+class SyntheticClock:
+    def __init__(self, value=100):
+        self._value = value
+        self._lock = Lock()
+
+    def __call__(self):
+        with self._lock:
+            return self._value
+
+    def set(self, value):
+        with self._lock:
+            self._value = value
+
+
+class ReviewTests(inherited.SyntheticTests):
+    def setUp(self):
+        super().setUp()
+        self.clock = SyntheticClock()
+
+    def run_verify(self, inputs=None, **overrides):
+        options = dict(fence=self.fence, authority=self.authority,
+                       expected_binding=self.binding, now=100)
+        options.update(overrides)
+        if hasattr(contracts, "FrozenBinding"):
+            options.setdefault("clock", self.clock)
+        return verifier.verify_and_record(*(inputs or self.inputs()), **options)
+
+    def test_review_newer_revocation_blocks_older_clean(self):
+        self.run_verify()
+        before = self.fence.snapshot()
+        self.revocation.update(version=2, revoked=["synthetic-producer"])
+        self.reject_unchanged()
+        self.assertEqual(before, self.fence.snapshot())
+        self.revocation.update(version=1, revoked=[])
+        self.reject_unchanged()
+
+    def test_review_immutable_binding(self):
+        # Adoption A, correctly signed selection B, and initial expectation A.
+        # Change the caller's mutable expectation only after A was compared.
+        self.selection["binding"]["source_commit"] = "f" * 40
+        inputs = self.inputs()
+        original = verifier.window
+        calls = []
+
+        def mutate_after_first_comparison(payload, now):
+            original(payload, now)
+            if not calls:
+                self.binding["source_commit"] = "f" * 40
+            calls.append(True)
+
+        with patch.object(verifier, "window", mutate_after_first_comparison):
+            self.reject_unchanged(inputs)
+        self.assertTrue(calls)
+
+    def test_review_unhashable_role(self):
+        principals = list(self.authority.principals)
+        principals[0] = replace(principals[0], role=[])
+        self.reject_unchanged(authority=replace(
+            self.authority, principals=tuple(principals)))
+
+    def test_review_expiry_at_acceptance(self):
+        original = self.fence.record
+
+        def delayed_record(*args, **kwargs):
+            self.clock.set(130)
+            return original(*args, **kwargs)
+
+        with patch.object(self.fence, "record", delayed_record):
+            self.reject_unchanged()
+
+    def test_authenticated_observation_is_not_release_acceptance(self):
+        before = self.fence.snapshot()
+        self.revocation.update(version=2, revoked=["synthetic-producer"])
+        self.reject_unchanged()
+        self.assertEqual(before, self.fence.snapshot())
+        current, conflicts = self.fence.currentness()
+        self.assertEqual(2, current[self.target].version)
+        self.assertIn("synthetic-producer", current[self.target].revoked)
+        self.assertFalse(conflicts)
+
+    def test_concurrent_old_commit_after_new_revocation(self):
+        # Precisely pause the old verified receipt before its locked commit.
+        ready, release = Event(), Event()
+        original = self.fence.record
+        old_inputs = self.inputs()
+
+        def delayed_record(receipt, **options):
+            if receipt.revocation_version == 1:
+                ready.set()
+                self.assertTrue(release.wait(2))
+            return original(receipt, **options)
+
+        def old_attempt():
+            try:
+                self.run_verify(old_inputs)
+                return "UNEXPECTED_ACCEPT"
+            except Rejected as exc:
+                return str(exc)
+
+        before = self.fence.snapshot()
+        with patch.object(self.fence, "record", delayed_record):
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                future = pool.submit(old_attempt)
+                try:
+                    self.assertTrue(ready.wait(2))
+                    self.revocation.update(version=2, revoked=["synthetic-producer"])
+                    self.reject_unchanged()
+                finally:
+                    release.set()
+                self.assertEqual("currentness_changed", future.result(timeout=3))
+        self.assertEqual(before, self.fence.snapshot())
+        self.assertEqual(2, self.fence.currentness()[0][self.target].version)
+
+    def test_old_commit_before_new_observation_then_no_old_retry(self):
+        self.assertEqual("RECORDED", self.run_verify())
+        accepted_before = self.fence.snapshot()
+        self.revocation.update(version=2, revoked=["synthetic-producer"])
+        self.reject_unchanged()
+        self.assertEqual(accepted_before, self.fence.snapshot())
+        self.revocation.update(version=1, revoked=[])
+        with self.assertRaisesRegex(Rejected, "^snapshot_rollback$"):
+            self.run_verify()
+        self.assertEqual(accepted_before, self.fence.snapshot())
+
+    def test_currentness_updates_during_reentrant_clock_read(self):
+        # The synthetic clock callback can expose an observation at the boundary.
+        # Fence must fetch/check currentness after the callback, not before it.
+        original = self.fence.record
+
+        def delayed_record(receipt, **kwargs):
+            def boundary_clock():
+                self.revocation.update(version=2, revoked=["synthetic-producer"])
+                with self.assertRaisesRegex(Rejected, "^producer_revoked$"):
+                    self.run_verify()
+                return 100
+            return original(receipt, clock=boundary_clock)
+
+        with patch.object(self.fence, "record", delayed_record):
+            self.reject_unchanged()
+        self.assertEqual(2, self.fence.currentness()[0][self.target].version)
+
+    def test_unauthenticated_snapshot_advances_neither_state(self):
+        import json
+        import base64
+        before = self.fence.snapshot(), self.fence.currentness()
+        self.revocation["version"] = 5
+        inputs = self.inputs()
+        value = json.loads(inputs[2])
+        value["signatures"][0]["signature"] = base64.b64encode(bytes(64)).decode()
+        inputs[2] = canonical(value)
+        self.reject_unchanged(inputs)
+        self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_out_of_scope_snapshot_advances_neither_state(self):
+        before = self.fence.snapshot(), self.fence.currentness()
+        self.revocation["target"]["tenant"] = "other-synthetic-tenant"
+        self.reject_unchanged()
+        self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_stale_and_future_observation_advances_neither_state(self):
+        for issued in (69, 101):
+            with self.subTest(issued=issued):
+                before = self.fence.snapshot(), self.fence.currentness()
+                self.revocation["issued_at"] = issued
+                self.reject_unchanged()
+                self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_equal_version_conflict_blocks_later_acceptance(self):
+        self.run_verify()
+        accepted_before = self.fence.snapshot()
+        original_id = self.revocation["id"]
+        self.revocation["id"] = "synthetic-equivocation"
+        with self.assertRaisesRegex(Rejected, "^snapshot_equivocation$"):
+            self.run_verify()
+        self.assertEqual(accepted_before, self.fence.snapshot())
+        self.assertIn(self.target, self.fence.currentness()[1])
+        self.revocation["id"] = original_id
+        with self.assertRaisesRegex(Rejected, "^currentness_ambiguous$"):
+            self.run_verify()
+        self.revocation["version"] = 2
+        with self.assertRaisesRegex(Rejected, "^currentness_ambiguous$"):
+            self.run_verify()
+        self.assertEqual(accepted_before, self.fence.snapshot())
+
+    def test_snapshot_refresh_exact_retry_at_later_time(self):
+        self.run_verify()
+        self.revocation.update(version=2, issued_at=95, next_update=125)
+        self.assertEqual("RECORDED", self.run_verify())
+        before = self.fence.snapshot()
+        self.clock.set(101)
+        self.assertEqual("IDEMPOTENT", self.run_verify(now=101))
+        self.assertEqual(before, self.fence.snapshot())
+
+    def test_mutating_caller_after_capture_does_not_change_valid_meaning(self):
+        original = verifier.window
+        inputs = self.inputs()
+        expected_target = self.target
+
+        def mutate(payload, now):
+            self.binding.clear()
+            original(payload, now)
+
+        with patch.object(verifier, "window", mutate):
+            self.assertEqual("RECORDED", self.run_verify(inputs))
+        self.assertIn(expected_target, self.fence.snapshot()[0])
+
+    def test_malformed_authority_shapes_bounded(self):
+        principals = self.authority.principals
+        variations = [None, {}, replace(self.authority, principals=[]),
+                      replace(self.authority, principals=(None,))]
+        for field, value in (("role", []), ("role", {}), ("role", None),
+                             ("identity", []), ("public_key", bytearray(32)),
+                             ("target", ["synthetic"] * 4)):
+            variations.append(replace(self.authority, principals=(
+                replace(principals[0], **{field: value}), *principals[1:])))
+        for index, authority in enumerate(variations):
+            with self.subTest(variant=index):
+                before = self.fence.snapshot(), self.fence.currentness()
+                self.reject_unchanged(authority=authority)
+                self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_clock_failure_and_rollback_bounded(self):
+        def failed_clock():
+            raise RuntimeError("synthetic failure")
+        for clock in (None, lambda: True, lambda: -1, lambda: 99, failed_clock):
+            with self.subTest(clock_type=type(clock).__name__):
+                before = self.fence.snapshot(), self.fence.currentness()
+                self.reject_unchanged(clock=clock)
+                self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_expiry_of_each_window_at_acceptance(self):
+        for kind in ("adoption", "selection", "revocation"):
+            with self.subTest(window=kind):
+                self.setUp()
+                if kind == "revocation":
+                    self.revocation["next_update"] = 105
+                else:
+                    getattr(self, kind)["valid_until"] = 105
+                    self.selection["adoption_digest"] = digest(self.adoption)
+                original = self.fence.record
+
+                def delayed(receipt, **options):
+                    self.clock.set(105)
+                    return original(receipt, **options)
+
+                with patch.object(self.fence, "record", delayed):
+                    self.reject_unchanged()
+                self.assertEqual(1, self.fence.currentness()[0][self.target].version)
+
+    def test_snapshot_expires_before_observation(self):
+        self.clock.set(120)
+        before = self.fence.currentness()
+        self.reject_unchanged()
+        self.assertEqual(before, self.fence.currentness())
+
+    def test_authority_context_cannot_silently_switch(self):
+        self.run_verify()
+        before = self.fence.snapshot(), self.fence.currentness()
+        authority = replace(self.authority, max_revocation_age=31)
+        self.reject_unchanged(authority=authority)
+        self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_currentness_and_receipt_are_immutable(self):
+        from dataclasses import FrozenInstanceError
+        self.run_verify()
+        current = self.fence.currentness()[0][self.target]
+        receipt = self.fence.snapshot()[0][self.target]
+        for record, field, value in ((current, "revoked", []),
+                                     (receipt, "target", ["changed"])):
+            with self.subTest(record=type(record).__name__):
+                with self.assertRaises(FrozenInstanceError):
+                    setattr(record, field, value)
+        states, _ = self.fence.snapshot()
+        states.clear()
+        self.assertEqual(1, len(self.fence.snapshot()[0]))
+
+    def test_nested_duplicate_keys_and_extra_fields(self):
+        import json
+        for index in range(3):
+            inputs = self.inputs()
+            value = json.loads(inputs[index])
+            value["payload"]["unrecognized"] = True
+            kind = ("adoption", "selection", "revocation")[index]
+            signer = ("synthetic-adopter", "synthetic-selector", "synthetic-revoker")[index]
+            inputs[index] = inherited.envelope(kind, value["payload"], [
+                (signer, self.keys[signer])])
+            with self.subTest(extra_field=index):
+                self.reject_unchanged(inputs)
+        inputs = self.inputs()
+        inputs[0] = inputs[0].replace(b'"epoch":1', b'"epoch":1,"epoch":1', 1)
+        self.reject_unchanged(inputs)
+
+    def test_signed_boolean_numeric_fields_rejected(self):
+        for name, fields in (("adoption", ("epoch", "valid_from", "valid_until")),
+                             ("selection", ("epoch", "sequence", "valid_from", "valid_until")),
+                             ("revocation", ("version", "issued_at", "next_update"))):
+            for field in fields:
+                with self.subTest(record=name, field=field):
+                    self.setUp()
+                    getattr(self, name)[field] = True
+                    self.reject_unchanged()
+
+    def test_availability_withdrawn_by_observation_clock(self):
+        before = self.fence.snapshot(), self.fence.currentness()
+
+        def withdrawing_clock():
+            self.fence.available = False
+            return 100
+
+        self.reject_unchanged(clock=withdrawing_clock)
+        self.assertEqual(before, (self.fence.snapshot(), self.fence.currentness()))
+
+    def test_availability_withdrawn_by_acceptance_clock(self):
+        original = self.fence.record
+
+        def delayed_record(receipt, **options):
+            def withdrawing_clock():
+                self.fence.available = False
+                return 100
+            return original(receipt, clock=withdrawing_clock)
+
+        with patch.object(self.fence, "record", delayed_record):
+            self.reject_unchanged()
+
+
+REPRODUCTION_CASES = (
+    "test_review_newer_revocation_blocks_older_clean",
+    "test_review_immutable_binding",
+    "test_review_unhashable_role",
+    "test_review_expiry_at_acceptance",
+)

@@ -1,0 +1,51 @@
+{
+  "closure_gate": "Close #435 only after remote replacement verification; do not delete its branch.",
+  "hash_graph": "Prior snapshots are immutable leaves. This mapping has no current file hashes; validation hashes source/body/mapping; the separate manifest hashes all eight other metadata files and explicitly excludes itself. Final commit/head/PR and manifest hash are verified outside the committed files.",
+  "historical_candidate_source": "3fdd34305311f2e4a97d34544c95d87e0dbf781c",
+  "historical_tests": {
+    "new_test_execution": false,
+    "subtests": 163,
+    "unique_cases": 85
+  },
+  "kind": "administrative_supersession_not_new_test_evidence",
+  "no_authority_granted": true,
+  "preserved_old_branch": "review/dormant-producer-trust-064c5a91",
+  "prior_preparation": [
+    {
+      "path": "prior-preparation/metadata.json",
+      "sha256": "3132d8e828c20434ef352b85ba494f3c5c17db5037141ce32639fa7e40bb052a"
+    },
+    {
+      "path": "prior-preparation/generated_pr_body.md",
+      "sha256": "0a752a2e7bd14752862c2aee7af1131c5c86b659fdb739276fd47cfcb5114153"
+    },
+    {
+      "path": "prior-preparation/metadata_validation.json",
+      "sha256": "87503b442190900920ed671160e6c954d1957160964d878645a6af97b2c40da2"
+    },
+    {
+      "path": "prior-preparation/ADDED_METADATA_MANIFEST.json",
+      "sha256": "f3bc17429df31d490d7ca59174d6d86eb4f7bfbd34c742255eb2881eb095004b"
+    }
+  ],
+  "prior_preparation_semantics": "Immutable historical blocked preparation; not current branch/publication state.",
+  "registration": {
+    "created_at": "2026-11-08T01:37:18Z",
+    "issue_id": 6266360811,
+    "issue_number": 436,
+    "issue_url": "https://github.com/USJAY77/usbay-policy-brain-public/issues/436",
+    "kind": "administrative_work_identifier_only",
+    "repository": "USJAY77/usbay-policy-brain-public",
+    "repository_id": 1222897702
+  },
+  "replacement_selector": {
+    "base_branch": "main",
+    "head_branch": "governance/dormant-producer-trust-review-export",
+    "number_recording": "Assigned by GitHub; verified separately after creation. No self-referential commit/PR-number hash is embedded.",
+    "repository": "USJAY77/usbay-policy-brain-public"
+  },
+  "superseded_head": "72f6250912dda77a785d51f37e4961a6353c2c96",
+  "superseded_pr": 435,
+  "unchanged_candidate_manifest_sha256": "064c5a91a88c06af3208aea574a561522d4f5a1ea74eed502576761583d458f3",
+  "unchanged_export_manifest_sha256": "66f41da26c289c2a67784a24b56722f1247af812c2b85d5609866af5cc4c92ff"
+}

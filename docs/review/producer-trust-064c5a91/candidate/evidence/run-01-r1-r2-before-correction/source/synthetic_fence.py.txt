@@ -1,0 +1,104 @@
+"""Synthetic in-memory currentness and release stores; no production guarantees."""
+from threading import RLock
+
+from contracts import CurrentSnapshot, Receipt, read_clock, require
+
+
+class SyntheticFence:
+    def __init__(self):
+        self._lock = RLock()
+        self._states = {}
+        self._nonces = {}
+        self._current = {}
+        self._conflicts = set()
+        self._available = True
+
+    @property
+    def available(self):
+        with self._lock:
+            return self._available
+
+    @available.setter
+    def available(self, value):
+        # Availability transitions share the state lock; reentrant synthetic
+        # clock hooks are still rechecked after returning from the callback.
+        require(type(value) is bool, "invalid_availability")
+        with self._lock:
+            self._available = value
+
+    def snapshot(self):
+        """Accepted-release state only, for no-advance-on-rejection assertions."""
+        with self._lock:
+            return (dict(self._states), dict(self._nonces))
+
+    def currentness(self):
+        with self._lock:
+            return (dict(self._current), frozenset(self._conflicts))
+
+    def observe(self, snapshot, *, clock):
+        """Only authenticated in-scope knowledge may advance currentness.
+
+        Same-version authenticated equivocation makes the target ambiguous;
+        no recovery/clearing mechanism is implemented or authorized here.
+        """
+        require(type(snapshot) is CurrentSnapshot, "snapshot_required")
+        with self._lock:
+            require(self.available, "fence_unavailable")
+            now = read_clock(clock, snapshot.verified_at)
+            require(self.available, "fence_unavailable")
+            require(now < snapshot.valid_until, "snapshot_expired")
+            require(snapshot.target not in self._conflicts, "currentness_ambiguous")
+            old = self._current.get(snapshot.target)
+            if old is not None:
+                require(snapshot.authority_digest == old.authority_digest,
+                        "authority_context_changed")
+                require(snapshot.version >= old.version, "snapshot_rollback")
+                if snapshot.version == old.version:
+                    if snapshot.snapshot_digest != old.snapshot_digest:
+                        self._conflicts.add(snapshot.target)
+                        require(False, "snapshot_equivocation")
+                    # Preserve the original authenticated snapshot and its
+                    # verified_at lower bound rather than replace on retry.
+                    return "CURRENT"
+            self._current[snapshot.target] = snapshot
+            return "OBSERVED"
+
+    def record(self, receipt, *, clock):
+        require(type(receipt) is Receipt, "receipt_required")
+        with self._lock:
+            require(self.available, "fence_unavailable")
+            # Clock is caller-supplied. The test double supports reentrant test
+            # hooks, so capture/check currentness AFTER reading it.
+            now = read_clock(clock, receipt.verified_at)
+            require(self.available, "fence_unavailable")
+            require(now < receipt.valid_until, "release_expired")
+            require(receipt.target not in self._conflicts, "currentness_ambiguous")
+            current = self._current.get(receipt.target)
+            require(current is not None, "currentness_required")
+            require(current.authority_digest == receipt.authority_digest,
+                    "authority_context_changed")
+            require(now >= current.verified_at and now < current.valid_until,
+                    "currentness_expired")
+            require(current.version == receipt.revocation_version
+                    and current.snapshot_digest == receipt.snapshot_digest,
+                    "currentness_changed")
+            old = self._states.get(receipt.target)
+            if old is not None:
+                require((receipt.epoch, receipt.sequence) >= (old.epoch, old.sequence),
+                        "release_rollback")
+                if (receipt.epoch, receipt.sequence) == (old.epoch, old.sequence):
+                    require(receipt.selection_digest == old.selection_digest,
+                            "release_conflict")
+            nonce_key = (receipt.target, receipt.adoption_nonce)
+            require(nonce_key not in self._nonces
+                    or self._nonces[nonce_key] == receipt.adoption_digest, "nonce_replay")
+            if old is not None and (
+                receipt.selection_digest == old.selection_digest
+                and receipt.snapshot_digest == old.snapshot_digest
+                and receipt.authority_digest == old.authority_digest
+            ):
+                # A later verification time is not a new release acceptance.
+                return "IDEMPOTENT"
+            self._states[receipt.target] = receipt
+            self._nonces[nonce_key] = receipt.adoption_digest
+            return "IDEMPOTENT" if receipt == old else "RECORDED"

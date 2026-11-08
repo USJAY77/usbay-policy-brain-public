@@ -1,0 +1,165 @@
+"""Synthetic process-local fence; no production storage or authority."""
+from dataclasses import dataclass
+from threading import RLock
+from types import MappingProxyType
+
+from contracts import CurrentSnapshot, Receipt, read_clock, require
+
+
+@dataclass(frozen=True)
+class _State:
+    states: object
+    nonces: object
+    current: object
+    conflicts: frozenset
+    times: object
+
+
+class SyntheticFence:
+    def __init__(self):
+        self._lock = RLock()
+        self._available = True
+        self._state = _State(*(MappingProxyType({}) for _ in range(3)),
+                             frozenset(), MappingProxyType({}))
+
+    @property
+    def available(self):
+        with self._lock:
+            return self._available
+
+    @available.setter
+    def available(self, value):
+        require(type(value) is bool, "invalid_availability")
+        with self._lock:
+            self._available = value
+
+    def snapshot(self):
+        """Accepted-release and replay state only; return independent copies."""
+        with self._lock:
+            return dict(self._state.states), dict(self._state.nonces)
+
+    def currentness(self):
+        with self._lock:
+            return dict(self._state.current), self._state.conflicts
+
+    def known_times(self):
+        """Authenticated per-target/authority currentness/acceptance times."""
+        with self._lock:
+            return dict(self._state.times)
+
+    @staticmethod
+    def _prepare_times(state, key, now):
+        times = dict(state.times)
+        times[key] = now
+        return MappingProxyType(times)
+
+    @staticmethod
+    def _prepare_states(state, receipt):
+        states = dict(state.states)
+        states[receipt.target] = receipt
+        return MappingProxyType(states)
+
+    @staticmethod
+    def _prepare_nonce(state, key, adoption_digest):
+        nonces = dict(state.nonces)
+        nonces[key] = adoption_digest
+        return MappingProxyType(nonces)
+
+    def _publish(self, expected, prepared):
+        # All allocation/preparation happens before this single publication.
+        # No clock, hook, equality, allocation or callback follows assignment.
+        # Same-process monkeypatching/asynchronous interruption is NOT attested.
+        require(self._state is expected, "state_changed_during_preparation")
+        self._state = prepared
+
+    def observe(self, snapshot, *, clock):
+        """Called only after complete snapshot authentication by the verifier.
+
+        Authenticated equal-version conflict publishes one consistent ambiguity
+        transition, then reports rejection; accepted-release state never changes.
+        """
+        require(type(snapshot) is CurrentSnapshot, "snapshot_required")
+        with self._lock:
+            require(self._available, "fence_unavailable")
+            now = read_clock(clock, snapshot.verified_at)
+            # A callback may reenter with valid observations/releases. Capture
+            # ALL state after its return, never before it.
+            state = self._state
+            require(self._available, "fence_unavailable")
+            key = snapshot.target, snapshot.authority_digest
+            require(snapshot.target not in state.conflicts, "currentness_ambiguous")
+            old = state.current.get(snapshot.target)
+            if old is not None:
+                require(snapshot.authority_digest == old.authority_digest,
+                        "authority_context_changed")
+            require(now >= state.times.get(key, 0), "clock_rollback")
+            require(now < snapshot.valid_until, "snapshot_expired")
+            if old is not None:
+                require(snapshot.version >= old.version, "snapshot_rollback")
+            conflict = old is not None and (
+                snapshot.version == old.version
+                and snapshot.snapshot_digest != old.snapshot_digest)
+            current = state.current
+            conflicts = state.conflicts
+            status = "CURRENT"
+            if conflict:
+                conflicts = conflicts | frozenset((snapshot.target,))
+            elif old is None or snapshot.version > old.version:
+                updated = dict(current)
+                updated[snapshot.target] = snapshot
+                current = MappingProxyType(updated)
+                status = "OBSERVED"
+            times = self._prepare_times(state, key, now)
+            prepared = _State(state.states, state.nonces, current, conflicts, times)
+            self._publish(state, prepared)
+            if conflict:
+                # This reports a deliberately completed authenticated knowledge
+                # transition, NOT a failed/partial release-state publication.
+                require(False, "snapshot_equivocation")
+            return status
+
+    def record(self, receipt, *, clock):
+        require(type(receipt) is Receipt, "receipt_required")
+        with self._lock:
+            require(self._available, "fence_unavailable")
+            now = read_clock(clock, receipt.verified_at)
+            state = self._state
+            require(self._available, "fence_unavailable")
+            key = receipt.target, receipt.authority_digest
+            require(receipt.target not in state.conflicts, "currentness_ambiguous")
+            current = state.current.get(receipt.target)
+            require(current is not None, "currentness_required")
+            require(current.authority_digest == receipt.authority_digest,
+                    "authority_context_changed")
+            require(now >= state.times.get(key, 0), "clock_rollback")
+            require(now < receipt.valid_until, "release_expired")
+            require(now >= current.verified_at and now < current.valid_until,
+                    "currentness_expired")
+            require(current.version == receipt.revocation_version
+                    and current.snapshot_digest == receipt.snapshot_digest,
+                    "currentness_changed")
+            old = state.states.get(receipt.target)
+            if old is not None:
+                require((receipt.epoch, receipt.sequence) >= (old.epoch, old.sequence),
+                        "release_rollback")
+                if (receipt.epoch, receipt.sequence) == (old.epoch, old.sequence):
+                    require(receipt.selection_digest == old.selection_digest,
+                            "release_conflict")
+            nonce_key = receipt.target, receipt.adoption_nonce
+            require(nonce_key not in state.nonces
+                    or state.nonces[nonce_key] == receipt.adoption_digest, "nonce_replay")
+            retry = old is not None and (
+                receipt.selection_digest == old.selection_digest
+                and receipt.snapshot_digest == old.snapshot_digest
+                and receipt.authority_digest == old.authority_digest)
+            # Preparation uses only immutable validated keys/values and private
+            # dict copies. A synchronous failure leaves the published aggregate
+            # untouched, including if nonce preparation fails after states.
+            states = state.states if retry else self._prepare_states(state, receipt)
+            nonces = state.nonces if retry else self._prepare_nonce(
+                state, nonce_key, receipt.adoption_digest)
+            times = self._prepare_times(state, key, now)
+            prepared = _State(states, nonces, state.current, state.conflicts, times)
+            status = "IDEMPOTENT" if retry else "RECORDED"
+            self._publish(state, prepared)
+            return status

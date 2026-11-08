@@ -1,0 +1,153 @@
+"""Dormant experimental v2 contracts; no application integration or authority."""
+import hashlib
+import json
+import re
+from dataclasses import dataclass
+
+
+class Rejected(ValueError):
+    """Bounded codes only."""
+
+
+def require(condition, code):
+    if not condition:
+        raise Rejected(code)
+
+
+def canonical(value):
+    try:
+        return json.dumps(value, sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=True, allow_nan=False).encode("ascii")
+    except (ValueError, TypeError, RecursionError):
+        raise Rejected("invalid_json") from None
+
+
+def digest(value):
+    return hashlib.sha256(canonical(value)).hexdigest()
+
+
+def exact(value, fields):
+    require(type(value) is dict and set(value) == set(fields), "invalid_fields")
+
+
+def text(value):
+    require(type(value) is str and 0 < len(value) <= 200
+            and re.fullmatch(r"[A-Za-z0-9._:/-]+", value) is not None,
+            "invalid_identifier")
+    return value
+
+
+def integer(value):
+    require(type(value) is int and value >= 0, "invalid_integer")
+    return value
+
+
+def hex_value(value, length=64):
+    require(type(value) is str and re.fullmatch(r"[0-9a-f]{%d}" % length, value),
+            "invalid_digest")
+    return value
+
+
+TARGET = ("app", "environment", "tenant", "purpose")
+BINDING = ("producer_id", "producer_key_id", "scope", "source_commit",
+           "source_tree", "manifest_digest", "artifact_digest", *TARGET)
+ADOPTION = ("id", "binding", "producer_public_key", "nonce", "epoch",
+            "valid_from", "valid_until")
+SELECTION = ("id", "binding", "adoption_digest", "epoch", "sequence",
+             "valid_from", "valid_until")
+REVOCATION = ("id", "target", "version", "issued_at", "next_update", "revoked")
+DOMAINS = {name: "usbay.experimental.producer." + name + ".v2"
+           for name in ("adoption", "selection", "revocation")}
+
+
+def binding(value):
+    exact(value, BINDING)
+    for field in BINDING:
+        text(value[field])
+    for field in ("source_commit", "source_tree"):
+        hex_value(value[field], 40)
+    for field in ("manifest_digest", "artifact_digest"):
+        hex_value(value[field])
+    require(value["scope"] in ("test", "production"), "invalid_scope")
+    require(value["producer_key_id"].startswith("sha256:"), "invalid_key_id")
+    hex_value(value["producer_key_id"][7:])
+    return tuple(value[field] for field in TARGET)
+
+
+@dataclass(frozen=True)
+class FrozenBinding:
+    values: tuple
+
+    def as_dict(self):
+        return dict(zip(BINDING, self.values))
+
+    @property
+    def target(self):
+        value = self.as_dict()
+        return tuple(value[field] for field in TARGET)
+
+
+def freeze_binding(value):
+    require(type(value) is dict, "binding_required")
+    # Built-in dict.copy snapshots an exact built-in dictionary in the supported
+    # CPython runtime; no caller callbacks/subclass accessors are invoked.
+    captured = dict.copy(value)
+    binding(captured)
+    return FrozenBinding(tuple(captured[field] for field in BINDING))
+
+
+@dataclass(frozen=True)
+class Principal:
+    identity: str
+    public_key: bytes
+    role: str
+    target: tuple
+
+
+@dataclass(frozen=True)
+class Authority:
+    """Caller independently authenticates this immutable trust input."""
+    principals: tuple
+    adoption_threshold: int
+    selection_threshold: int
+    revocation_threshold: int
+    max_revocation_age: int
+
+
+@dataclass(frozen=True)
+class CurrentSnapshot:
+    target: tuple
+    authority_digest: str
+    version: int
+    snapshot_digest: str
+    revoked: tuple
+    verified_at: int
+    valid_until: int
+
+
+@dataclass(frozen=True)
+class Receipt:
+    """Selection evidence only; no execution/deployment/provider authority."""
+    target: tuple
+    authority_digest: str
+    epoch: int
+    sequence: int
+    revocation_version: int
+    adoption_digest: str
+    adoption_nonce: str
+    selection_digest: str
+    snapshot_digest: str
+    record_ids: tuple
+    verified_at: int
+    valid_until: int
+
+
+def read_clock(clock, verified_at):
+    require(callable(clock), "clock_required")
+    try:
+        now = clock()
+    except Exception:
+        raise Rejected("clock_unavailable") from None
+    integer(now)
+    require(now >= verified_at, "clock_rollback")
+    return now

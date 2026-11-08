@@ -1,0 +1,448 @@
+"""Standalone synthetic tests: never import Gateway or repository application code."""
+import base64
+import copy
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import unittest
+
+# -I removes cwd/user imports; add only this task's new, isolated modules.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from contracts import (ADOPTION, BINDING, REVOCATION, SELECTION, Authority,
+                       DOMAINS, Principal, Rejected, canonical, digest)
+from synthetic_fence import SyntheticFence
+from verifier import verify_and_record
+
+
+def deny_effects(event, args):
+    # Additional Python-level guard, NOT OS/kernel containment.
+    if event.startswith(("socket.", "subprocess.", "os.exec", "os.spawn")) \
+            or event in ("os.system", "os.fork", "os.forkpty"):
+        raise RuntimeError("synthetic_test_forbidden_effect")
+    if event == "open":
+        _path, mode, flags = args
+        if (mode and any(char in mode for char in "wax+")) \
+                or (isinstance(flags, int) and flags & (os.O_WRONLY | os.O_RDWR |
+                                                      os.O_CREAT | os.O_TRUNC)):
+            raise RuntimeError("synthetic_test_forbidden_write")
+
+
+sys.addaudithook(deny_effects)
+
+
+def raw_public(key):
+    return key.public_key().public_bytes(serialization.Encoding.Raw,
+                                        serialization.PublicFormat.Raw)
+
+
+def envelope(kind, payload, signers):
+    signed = {"domain": DOMAINS[kind], "payload": payload}
+    message = canonical(signed)
+    return canonical({**signed, "signatures": [
+        {"identity": identity, "signature": base64.b64encode(key.sign(message)).decode()}
+        for identity, key in signers]})
+
+
+class SyntheticTests(unittest.TestCase):
+    def setUp(self):
+        # Ephemeral synthetic material only, never serialized as private bytes.
+        self.keys = {name: Ed25519PrivateKey.generate()
+                     for name in ("synthetic-adopter", "synthetic-selector",
+                                  "synthetic-revoker", "synthetic-producer")}
+        public = raw_public(self.keys["synthetic-producer"])
+        self.binding = {
+            "producer_id": "synthetic-producer",
+            "producer_key_id": "sha256:" + hashlib.sha256(public).hexdigest(),
+            "scope": "test", "source_commit": "a" * 40, "source_tree": "b" * 40,
+            "manifest_digest": "c" * 64, "artifact_digest": "d" * 64,
+            "app": "synthetic-app", "environment": "synthetic-environment",
+            "tenant": "synthetic-tenant", "purpose": "synthetic-test",
+        }
+        self.target = tuple(self.binding[x] for x in
+                            ("app", "environment", "tenant", "purpose"))
+        self.authority = Authority(tuple(
+            Principal(identity, raw_public(self.keys[identity]), role, self.target)
+            for identity, role in (("synthetic-adopter", "adoption"),
+                                   ("synthetic-selector", "selection"),
+                                   ("synthetic-revoker", "revocation"))),
+            1, 1, 1, 30)
+        self.adoption = {
+            "id": "synthetic-adoption", "binding": copy.deepcopy(self.binding),
+            "producer_public_key": base64.b64encode(public).decode(),
+            "nonce": "e" * 64, "epoch": 1, "valid_from": 90, "valid_until": 130,
+        }
+        self.selection = {
+            "id": "synthetic-selection", "binding": copy.deepcopy(self.binding),
+            "adoption_digest": digest(self.adoption), "epoch": 1, "sequence": 1,
+            "valid_from": 90, "valid_until": 130,
+        }
+        self.revocation = {
+            "id": "synthetic-snapshot", "target": dict(zip(
+                ("app", "environment", "tenant", "purpose"), self.target)),
+            "version": 1, "issued_at": 90, "next_update": 120, "revoked": [],
+        }
+        self.fence = SyntheticFence()
+
+    def inputs(self):
+        return [envelope(kind, payload, [(identity, self.keys[identity])])
+                for kind, payload, identity in (
+                    ("adoption", self.adoption, "synthetic-adopter"),
+                    ("selection", self.selection, "synthetic-selector"),
+                    ("revocation", self.revocation, "synthetic-revoker"))]
+
+    def run_verify(self, inputs=None, **overrides):
+        options = dict(fence=self.fence, authority=self.authority,
+                       expected_binding=self.binding, now=100)
+        options.update(overrides)
+        options.setdefault("clock", lambda: options["now"])
+        return verify_and_record(*(inputs or self.inputs()), **options)
+
+    def reject_unchanged(self, inputs=None, **overrides):
+        before = self.fence.snapshot()
+        with self.assertRaises(Rejected):
+            self.run_verify(inputs, **overrides)
+        self.assertEqual(before, self.fence.snapshot())
+
+    def test_exact_release_idempotence(self):
+        self.assertEqual("RECORDED", self.run_verify())
+        before = self.fence.snapshot()
+        self.assertEqual("IDEMPOTENT", self.run_verify())
+        self.assertEqual(before, self.fence.snapshot())
+
+    def test_each_binding_mismatch(self):
+        for field in BINDING:
+            for record in ("adoption", "selection"):
+                with self.subTest(field=field, record=record):
+                    original = copy.deepcopy(getattr(self, record))
+                    value = getattr(self, record)["binding"]
+                    value[field] = (
+                        "f" * len(value[field]) if field in (
+                            "source_commit", "source_tree", "manifest_digest",
+                            "artifact_digest") else
+                        "sha256:" + "f" * 64 if field == "producer_key_id" else
+                        "production" if field == "scope" else "different")
+                    self.reject_unchanged()
+                    setattr(self, record, original)
+
+    def test_each_required_field(self):
+        for name, fields in (("adoption", ADOPTION), ("selection", SELECTION),
+                             ("revocation", REVOCATION)):
+            for field in fields:
+                with self.subTest(record=name, missing=field):
+                    original = copy.deepcopy(getattr(self, name))
+                    del getattr(self, name)[field]
+                    self.reject_unchanged()
+                    setattr(self, name, original)
+
+    def test_missing_binding_fields(self):
+        for field in BINDING:
+            with self.subTest(field=field):
+                value = dict(self.binding)
+                del value[field]
+                self.reject_unchanged(expected_binding=value)
+
+    def test_signature_tampering(self):
+        for index in range(3):
+            with self.subTest(envelope=index):
+                inputs = self.inputs()
+                value = json.loads(inputs[index])
+                value["signatures"][0]["signature"] = base64.b64encode(bytes(64)).decode()
+                inputs[index] = canonical(value)
+                self.reject_unchanged(inputs)
+
+    def test_signed_payload_tampering(self):
+        for index in range(3):
+            with self.subTest(envelope=index):
+                inputs = self.inputs()
+                value = json.loads(inputs[index])
+                value["payload"]["id"] += "-tampered"
+                inputs[index] = canonical(value)
+                self.reject_unchanged(inputs)
+
+    def test_unauthorized_adopter(self):
+        inputs = self.inputs()
+        inputs[0] = envelope("adoption", self.adoption, [
+            ("synthetic-stranger", self.keys["synthetic-selector"])])
+        self.reject_unchanged(inputs)
+
+    def test_wrong_role_and_target(self):
+        for mutation in ("role", "target"):
+            with self.subTest(mutation=mutation):
+                principals = list(self.authority.principals)
+                principals[0] = replace(principals[0], **{
+                    mutation: "selection" if mutation == "role" else
+                    ("other-app", *self.target[1:])})
+                self.reject_unchanged(authority=replace(
+                    self.authority, principals=tuple(principals)))
+
+    def test_explicit_authority_and_fence_required(self):
+        for overrides in ({"authority": None}, {"fence": None},
+                          {"expected_binding": None}, {"now": None}):
+            with self.subTest(field=next(iter(overrides))):
+                self.reject_unchanged(**overrides)
+
+    def test_expiry_and_future_records(self):
+        for name in ("adoption", "selection"):
+            for field, value in (("valid_from", 101), ("valid_until", 100)):
+                with self.subTest(record=name, field=field):
+                    original = copy.deepcopy(getattr(self, name))
+                    getattr(self, name)[field] = value
+                    self.reject_unchanged()
+                    setattr(self, name, original)
+
+    def test_stale_future_and_expired_snapshot(self):
+        for field, value in (("issued_at", 101), ("issued_at", 69),
+                             ("next_update", 100)):
+            with self.subTest(field=field, value=value):
+                original = dict(self.revocation)
+                self.revocation[field] = value
+                self.reject_unchanged()
+                self.revocation = original
+
+    def test_revoked_entities(self):
+        for identity in ("synthetic-adopter", "synthetic-selector", "synthetic-revoker",
+                         "synthetic-producer", "synthetic-adoption",
+                         "synthetic-selection", self.binding["producer_key_id"]):
+            with self.subTest(identity_kind=identity[:20]):
+                # Each variant must reach its own revocation check rather than
+                # inherit equal-version equivocation from another variant.
+                self.fence = SyntheticFence()
+                self.revocation["revoked"] = [identity]
+                self.reject_unchanged()
+
+    def test_snapshot_rollback(self):
+        self.revocation["version"] = 2
+        self.run_verify()
+        self.revocation["version"] = 1
+        self.reject_unchanged()
+
+    def test_snapshot_equivocation(self):
+        self.run_verify()
+        self.revocation["id"] = "synthetic-different-snapshot"
+        self.reject_unchanged()
+
+    def test_snapshot_refresh(self):
+        self.run_verify()
+        self.revocation.update(version=2, issued_at=95, next_update=125)
+        self.assertEqual("RECORDED", self.run_verify())
+        self.assertEqual(2, next(iter(self.fence.snapshot()[0].values())).revocation_version)
+
+    def test_release_rollback(self):
+        self.selection["sequence"] = 2
+        self.run_verify()
+        self.selection["sequence"] = 1
+        self.reject_unchanged()
+
+    def test_conflicting_release(self):
+        self.run_verify()
+        self.selection["id"] = "synthetic-conflict"
+        self.reject_unchanged()
+
+    def test_nonce_replay_different_adoption(self):
+        self.run_verify()
+        self.adoption["id"] = "synthetic-other-adoption"
+        self.selection.update(sequence=2, adoption_digest=digest(self.adoption))
+        self.reject_unchanged()
+
+    def test_epoch_mismatch(self):
+        self.selection["epoch"] = 2
+        self.reject_unchanged()
+
+    def test_unavailable_state(self):
+        self.fence.available = False
+        self.reject_unchanged()
+
+    def test_concurrency_conflicts(self):
+        original = self.inputs()
+        self.selection["id"] = "synthetic-competitor"
+        competitor = self.inputs()
+
+        def attempt(inputs):
+            try:
+                return self.run_verify(inputs)
+            except Rejected as exc:
+                return str(exc)
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            outcomes = list(pool.map(attempt, [original, competitor] * 8))
+        self.assertEqual(1, outcomes.count("RECORDED"))
+        self.assertEqual(7, outcomes.count("IDEMPOTENT"))
+        self.assertEqual(8, outcomes.count("release_conflict"))
+        self.assertEqual(1, len(self.fence.snapshot()[0]))
+
+    def test_concurrency_exact_release(self):
+        inputs = self.inputs()
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            outcomes = list(pool.map(lambda _: self.run_verify(inputs), range(16)))
+        self.assertEqual(1, outcomes.count("RECORDED"))
+        self.assertEqual(15, outcomes.count("IDEMPOTENT"))
+
+    def test_duplicate_key_not_two_humans(self):
+        original = self.authority.principals[0]
+        duplicate = replace(original, identity="synthetic-alias")
+        self.reject_unchanged(authority=replace(
+            self.authority, principals=(*self.authority.principals, duplicate),
+            adoption_threshold=2))
+
+    def test_threshold_not_met(self):
+        self.reject_unchanged(authority=replace(self.authority, adoption_threshold=2))
+
+    def test_threshold_success_explicit(self):
+        key = Ed25519PrivateKey.generate()
+        second = Principal("synthetic-second-adopter", raw_public(key), "adoption",
+                           self.target)
+        inputs = self.inputs()
+        inputs[0] = envelope("adoption", self.adoption, [
+            ("synthetic-adopter", self.keys["synthetic-adopter"]),
+            ("synthetic-second-adopter", key)])
+        authority = replace(self.authority, principals=(*self.authority.principals, second),
+                            adoption_threshold=2)
+        self.assertEqual("RECORDED", self.run_verify(inputs, authority=authority))
+
+    def test_wrong_domain(self):
+        inputs = self.inputs()
+        inputs[0] = envelope("selection", self.adoption, [
+            ("synthetic-selector", self.keys["synthetic-selector"])])
+        self.reject_unchanged(inputs)
+
+    def test_producer_key_mismatch(self):
+        self.adoption["producer_public_key"] = base64.b64encode(
+            raw_public(self.keys["synthetic-selector"])).decode()
+        self.selection["adoption_digest"] = digest(self.adoption)
+        self.reject_unchanged()
+
+    def test_adoption_digest_mismatch(self):
+        self.selection["adoption_digest"] = "f" * 64
+        self.reject_unchanged()
+
+    def test_ambiguous_and_malformed_envelopes(self):
+        for raw in (b"{}", b"[]", b'{"domain":1,"domain":2}', b'{"x":NaN}',
+                    b" " + self.inputs()[0], b"\xff", b"x" * 65537):
+            with self.subTest(size=len(raw)):
+                inputs = self.inputs()
+                inputs[0] = raw
+                self.reject_unchanged(inputs)
+
+    def test_invalid_times_and_scope(self):
+        for value in (None, "", "*", 1):
+            with self.subTest(value_type=type(value).__name__):
+                expected = dict(self.binding, scope=value)
+                self.reject_unchanged(expected_binding=expected)
+        for value in (True, -1, 100.0, "100"):
+            with self.subTest(time_type=type(value).__name__):
+                self.reject_unchanged(now=value)
+
+    def test_new_release_after_failed_attempt(self):
+        self.selection["adoption_digest"] = "0" * 64
+        self.reject_unchanged()
+        self.selection["adoption_digest"] = digest(self.adoption)
+        self.assertEqual("RECORDED", self.run_verify())
+
+    def test_no_runtime_modules_loaded(self):
+        self.assertNotIn("gateway.app", sys.modules)
+        self.assertNotIn("runtime.policy_validator", sys.modules)
+        self.assertNotIn("security.runtime_artifact_authority", sys.modules)
+
+    def test_guard_denies_effects(self):
+        for event, args in (("socket.__new__", ()), ("subprocess.Popen", ()),
+                            ("os.fork", ()), ("open", ("synthetic", "w", 0))):
+            with self.subTest(event=event):
+                with self.assertRaises(RuntimeError):
+                    deny_effects(event, args)
+
+    def test_failures_preserve_existing_state(self):
+        self.run_verify()
+        for change in ("tamper", "expired", "unavailable", "revoked"):
+            with self.subTest(change=change):
+                inputs = self.inputs()
+                options = {}
+                if change == "tamper":
+                    value = json.loads(inputs[1])
+                    value["payload"]["id"] += "-tamper"
+                    inputs[1] = canonical(value)
+                elif change == "expired":
+                    options["now"] = 140
+                elif change == "unavailable":
+                    self.fence.available = False
+                else:
+                    self.revocation["version"] = 2
+                    self.revocation["revoked"] = ["synthetic-producer"]
+                    inputs = self.inputs()
+                self.reject_unchanged(inputs, **options)
+                self.fence.available = True
+                self.revocation["revoked"] = []
+
+    def test_revoked_adopter_key(self):
+        self.revocation["revoked"] = ["sha256:" + hashlib.sha256(
+            raw_public(self.keys["synthetic-adopter"])).hexdigest()]
+        self.reject_unchanged()
+
+    def test_explicit_missing_envelopes(self):
+        for index in range(3):
+            with self.subTest(index=index):
+                inputs = self.inputs()
+                inputs[index] = None
+                self.reject_unchanged(inputs)
+
+    def test_snapshot_wrong_target(self):
+        for field in ("app", "environment", "tenant", "purpose"):
+            with self.subTest(field=field):
+                self.revocation["target"][field] = "different"
+                self.reject_unchanged()
+                self.revocation["target"][field] = self.binding[field]
+
+    def test_invalid_signature_lists(self):
+        for signatures in ([], None, [{"identity": "synthetic-adopter"}]):
+            with self.subTest(kind=type(signatures).__name__):
+                inputs = self.inputs()
+                value = json.loads(inputs[0])
+                value["signatures"] = signatures
+                inputs[0] = canonical(value)
+                self.reject_unchanged(inputs)
+        inputs = self.inputs()
+        value = json.loads(inputs[0])
+        value["signatures"] *= 2
+        inputs[0] = canonical(value)
+        self.reject_unchanged(inputs)
+
+    def test_explicit_invalid_limits(self):
+        for field in ("adoption_threshold", "selection_threshold",
+                      "revocation_threshold", "max_revocation_age"):
+            for value in (0, -1, True, None):
+                with self.subTest(field=field, value_type=type(value).__name__):
+                    self.reject_unchanged(authority=replace(self.authority, **{field: value}))
+
+    def test_higher_sequence_same_adoption(self):
+        self.run_verify()
+        self.selection["sequence"] = 2
+        self.assertEqual("RECORDED", self.run_verify())
+        self.assertEqual(2, next(iter(self.fence.snapshot()[0].values())).sequence)
+
+
+class CountingResult(unittest.TextTestResult):
+    subtests = 0
+    subtest_failures = 0
+
+    def addSubTest(self, test, subtest, err):
+        self.subtests += 1
+        if err is not None:
+            self.subtest_failures += 1
+        super().addSubTest(test, subtest, err)
+
+
+if __name__ == "__main__":
+    result = unittest.TextTestRunner(verbosity=2, resultclass=CountingResult).run(
+        unittest.defaultTestLoader.loadTestsFromTestCase(SyntheticTests))
+    print(json.dumps({"unique_cases": result.testsRun, "failures": len(result.failures),
+                      "errors": len(result.errors), "skipped": len(result.skipped),
+                      "subtests": result.subtests,
+                      "subtest_failures": result.subtest_failures,
+                      "module_observation": "Use source-bound launcher module inventory; no hardcoded loading claim"},
+                     sort_keys=True))
+    sys.exit(0 if result.wasSuccessful() else 1)

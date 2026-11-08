@@ -1,0 +1,138 @@
+"""R1/R2 deterministic synthetic regressions; never import the application."""
+from contextlib import contextmanager
+import copy
+from unittest.mock import patch
+
+from contracts import Rejected, digest
+import test_review
+from test_synthetic import envelope
+
+
+class FailNonceWrite(dict):
+    def __setitem__(self, key, value):
+        raise MemoryError("synthetic_nonce_write_failure")
+
+
+class BoundaryTests(test_review.ReviewTests):
+    def bundle(self, *, sequence=1, version=1, nonce="e", end=130,
+               next_update=120, revoked=(), snapshot_id="synthetic-snapshot"):
+        adoption, selection, snapshot = (
+            copy.deepcopy(value) for value in
+            (self.adoption, self.selection, self.revocation))
+        adoption.update(nonce=nonce * 64, valid_until=end)
+        selection.update(sequence=sequence, adoption_digest=digest(adoption),
+                         valid_until=end)
+        snapshot.update(version=version, next_update=next_update,
+                        revoked=list(revoked), id=snapshot_id)
+        return [envelope(kind, payload, [(identity, self.keys[identity])])
+                for kind, payload, identity in (
+                    ("adoption", adoption, "synthetic-adopter"),
+                    ("selection", selection, "synthetic-selector"),
+                    ("revocation", snapshot, "synthetic-revoker"))]
+
+    def test_reentrant_later_release_blocks_outer_earlier_acceptance(self):
+        outer = self.bundle(sequence=3, end=105)
+        inner = self.bundle(sequence=2, nonce="f")
+        original = self.fence.record
+        nested = []
+
+        def intercepted(receipt, **options):
+            if receipt.sequence != 3:
+                return original(receipt, **options)
+
+            def callback():
+                self.assertEqual("RECORDED", self.run_verify(
+                    inner, now=110, clock=lambda: 110))
+                nested.append((self.fence.snapshot(), self.fence.currentness()))
+                return 100
+            return original(receipt, clock=callback)
+
+        with patch.object(self.fence, "record", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(outer)
+        self.assertEqual(1, len(nested))
+        self.assertEqual(nested[0], (self.fence.snapshot(), self.fence.currentness()))
+        self.assertEqual(2, self.fence.snapshot()[0][self.target].sequence)
+
+    def test_reentrant_later_snapshot_blocks_expired_higher_outer(self):
+        outer = self.bundle(sequence=3, version=3, next_update=105)
+        inner = self.bundle(sequence=2, version=2, nonce="f")
+        original = self.fence.observe
+        nested = []
+
+        def intercepted(snapshot, **options):
+            if snapshot.version != 3:
+                return original(snapshot, **options)
+
+            def callback():
+                self.assertEqual("RECORDED", self.run_verify(
+                    inner, now=110, clock=lambda: 110))
+                nested.append((self.fence.snapshot(), self.fence.currentness()))
+                return 100
+            return original(snapshot, clock=callback)
+
+        with patch.object(self.fence, "observe", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(outer)
+        self.assertEqual(1, len(nested))
+        self.assertEqual(nested[0], (self.fence.snapshot(), self.fence.currentness()))
+        self.assertEqual(2, self.fence.currentness()[0][self.target].version)
+
+    def test_reentrant_exact_retry_must_not_restore_earlier_time(self):
+        inputs = self.bundle()
+        self.assertEqual("RECORDED", self.run_verify(inputs))
+        before = self.fence.snapshot()
+        original = self.fence.record
+        nesting = []
+
+        def intercepted(receipt, **options):
+            if nesting:
+                return original(receipt, **options)
+
+            def callback():
+                nesting.append(True)
+                self.assertEqual("IDEMPOTENT", self.run_verify(
+                    inputs, now=110, clock=lambda: 110))
+                return 100
+            return original(receipt, clock=callback)
+
+        with patch.object(self.fence, "record", intercepted):
+            with self.assertRaises(Rejected):
+                self.run_verify(inputs)
+        self.assertEqual(before, self.fence.snapshot())
+
+    @contextmanager
+    def nonce_failure(self):
+        """Inject the same logical second-write fault before/after correction."""
+        if hasattr(self.fence, "_prepare_nonce"):
+            original = self.fence._prepare_nonce
+
+            def failed(*args):
+                original(*args)
+                raise MemoryError("synthetic_nonce_write_failure")
+            with patch.object(self.fence, "_prepare_nonce", failed):
+                yield
+        else:
+            with patch.object(self.fence, "_nonces", FailNonceWrite(
+                    self.fence.snapshot()[1])):
+                yield
+
+    def test_nonce_write_failure_is_atomic(self):
+        before = self.fence.snapshot()
+        with self.nonce_failure():
+            with self.assertRaisesRegex(MemoryError, "^synthetic_nonce_write_failure$"):
+                self.run_verify()
+        self.assertEqual(before, self.fence.snapshot())
+        self.assertEqual("RECORDED", self.run_verify())
+        states, nonces = self.fence.snapshot()
+        receipt = states[self.target]
+        self.assertEqual(receipt.adoption_digest,
+                         nonces[(self.target, receipt.adoption_nonce)])
+
+
+REPRODUCTION_CASES = (
+    "test_reentrant_later_release_blocks_outer_earlier_acceptance",
+    "test_reentrant_later_snapshot_blocks_expired_higher_outer",
+    "test_reentrant_exact_retry_must_not_restore_earlier_time",
+    "test_nonce_write_failure_is_atomic",
+)

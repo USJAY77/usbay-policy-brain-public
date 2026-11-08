@@ -1,0 +1,22 @@
+{
+  "record_kind": "unfilled_engineering_review_template",
+  "record_status": "UNFILLED",
+  "decision": "UNRESOLVED",
+  "intended_reviewer": "USBAY-GLOBAL23",
+  "review_scope": "isolated_candidate_engineering_suitability_only",
+  "candidate_manifest_sha256": "064c5a91a88c06af3208aea574a561522d4f5a1ea74eed502576761583d458f3",
+  "source_head": "3fdd34305311f2e4a97d34544c95d87e0dbf781c",
+  "source_tree": "ae0f1774ed72add2da4a62d4f6203dca4cfc39d0",
+  "final_run_inventory_sha256": "c19987564ab4f1b154a759b447a086eb6732c15e8356e2fe684d8ec02780517b",
+  "actual_reviewer_identity": null,
+  "reviewer_capacity_evidence": null,
+  "reviewer_authority_established": "UNKNOWN",
+  "distinct_human_identity_established": "UNKNOWN",
+  "findings": null,
+  "limitations": null,
+  "decision_time": null,
+  "response_evidence_reference": null,
+  "production_authority": "NONE",
+  "grants_any_operational_action": false,
+  "messages_sent": false
+}
