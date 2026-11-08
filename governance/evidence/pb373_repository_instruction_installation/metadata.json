@@ -1,0 +1,135 @@
+{
+  "pb_number": 373,
+  "pb_slug": "install-usbay-repository-agent-guidance",
+  "pb_title": "Install USBAY Agent Guidance and Diagnose CI Concurrency",
+  "decision": "REVIEW_REQUIRED",
+  "status": "AWAITING_APPROVAL",
+  "branch_name": "governance/install-usbay-repository-agent-guidance",
+  "commit_title": "PB-373 REVIEW_REQUIRED: Install USBAY Agent Guidance and Diagnose CI Concurrency",
+  "pr_title": "PB-373 REVIEW_REQUIRED: Install USBAY Agent Guidance and Diagnose CI Concurrency",
+  "pr_body": "## PURPOSE\nInstall the reviewed USBAY engineering guidance in repository agent loader locations, with explicit separation of historical source packaging, environment installation, observed loading and governance adoption. Preserve bounded failure diagnostics for CI-policy adoption and first-use intent concurrency. Exercise the existing exactly-one-winner test in 16 isolated cases with eight threads each.\n\n## RISK\nRepository guidance intentionally loads when supported agents open this branch under owner-authorized installation scope. It grants no operational authority. Earlier native CI returned zero successful first uses; a later passing run did not establish its cause. Diagnostics must never expose signing material or raw inputs.\n\n## POLICY LINK\nBaseline AGENTS.md; PB-023/PB-026 metadata contracts; .github/pull_request_template.md; shared source and staged adapters from PR424/base227c5144c63c715a09acf0be41ef8fe8a918a071; administrative work item https://github.com/USJAY77/usbay-policy-brain-public/issues/423.\n\n## REQUIRED APPROVALS\n- USBAY-AUDIT\n- USBAY-GLOBAL23\n\n## GOVERNANCE CHECKS\n- Preserve baseline AGENTS.md as an exact prefix. Keep active/staged Codex guidance equal, retain original Cursor/Copilot adapter bytes and leave the canonical shared source/hash unchanged.\n- Guidance, observed loading, source approval, policy adoption and runtime enforcement are separate. No account-wide installation or runtime authority is inferred.\n- Every original test assertion condition remains unchanged, including exactly one ALLOW and rejection of subsequent replay. The observer calls original reserve once and re-raises its original error; it adds no recovery, retry, wait or permissive fallback.\n- Use 16 function-scoped synthetic cases, each with a fresh temporary state and eight threads. Diagnostics contain only attempt number, decision/reason codes and typed SQLite error code/name. The constant fixture representation must not expose signing material.\n- Owner authorized publication of this bounded reproduction and one new CI cycle. No automatic rerun, runtime/application change, policy modification, workflow/dependency change, trust/permission widening, merge, deployment or product activation.\n- Two independent reviews must bind the exact final head. Previous-head approvals/reviews do not establish approval of changed test code.\n\n## AUDIT\nBase227c5144c63c715a09acf0be41ef8fe8a918a071. Original CI-policy failures at headde101b9f/job127256802439 remain historical. Concurrency failure at head1b5bdedbe4/job127284837444 observed zero ALLOW; its per-attempt causes were not logged. Parent08b6f9b4201d3231814d32fae5db63b6922d4fe8 passed 2818 tests and 194 subtests, with14 checks, in run42040948367 attempt1. These are distinct runs, not cumulative new proof; historical causes remain UNKNOWN.\n\n## IMPACT\nRepository agents receive consistent bounded engineering guidance. Native test diagnostics investigate concurrency without changing production replay semantics, weakening safety assertions or granting operational authority.\n\n## Decision\nREVIEW_REQUIRED\n\n## Status\nAWAITING_APPROVAL\n\n## MECHANISM\nInstall exact staged engineering adapters with the Codex installation-context clarification. In tests, expose bounded CI-adoption failure reasons and observe existing first-use reservation errors without replacing behavior. Preserve the redacted fixture representation and all assertion conditions.\n\n## GAP\nEarlier live-adoption and zero-winner CI failure causes remain UNKNOWN. A passing stress run cannot prove their absence or production readiness. Native reproduction and independent final-head review remain pending until observed.\n\n## VALIDATION\nStatic AST checks preserve every original assertion condition, the replay postcondition, all unrelated module code and fixture behavior. The observer calls reserve once and re-raises original errors. PB-023/PB-026 validators and exact source/tree checks apply. One new native CI cycle is authorized; no local tests/application are run.\n\n## ROLLBACK\nNo rollback or history rewrite is performed. A later reviewed reversal must preserve baseline instructions, historical failures and governed replay/uncertainty evidence.\n\n## SOURCE\nhttps://github.com/USJAY77/usbay-policy-brain-public/commit/227c5144c63c715a09acf0be41ef8fe8a918a071\n\n## CHANGED FILES\n- AGENTS.md\n- .cursor/rules/usbay-discipline.mdc\n- .github/copilot-instructions.md\n- docs/engineering/adapters/CODEX_AGENTS.md.proposed\n- governance/evidence/pb373_repository_instruction_installation/metadata.json\n- governance/evidence/pb373_repository_instruction_installation/generated_pr_body.md\n- tests/test_governance_actions_policy_approvals.py\n- tests/test_intent_governance.py\n\n## VALIDATION RESULTS\nParent08b6f9b420 passed2818 tests plus194 subtests and14 checks. Bounded16-case reproduction is not executed during preparation; current-head CI results must be reported separately. Parameter repetitions are not distinct new behavior proofs.\n\n## ROLLBACK PLAN\nPrepare a minimal reviewed source reversal if needed, retaining prior source guidance and diagnostic evidence. Do not reset replay consumption or infer recovery authority.\n\n## COMMIT OR SOURCE REFERENCE\nReproduction parent08b6f9b4201d3231814d32fae5db63b6922d4fe8; initial concurrency failure https://github.com/USJAY77/usbay-policy-brain-public/actions/runs/42039091742/job/127284837444; latest passing diagnostic run https://github.com/USJAY77/usbay-policy-brain-public/actions/runs/42040948367\n",
+  "source": "227c5144c63c715a09acf0be41ef8fe8a918a071",
+  "source_tree": "5097fba45a3995c40a1206a8a580cc5b26934496",
+  "installation_scope": "ENGINEERING_GUIDANCE_ONLY",
+  "runtime_authority_granted": false,
+  "review_source": {
+    "pb_number": 373,
+    "pb_title": "Install USBAY Agent Guidance and Diagnose CI Concurrency",
+    "decision": "REVIEW_REQUIRED",
+    "status": "AWAITING_APPROVAL",
+    "purpose": "Install the reviewed USBAY engineering guidance in repository agent loader locations, with explicit separation of historical source packaging, environment installation, observed loading and governance adoption. Preserve bounded failure diagnostics for CI-policy adoption and first-use intent concurrency. Exercise the existing exactly-one-winner test in 16 isolated cases with eight threads each.",
+    "risk": "Repository guidance intentionally loads when supported agents open this branch under owner-authorized installation scope. It grants no operational authority. Earlier native CI returned zero successful first uses; a later passing run did not establish its cause. Diagnostics must never expose signing material or raw inputs.",
+    "policy_link": "Baseline AGENTS.md; PB-023/PB-026 metadata contracts; .github/pull_request_template.md; shared source and staged adapters from PR424/base227c5144c63c715a09acf0be41ef8fe8a918a071; administrative work item https://github.com/USJAY77/usbay-policy-brain-public/issues/423.",
+    "required_approvals": [
+      "USBAY-AUDIT",
+      "USBAY-GLOBAL23"
+    ],
+    "governance_checks": [
+      "Preserve baseline AGENTS.md as an exact prefix. Keep active/staged Codex guidance equal, retain original Cursor/Copilot adapter bytes and leave the canonical shared source/hash unchanged.",
+      "Guidance, observed loading, source approval, policy adoption and runtime enforcement are separate. No account-wide installation or runtime authority is inferred.",
+      "Every original test assertion condition remains unchanged, including exactly one ALLOW and rejection of subsequent replay. The observer calls original reserve once and re-raises its original error; it adds no recovery, retry, wait or permissive fallback.",
+      "Use 16 function-scoped synthetic cases, each with a fresh temporary state and eight threads. Diagnostics contain only attempt number, decision/reason codes and typed SQLite error code/name. The constant fixture representation must not expose signing material.",
+      "Owner authorized publication of this bounded reproduction and one new CI cycle. No automatic rerun, runtime/application change, policy modification, workflow/dependency change, trust/permission widening, merge, deployment or product activation.",
+      "Two independent reviews must bind the exact final head. Previous-head approvals/reviews do not establish approval of changed test code."
+    ],
+    "audit": "Base227c5144c63c715a09acf0be41ef8fe8a918a071. Original CI-policy failures at headde101b9f/job127256802439 remain historical. Concurrency failure at head1b5bdedbe4/job127284837444 observed zero ALLOW; its per-attempt causes were not logged. Parent08b6f9b4201d3231814d32fae5db63b6922d4fe8 passed 2818 tests and 194 subtests, with14 checks, in run42040948367 attempt1. These are distinct runs, not cumulative new proof; historical causes remain UNKNOWN.",
+    "impact": "Repository agents receive consistent bounded engineering guidance. Native test diagnostics investigate concurrency without changing production replay semantics, weakening safety assertions or granting operational authority."
+  },
+  "generated_supplements": {
+    "MECHANISM": "Install exact staged engineering adapters with the Codex installation-context clarification. In tests, expose bounded CI-adoption failure reasons and observe existing first-use reservation errors without replacing behavior. Preserve the redacted fixture representation and all assertion conditions.",
+    "GAP": "Earlier live-adoption and zero-winner CI failure causes remain UNKNOWN. A passing stress run cannot prove their absence or production readiness. Native reproduction and independent final-head review remain pending until observed.",
+    "VALIDATION": "Static AST checks preserve every original assertion condition, the replay postcondition, all unrelated module code and fixture behavior. The observer calls reserve once and re-raises original errors. PB-023/PB-026 validators and exact source/tree checks apply. One new native CI cycle is authorized; no local tests/application are run.",
+    "ROLLBACK": "No rollback or history rewrite is performed. A later reviewed reversal must preserve baseline instructions, historical failures and governed replay/uncertainty evidence.",
+    "SOURCE": "https://github.com/USJAY77/usbay-policy-brain-public/commit/227c5144c63c715a09acf0be41ef8fe8a918a071",
+    "CHANGED FILES": "- AGENTS.md\n- .cursor/rules/usbay-discipline.mdc\n- .github/copilot-instructions.md\n- docs/engineering/adapters/CODEX_AGENTS.md.proposed\n- governance/evidence/pb373_repository_instruction_installation/metadata.json\n- governance/evidence/pb373_repository_instruction_installation/generated_pr_body.md\n- tests/test_governance_actions_policy_approvals.py\n- tests/test_intent_governance.py",
+    "VALIDATION RESULTS": "Parent08b6f9b420 passed2818 tests plus194 subtests and14 checks. Bounded16-case reproduction is not executed during preparation; current-head CI results must be reported separately. Parameter repetitions are not distinct new behavior proofs.",
+    "ROLLBACK PLAN": "Prepare a minimal reviewed source reversal if needed, retaining prior source guidance and diagnostic evidence. Do not reset replay consumption or infer recovery authority.",
+    "COMMIT OR SOURCE REFERENCE": "Reproduction parent08b6f9b4201d3231814d32fae5db63b6922d4fe8; initial concurrency failure https://github.com/USJAY77/usbay-policy-brain-public/actions/runs/42039091742/job/127284837444; latest passing diagnostic run https://github.com/USJAY77/usbay-policy-brain-public/actions/runs/42040948367"
+  },
+  "targets": [
+    {
+      "target": "AGENTS.md",
+      "reviewed_source": "docs/engineering/adapters/CODEX_AGENTS.md.proposed",
+      "sha256": "188de5c70c7a31596195da3936d7a31367ef99d4dc9ed6d0868afa6bb0a80702",
+      "git_blob": "250d06b0d9a092450ccd871ce87b7fb675b36e1b",
+      "baseline_blob": "197c365e6d9677c192399b5bd96c7bf750d2d844",
+      "reviewed_base_source_blob": "d555a1d66b720e0bed15b32cd282bc18c8d44f3d",
+      "source_review_state": "STATUS_CLARIFICATION_PENDING_REVIEW"
+    },
+    {
+      "target": ".cursor/rules/usbay-discipline.mdc",
+      "reviewed_source": "docs/engineering/adapters/CURSOR_RULE.mdc.proposed",
+      "sha256": "b2a06c0b97f1c841ca1620fc5ed6955ead800a259980682f0c171038bfc01c3d",
+      "git_blob": "f10c37d83dfc6a47cf91d782a5cff81c5a78ee5f",
+      "baseline_blob": null
+    },
+    {
+      "target": ".github/copilot-instructions.md",
+      "reviewed_source": "docs/engineering/adapters/GITHUB_COPILOT_INSTRUCTIONS.md.proposed",
+      "sha256": "de128c41f6dc343f03772d87b3c78c1a8772aa98cf1b9d7c4bfa232860943e1e",
+      "git_blob": "387cb10f1a63cb9d823740e7d231dbd5368b6523",
+      "baseline_blob": null
+    }
+  ],
+  "publication": "AUTHORIZED_DRAFT_PR_ONLY",
+  "merge": "NOT_AUTHORIZED",
+  "diagnostic_scope": {
+    "messages_only": true,
+    "changed_assertion_lines": [
+      51,
+      132
+    ],
+    "fields": [
+      "reason",
+      "http_status"
+    ],
+    "conditions_unchanged_ast_verified": true,
+    "ci_cycles_authorized": 1,
+    "initial_failure_job": 127256802439,
+    "initial_failure_reason": "UNKNOWN_NOT_PRINTED"
+  },
+  "status_clarification": {
+    "finding": 4481155807,
+    "canonical_source_unchanged": true,
+    "core_sha256": "9d08083f7c584dd34ce0e211f8d5a791bcfa510884b550ff9e69405db439071e",
+    "active_staged_codex_equal": true,
+    "publication": "AUTHORIZED_PR425_UPDATE",
+    "new_CI_cycle": "AUTHORIZED_ONCE",
+    "review_threads_resolved": false
+  },
+  "intent_concurrency_diagnostics": {
+    "fields": [
+      "decision",
+      "reason_code"
+    ],
+    "all_conditions_unchanged": true,
+    "fixture_values_unchanged": true,
+    "fixture_repr": "<SyntheticIntentCase>",
+    "prior_observed_ALLOW": 0,
+    "expected_ALLOW": 1,
+    "initial_failure_reasons": "UNKNOWN",
+    "raw_fixture_material_retained": false,
+    "publication": "AUTHORIZED_PR425_UPDATE",
+    "new_CI_cycle": "AUTHORIZED_ONCE",
+    "replay_logic_changed": false
+  },
+  "bounded_concurrency_reproduction": {
+    "cases": 16,
+    "threads_per_case": 8,
+    "fresh_function_scoped_state": true,
+    "all_original_assertion_conditions_identical": true,
+    "observer_calls_original_once": true,
+    "observer_reraises_original": true,
+    "safe_fields": [
+      "attempt",
+      "decision",
+      "reason_code",
+      "sqlite_errorcode",
+      "sqlite_errorname"
+    ],
+    "original_failure_cause": "UNKNOWN",
+    "publication": "AUTHORIZED_PR425_UPDATE",
+    "new_CI_cycle": "AUTHORIZED_ONCE",
+    "runtime_logic_changed": false
+  }
+}
