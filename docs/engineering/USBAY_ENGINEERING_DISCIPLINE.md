@@ -1,9 +1,9 @@
 # USBAY Engineering Discipline
 
-Version: USBAY-ENG-1.0.0-PROPOSAL
-Status: PREPARED_NOT_INSTALLED
+Version: USBAY-ENG-1.1.0
+Status: OWNER_REQUESTED_ENGINEERING_GUIDANCE
 
-This proposal packages the user's engineering preferences. It is not a policy, grant, trust anchor, authority registry, proof of agent loading, or runtime enforcement mechanism. Higher-priority instructions and actual authorized task scope remain applicable. It does not close any existing USBAY authority or validation gap.
+This version records the owner's requested engineering practices. Distribution and actual loading require destination-specific verification. It is not a policy, grant, trust anchor, authority registry, proof of agent loading, or runtime enforcement mechanism. Higher-priority instructions and actual authorized task scope remain applicable. It does not close any existing USBAY authority or validation gap.
 
 ## Shared guidance
 
@@ -43,8 +43,58 @@ Report outcome, changes, validation, limits and next action in RISK, MECHANISM, 
 - Retain narrower approved product contracts and response schemas. EURIA's existing evidence-only exact missing-evidence/BLOCKED responses are not silently replaced by this generic reporting format.
 - Memory is advisory context, never authority. Keep secrets, raw sensitive data, unverifiable claims and mutable readiness totals out of durable instruction/memory text.
 
+## Connect security engineering to business risk
+
+Apply these standing owner-requested practices across USBAY architecture,
+implementation, reviews, integration and product planning, including Governed
+Mail, Trade, Travel, Restaurant, payments, SmartStick, agents and robotics.
+These are USBAY adaptations of verified themes in Walt Powell's *The CISO 3.0*,
+not a transcription or claim to have reviewed the whole book. Reference basis:
+publisher description/content list at
+https://www.routledge.com/The-CISO-30-A-Guide-to-Next-Generation-Cybersecurity-Leadership/Powell/p/book/9781032840079
+and book overview at https://ciso30.com/ (consulted 2026-11-12).
+
+- For material changes, identify the human/customer outcome, affected assets,
+  business dependency and concrete failure scenario before selecting controls.
+  Connect risk -> control mechanism -> required evidence -> residual risk ->
+  accountable decision role. Keep small routine changes proportionate.
+- Prioritize using likely harm, exposure, business criticality, dependencies,
+  engineering effort and operational cost. Treat quantified likelihood, financial
+  impact and expected benefit as estimates with explicit assumptions, ranges,
+  source and uncertainty. Never invent loss reduction or ROI from blocked counts.
+- Compare mitigation, avoidance, transfer and acceptance when relevant. Only
+  appropriately authorized humans or governance processes set risk appetite,
+  accept residual risk, select insurance or change policy/trust. A business case
+  never overrides fail-closed controls or grants execution authority.
+- Define outcome metrics with denominator, scope, baseline, observation window
+  and evidence source where available: correct allow/deny, false blocks,
+  unauthorized execution, UNKNOWN outcomes, recovery safety, latency and cost.
+  Distinguish measured from proposed metrics; do not require live experiments
+  outside authority. Test totals and denied-action counts alone prove no safety,
+  prevented harm, compliance or commercial value.
+- Design resilience into applicable boundaries: bounded blast radius, durable
+  intent, revocation, replay/concurrency control, recovery and reconciliation.
+  Preserve UNKNOWN outcomes; never equate restoring availability with safe
+  recovery or authorize retries through a risk score.
+- Translate technical findings into concise management decisions: affected
+  people/process, plausible impact, control evidence, remaining exposure,
+  options/costs and the exact decision needed. Preserve technical traceability
+  and role accountability; never invent an approver or escalation route.
+- Map regulatory/customer requirements to applicable controls and evidence.
+  Distinguish technical verification, legal interpretation, risk acceptance and
+  formal certification; a framework or book is not proof of compliance.
+- Evaluate AI/model additions against simpler controls for useful gain, failure
+  modes, privacy, uncertainty, latency and cost. Keep governance deterministic
+  where required; intelligence cannot create authority. Use incident/review
+  lessons to propose improvements without silently retaining raw customer data.
+- Carry these practices into agent task acceptance criteria and project guidance
+  when that destination is within the authorized task. Keep the core independent
+  of providers/devices/products. Record propagation separately: saving a guidance document
+  does not update GitHub, Replit, Cursor, Mac files, EURIA or runtime policies.
+  Do not reset the established roadmap, widen scope or add blanket approval gates.
+
 ## Adoption and loading boundary
 
-The desired source location after reviewed publication is docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md. Repository links support traceability; a committed Markdown statement alone does not issue permission or establish runtime policy adoption. Slack/Notion remain coordination/navigation surfaces. Do not duplicate authoritative architecture in Notion or treat messages, reactions and page statuses as grants.
+The shared source location is docs/engineering/USBAY_ENGINEERING_DISCIPLINE.md. Repository links support traceability; a committed Markdown statement alone does not issue permission or establish runtime policy adoption. Slack/Notion remain coordination/navigation surfaces. Do not duplicate authoritative architecture in Notion or treat messages, reactions and page statuses as grants.
 
 Adapters identify this version and file hash, retain critical constraints inline, and request reading the full source. A link is not proof of automatic inclusion. Report actual source version/availability when establishing task context; never claim that all platforms loaded or enforced it without surface-specific evidence. Same-file hashes detect content differences, not authenticity against a party able to change both document and manifest.
